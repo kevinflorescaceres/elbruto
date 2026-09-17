@@ -18,6 +18,11 @@ export default tseslint.config(
   },
   // El motor debe ser determinista y sin dependencias (PLAN.md §2 y §12).
   {
+    // Los tests navegan respuestas JSON sueltas; tiparlas no aporta nada.
+    files: ['**/*.test.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
+  {
     files: ['packages/engine/**/*.ts'],
     ignores: ['packages/engine/**/*.test.ts'],
     rules: {

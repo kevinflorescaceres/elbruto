@@ -1,0 +1,113 @@
+// Modelo de datos de PLAN.md §5.
+// Los catalogos (armas, habilidades, mascotas) viven en packages/engine, no aqui.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Usuario anonimo. Se identifica por una cookie; solo guardamos el hash del token.
+model Keeper {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+
+  brutes Brute[]
+}
+
+model Brute {
+  id   String @id @default(cuid())
+  name String
+  /// Identidad canonica y semilla del luchador. Unico sin distinguir mayusculas.
+  slug String @unique
+
+  keeperId String?
+  keeper   Keeper? @relation(fields: [keeperId], references: [id], onDelete: SetNull)
+
+  /// Hash del enlace de recuperacion. Nulo en los bots.
+  claimTokenHash String? @unique
+
+  level Int @default(1)
+  xp    Int @default(0)
+
+  endurance Int
+  strength  Int
+  agility   Int
+  speed     Int
+
+  weapons    String[]
+  skills     String[]
+  pets       String[]
+  /// Derivada del nombre y congelada: el arte futuro no debe cambiar luchadores ya creados.
+  appearance Json
+
+  wins   Int @default(0)
+  losses Int @default(0)
+
+  fightsToday  Int     @default(0)
+  /// Dia de juego "YYYY-MM-DD" en GAME_TIMEZONE, no un instante UTC.
+  lastFightDay String?
+
+  isBot     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  levelUpChoice LevelUpChoice?
+  fightsAsA     Fight[]        @relation("fightA")
+  fightsAsB     Fight[]        @relation("fightB")
+  fightsWon     Fight[]        @relation("fightWinner")
+  reports       Report[]
+
+  @@index([level])
+  @@index([isBot, level])
+}
+
+/// Las 2 opciones pendientes. Mientras exista, el luchador no puede pelear.
+model LevelUpChoice {
+  id      String @id @default(cuid())
+  bruteId String @unique
+  brute   Brute  @relation(fields: [bruteId], references: [id], onDelete: Cascade)
+  level   Int
+  options Json
+
+  createdAt DateTime @default(now())
+}
+
+model Fight {
+  id String @id @default(cuid())
+
+  bruteAId String
+  bruteA   Brute  @relation("fightA", fields: [bruteAId], references: [id], onDelete: Cascade)
+  bruteBId String
+  bruteB   Brute  @relation("fightB", fields: [bruteBId], references: [id], onDelete: Cascade)
+  winnerId String
+  winner   Brute  @relation("fightWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+
+  seed          Int
+  engineVersion Int
+
+  /// Copias de ambos luchadores al pelear: la repeticion no depende de su estado actual.
+  snapshotA Json
+  snapshotB Json
+  log       Json
+
+  createdAt DateTime @default(now())
+
+  @@index([bruteAId, createdAt])
+  @@index([bruteBId, createdAt])
+}
+
+/// Denuncia de un luchador (PLAN.md §11).
+model Report {
+  id      String @id @default(cuid())
+  bruteId String
+  brute   Brute  @relation(fields: [bruteId], references: [id], onDelete: Cascade)
+  reason  String
+  /// Solo para limitar el abuso, no se muestra.
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([bruteId])
+}

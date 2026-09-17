@@ -35,7 +35,22 @@ function petWeapon(pet: Pet): Weapon {
   };
 }
 
-function buildFighter(brute: Brute, side: Side, rng: Rng): Combatant {
+export interface CombatStats {
+  maxHp: number;
+  strength: number;
+  agility: number;
+  speed: number;
+  armor: number;
+  block: number;
+  counter: number;
+  actives: Skill[];
+}
+
+/**
+ * Stats con las habilidades pasivas ya aplicadas. Es lo que se ve en el combate,
+ * y tambien lo que debe mostrar la ficha del luchador.
+ */
+export function combatStats(brute: Brute): CombatStats {
   let maxHp = maxHpFor(brute.endurance);
   let { strength, agility, speed } = brute;
   let armor = 0;
@@ -73,6 +88,12 @@ function buildFighter(brute: Brute, side: Side, rng: Rng): Combatant {
         break;
     }
   }
+
+  return { maxHp, strength, agility, speed, armor, block, counter, actives };
+}
+
+function buildFighter(brute: Brute, side: Side, rng: Rng): Combatant {
+  const { maxHp, strength, agility, speed, armor, block, counter, actives } = combatStats(brute);
 
   // Entra a la pelea con un arma ya en la mano: empezar siempre a punos
   // desperdiciaba turnos y dejaba todas las armas por debajo del 40% de victorias.

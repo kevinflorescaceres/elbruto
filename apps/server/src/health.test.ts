@@ -1,8 +1,9 @@
 import { expect, it } from 'vitest';
 import { buildApp } from './app.js';
 
-it('GET /api/health responde el DTO validado', async () => {
-  const app = buildApp();
+// Smoke test sin base de datos: comprueba que los plugins se montan.
+it('GET /api/health responde sin tocar la base de datos', async () => {
+  const app = await buildApp();
   const res = await app.inject({ method: 'GET', url: '/api/health' });
 
   expect(res.statusCode).toBe(200);
