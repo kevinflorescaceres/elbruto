@@ -122,14 +122,15 @@ Fight
 
 - La semilla del luchador es un hash del slug.
 - Estadísticas iniciales: `endurance`, `strength`, `agility` y `speed` repartiendo 12 puntos, con mínimo 2 en cada una, usando el PRNG.
-- Vida máxima: `50 + endurance * 6`.
-- Empieza con 1 mejora aleatoria (arma, habilidad o mascota) además de pelear con los puños.
+- Vida máxima: `50 + endurance * 10`. _(Ajustado en Fase 1: con `* 6` los combates duraban ~27 turnos, demasiado poco para animarlos.)_
+- Empieza con 1 mejora aleatoria: arma o habilidad. _(Ajustado en Fase 1: una mascota a nivel 1 desequilibra el combate.)_
 
 ### Progresión
 
 - Victoria: +2 XP. Derrota: +1 XP.
 - XP para subir: `level * 5`.
 - Al subir de nivel se generan 2 opciones distintas con el PRNG, ponderadas: arma 35%, habilidad 35%, mascota 10%, estadística 20% (+2 a una o +1 a dos).
+- A partir de la cuarta arma el peso de "arma" baja de 35% a 10%. _(Ajustado en Fase 1: solo se empuña un arma a la vez, así que la quinta no aportaba nada y la elección era un trámite.)_
 - No se ofrece nada que el luchador ya tenga.
 - Con una elección pendiente no se puede pelear.
 - Peleas diarias: 6. El reinicio ocurre a medianoche según `GAME_TIMEZONE` (variable de entorno).
@@ -143,24 +144,26 @@ Fight
 
 - Participantes: los dos luchadores y sus mascotas. Las mascotas son combatientes con sus propias stats, pero el combate termina solo cuando un luchador llega a 0 de vida.
 - **Iniciativa:** cada combatiente tiene un tiempo de próxima acción. Actúa el menor. Tras actuar suma `delay = weapon.baseDelay * 10 / (10 + speed)` (redondeado).
-- **Acción del luchador** en su turno, elegida con el PRNG según pesos: atacar con el arma actual, sacar un arma nueva, lanzar el arma o activar una habilidad activa.
-- **Objetivo:** el luchador rival o una de sus mascotas vivas, con más peso para el luchador.
+- Cada luchador **entra al combate con una de sus armas ya empuñada** (elegida con el PRNG), no a puños. _(Ajustado en Fase 1: empezar desarmado gastaba turnos y hundía a todas las armas por debajo del 40% de victorias.)_
+- **Acción del luchador** en su turno, elegida con el PRNG según pesos: atacar 60, sacar un arma nueva 12, lanzar el arma 5, activar una habilidad activa 18. Los pesos de las acciones imposibles pasan a 0.
+- **Objetivo:** el luchador rival (peso 5) o una de sus mascotas vivas (peso 1 cada una).
 - **Resolución:**
   - Probabilidad de impacto: `clamp(weapon.accuracy - defender.agility * 2, 10, 95)` (en porcentaje).
   - Si falla, el log registra `evade`. Si el defensor tiene una habilidad de bloqueo, puede registrar `block`.
   - Daño: `weapon.damage + floor(strength * weapon.strengthScale / 100)`, con variación de ±20% vía PRNG.
-  - Posibilidad de `counter` y de `disarm` según habilidades y armas.
+  - `counter`: el defensor contraataca una vez si tiene la habilidad. No encadena.
+  - `disarm`: solo mediante la habilidad activa correspondiente. _(Simplificación de Fase 1: ningún arma desarma por sí sola.)_
 - **Tope de turnos:** 500. Si se alcanza, gana quien tenga mayor porcentaje de vida restante.
 
 ### Catálogo inicial (nombres y efectos originales)
 
 - **10 armas** en categorías: rápida, pesada, larga, arrojadiza. Campos: `id, name, category, damage, accuracy, baseDelay, strengthScale, reach, throwable`.
-- **10 habilidades**, mezcla de pasivas (más vida, más agilidad, bloqueo, contraataque) y activas (curación única, golpe fuerte, desarmar). Campos: `id, name, kind, trigger, effect`.
+- **10 habilidades**, mezcla de pasivas (más vida, más agilidad, bloqueo, contraataque) y activas (curación única, golpe fuerte, desarmar). Campos: `id, name, type, effect`. _(Ajustado en Fase 1: `trigger` era redundante, `type` + `effect` ya determinan cuándo se aplica.)_
 - **3 mascotas** (p. ej. perro, lobo, oso) con stats propias.
 
 ## 7. Eventos del combate
 
-Definidos en `packages/shared` como una unión discriminada de Zod por `type`:
+Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los produce y no puede depender de Zod (§12). **`packages/shared`** construye encima la unión discriminada de Zod por `type`, más una comprobación a nivel de tipo que rompe `pnpm typecheck` si los dos se desincronizan. Tipos de evento:
 
 `start`, `spawn`, `turn`, `move`, `attack`, `hit`, `evade`, `block`, `counter`, `damage`, `heal`, `drawWeapon`, `throwWeapon`, `disarm`, `skill`, `death`, `end`.
 

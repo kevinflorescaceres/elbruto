@@ -32,6 +32,12 @@ negociable.
 - Todo lo que cruza la red se valida con esquemas Zod de `packages/shared`, en los dos lados.
 - `ENGINE_VERSION` sube cada vez que cambian las reglas del combate.
 
+## Ajustes de reglas
+
+`plan.md` §6 y §7 llevan marcadas con _(Ajustado en Fase 1)_ las reglas que cambiaron
+al medir el balance. Si vuelves a tocar los números del catálogo, corre `pnpm balance`:
+es la única forma de saber si un cambio rompe algo.
+
 ## Estado
 
-Fase 0 completa. Siguiente: Fase 1 (motor de combate).
+Fases 0 y 1 completas. Siguiente: Fase 2 (backend).

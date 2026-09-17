@@ -36,7 +36,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['*', '@*/**', 'node:*'],
+              // Cualquier especificador que no empiece por "." es externo.
+              regex: '^[^.]',
               message: 'El motor no importa nada externo: solo rutas relativas.',
             },
           ],
