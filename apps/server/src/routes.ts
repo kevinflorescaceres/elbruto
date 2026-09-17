@@ -66,7 +66,10 @@ async function loadOwnBrute(request: FastifyRequest, slug: string) {
 const parseOptions = (value: unknown): [LevelUpOption, LevelUpOption] =>
   z.tuple([levelUpOptionSchema, levelUpOptionSchema]).parse(value);
 
-export function registerRoutes(app: FastifyInstance): void {
+export function registerRoutes(
+  app: FastifyInstance,
+  { createLimit }: { createLimit: number },
+): void {
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error instanceof HttpError) return reply.code(error.status).send({ error: error.message });
     if (error instanceof z.ZodError) {
@@ -91,7 +94,7 @@ export function registerRoutes(app: FastifyInstance): void {
     return { brutes: brutes.map(rowToProfile) };
   });
 
-  const strictLimit = { config: { rateLimit: { max: 5, timeWindow: '1 hour' } } };
+  const strictLimit = { config: { rateLimit: { max: createLimit, timeWindow: '1 hour' } } };
 
   app.post('/api/brutes', strictLimit, async (request, reply) => {
     const { name } = createBruteBody.parse(request.body);

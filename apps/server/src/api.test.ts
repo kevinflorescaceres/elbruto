@@ -46,7 +46,8 @@ async function newFighter(
 }
 
 beforeAll(async () => {
-  app = await buildApp();
+  // Los tests comparten IP: los limites reales se prueban aparte, mas abajo.
+  app = await buildApp({ globalLimit: 100_000, createLimit: 100_000 });
 });
 
 afterAll(async () => {
@@ -214,6 +215,20 @@ describe('ciclo completo', () => {
       opponentSlug: mine.slug,
     });
     expect(yo.status).toBe(400);
+  });
+});
+
+describe('anti-abuso', () => {
+  it('corta la creacion de luchadores por IP', async () => {
+    const limited = await buildApp({ createLimit: 2 });
+    const post = (name: string) =>
+      limited.inject({ method: 'POST', url: '/api/brutes', payload: { name } });
+
+    expect((await post(unique('cupo'))).statusCode).toBe(201);
+    expect((await post(unique('cupo'))).statusCode).toBe(201);
+    expect((await post(unique('cupo'))).statusCode).toBe(429);
+
+    await limited.close();
   });
 });
 

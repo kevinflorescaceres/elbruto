@@ -3,13 +3,22 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerRoutes } from './routes.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface AppOptions {
+  /** Peticiones por minuto y por IP. */
+  globalLimit?: number;
+  /** Creaciones de luchador y denuncias por hora y por IP (PLAN.md §4). */
+  createLimit?: number;
+}
+
+export async function buildApp({
+  globalLimit = 120,
+  createLimit = 5,
+}: AppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
 
   await app.register(cookie);
-  // Limite general; las rutas sensibles lo estrechan en su propia definicion.
-  await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
+  await app.register(rateLimit, { max: globalLimit, timeWindow: '1 minute' });
 
-  registerRoutes(app);
+  registerRoutes(app, { createLimit });
   return app;
 }
