@@ -128,10 +128,11 @@ describe('ciclo completo', () => {
     expect(opponents.status).toBe(200);
     expect(opponents.body.opponents.map((o: any) => o.slug)).toContain(theirs.slug);
 
-    // 3 peleas dan 3-6 XP; subir a nivel 2 cuesta 5.
+    // Perder da 1 XP y ganar 2, asi que 5 peleas suben de nivel pase lo que pase.
+    // Con 3 dependia de ganar alguna: el test salia flaky.
     let leveled = false;
     let lastFightId = '';
-    for (let i = 0; i < 3 && !leveled; i++) {
+    for (let i = 0; i < 5 && !leveled; i++) {
       const res = await mine.browser.call('POST', `/api/brutes/${mine.slug}/fights`, {
         opponentSlug: theirs.slug,
       });
