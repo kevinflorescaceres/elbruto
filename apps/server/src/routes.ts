@@ -3,6 +3,7 @@
  * decide viene de `@camorra/engine`.
  */
 import { randomInt } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
 import {
   addXp,
@@ -38,6 +39,28 @@ const slugParams = z.object({ slug: z.string().min(1) });
 const idParams = z.object({ id: z.string().min(1) });
 
 const bruteInclude = { levelUpChoice: true } as const;
+
+/** Primero el nivel, luego las victorias, y a igualdad el mas veterano. */
+const ORDEN_RANKING = [
+  { level: 'desc' },
+  { wins: 'desc' },
+  { createdAt: 'asc' },
+] satisfies Prisma.BruteOrderByWithRelationInput[];
+
+/**
+ * Cuantos van por delante, mas uno. Es una consulta extra por ficha vista.
+ * ponytail: cuenta sobre el indice (isBot, level); si algun dia hay muchos
+ * jugadores, guardar el puesto y recalcularlo al terminar un combate.
+ */
+async function puestoDe(row: { level: number; wins: number }): Promise<number> {
+  const porDelante = await prisma.brute.count({
+    where: {
+      isBot: false,
+      OR: [{ level: { gt: row.level } }, { level: row.level, wins: { gt: row.wins } }],
+    },
+  });
+  return porDelante + 1;
+}
 
 class HttpError extends Error {
   constructor(
@@ -93,7 +116,7 @@ export function registerRoutes(
       include: bruteInclude,
       orderBy: { createdAt: 'asc' },
     });
-    return { brutes: brutes.map(rowToProfile) };
+    return { brutes: brutes.map((row) => rowToProfile(row)) };
   });
 
   const strictLimit = { config: { rateLimit: { max: createLimit, timeWindow: '1 hour' } } };
@@ -158,7 +181,36 @@ export function registerRoutes(
 
   app.get('/api/brutes/:slug', async (request) => {
     const { slug } = slugParams.parse(request.params);
-    return rowToProfile(await loadBrute(slug));
+    const row = await loadBrute(slug);
+    // Los bots no compiten en el ranking, asi que no tienen puesto.
+    return rowToProfile(row, row.isBot ? {} : { rank: await puestoDe(row) });
+  });
+
+  app.get('/api/ranking', async (request) => {
+    const { limit } = z
+      .object({ limit: z.coerce.number().int().min(1).max(100).default(50) })
+      .parse(request.query);
+
+    const [brutes, total] = await Promise.all([
+      prisma.brute.findMany({
+        where: { isBot: false },
+        orderBy: ORDEN_RANKING,
+        take: limit,
+      }),
+      prisma.brute.count({ where: { isBot: false } }),
+    ]);
+
+    return {
+      brutes: brutes.map((row, i) => ({
+        rank: i + 1,
+        name: row.name,
+        slug: row.slug,
+        level: row.level,
+        wins: row.wins,
+        losses: row.losses,
+      })),
+      total,
+    };
   });
 
   app.get('/api/brutes/:slug/fights', async (request) => {
@@ -230,7 +282,7 @@ export function registerRoutes(
       where: { id: { in: opponents.map((o) => o.id) } },
       include: bruteInclude,
     });
-    return { opponents: rows.map(rowToProfile) };
+    return { opponents: rows.map((row) => rowToProfile(row)) };
   });
 
   app.post('/api/brutes/:slug/fights', async (request) => {

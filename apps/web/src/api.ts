@@ -13,6 +13,7 @@ import {
   levelUpSchema,
   meSchema,
   opponentsSchema,
+  rankingSchema,
   startFightResponse,
 } from '@camorra/shared';
 
@@ -51,6 +52,7 @@ const post = (body: unknown) => ({ method: 'POST', body }) as const;
 
 export const api = {
   me: () => call(meSchema, '/me'),
+  ranking: () => call(rankingSchema, '/ranking'),
   createBrute: (name: string) => call(createBruteResponse, '/brutes', post({ name })),
   claim: (token: string) => call(claimResponse, '/claim', post({ token })),
 

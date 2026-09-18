@@ -18,6 +18,26 @@ export function gameDay(now: Date = new Date()): string {
 
 export const FIGHTS_PER_DAY = 6;
 
+/**
+ * Cuando vuelven las peleas: la medianoche siguiente en GAME_TIMEZONE.
+ *
+ * ponytail: se calcula restando la hora local de 24 h. En el dia del cambio de
+ * horario se desvia una hora. Si molesta, hace falta una libreria de zonas.
+ */
+export function nextReset(now: Date = new Date()): Date {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: process.env.GAME_TIMEZONE ?? 'Europe/Madrid',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(now);
+
+  const [h = 0, m = 0, sec = 0] = partes.split(':').map(Number);
+  const faltan = 86400 - (h * 3600 + m * 60 + sec);
+  return new Date(now.getTime() + faltan * 1000);
+}
+
 export const fightsLeftToday = (row: Pick<BruteRow, 'fightsToday' | 'lastFightDay'>): number =>
   row.lastFightDay === gameDay() ? Math.max(0, FIGHTS_PER_DAY - row.fightsToday) : FIGHTS_PER_DAY;
 
@@ -48,6 +68,7 @@ export function toProfile(
     isBot: boolean;
     fightsLeftToday: number;
     pendingLevelUp: boolean;
+    rank?: number | null;
   },
 ): BruteProfile {
   return {
@@ -65,18 +86,28 @@ export function toProfile(
     skills: brute.skills,
     pets: brute.pets,
     appearance: brute.appearance,
+    nextResetAt: nextReset().toISOString(),
+    rank: extra.rank ?? null,
     ...extra,
   };
 }
 
 /** Ficha a partir de una fila, con los contadores ya resueltos. */
-export function rowToProfile(row: BruteRow & { levelUpChoice?: unknown | null }): BruteProfile {
+export function rowToProfile(
+  row: BruteRow & { levelUpChoice?: unknown | null },
+  /**
+   * Objeto y no un numero suelto a proposito: `brutes.map(rowToProfile)` pasaba
+   * el indice del array aqui y el primer peleon salia con el puesto 0.
+   */
+  opciones: { rank?: number } = {},
+): BruteProfile {
   return toProfile(toEngineBrute(row), {
     wins: row.wins,
     losses: row.losses,
     isBot: row.isBot,
     fightsLeftToday: fightsLeftToday(row),
     pendingLevelUp: row.levelUpChoice != null,
+    rank: opciones.rank ?? null,
   });
 }
 
@@ -88,6 +119,7 @@ export const snapshotToProfile = (brute: Brute): BruteProfile =>
     isBot: false,
     fightsLeftToday: 0,
     pendingLevelUp: false,
+    rank: null,
   });
 
 export { maxHpFor };

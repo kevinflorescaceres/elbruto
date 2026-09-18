@@ -44,6 +44,10 @@ export const bruteProfileSchema = statsSchema.extend({
   isBot: z.boolean(),
   fightsLeftToday: z.number().int().nonnegative(),
   pendingLevelUp: z.boolean(),
+  /** Cuando vuelven las peleas. ISO, para que el cliente cuente hacia atras. */
+  nextResetAt: z.string(),
+  /** Puesto en el ranking. Nulo si no se ha calculado para esta respuesta. */
+  rank: z.number().int().positive().nullable(),
 });
 
 export const levelUpOptionSchema = z.discriminatedUnion('type', [
@@ -117,6 +121,21 @@ export const fightReplaySchema = z.object({
   snapshotA: bruteProfileSchema,
   snapshotB: bruteProfileSchema,
   log: z.array(fightEventSchema),
+});
+
+// --- GET /api/ranking ---
+export const rankingSchema = z.object({
+  brutes: z.array(
+    z.object({
+      rank: z.number().int().positive(),
+      name: z.string(),
+      slug: z.string(),
+      level: z.number().int().positive(),
+      wins: z.number().int().nonnegative(),
+      losses: z.number().int().nonnegative(),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
 });
 
 // --- POST /api/reports (PLAN.md §11) ---

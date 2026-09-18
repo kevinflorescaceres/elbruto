@@ -71,6 +71,9 @@ export function Home() {
       )}
 
       <h2>Mis peleones</h2>
+      <p className="apagado">
+        <Link to="/ranking">Ver quién manda en la calle →</Link>
+      </p>
       {me.isPending && <p className="apagado">Cargando...</p>}
       {me.data?.brutes.length === 0 && <p className="apagado">Todavía no tienes ninguno.</p>}
       <div className="rejilla">

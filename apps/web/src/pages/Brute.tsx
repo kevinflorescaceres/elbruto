@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type WeaponCategory } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
+import { Cuenta } from '../Cuenta.js';
 import { api } from '../api.js';
 import { useBrute, useIsMine } from '../hooks.js';
 
@@ -150,9 +151,19 @@ export function BrutePage() {
             </>
           ) : (
             <>
-              <p>
-                Te quedan <strong>{b.fightsLeftToday}</strong> peleas hoy.
-              </p>
+              {b.fightsLeftToday > 0 ? (
+                <p>
+                  Te quedan <strong>{b.fightsLeftToday}</strong> peleas hoy.
+                </p>
+              ) : (
+                <p>
+                  Por hoy se acabó. Vuelven en{' '}
+                  <strong>
+                    <Cuenta hasta={b.nextResetAt} />
+                  </strong>
+                  .
+                </p>
+              )}
               <Link to={`/b/${slug}/arena`}>
                 <button disabled={b.fightsLeftToday === 0}>Buscar pelea</button>
               </Link>

@@ -315,6 +315,79 @@ describe('metadatos para compartir', () => {
   });
 });
 
+describe('razones para volver', () => {
+  it('el ranking ordena por nivel y deja fuera a los bots', async () => {
+    const fuerte = await newFighter('mandamas');
+    const flojo = await newFighter('novato');
+    await prisma.brute.update({ where: { slug: fuerte.slug }, data: { level: 9, wins: 4 } });
+    // Un bot de nivel muy alto no debe colarse en la tabla.
+    await prisma.brute.create({
+      data: {
+        name: 'Bot Altisimo',
+        slug: 'bot-altisimo',
+        isBot: true,
+        level: 30,
+        endurance: 5,
+        strength: 5,
+        agility: 5,
+        speed: 5,
+        appearance: { body: 0, head: 0, hair: 0, skinColor: 0, hairColor: 0, clothColor: 0 },
+      },
+    });
+
+    const res = await new Browser().call('GET', '/api/ranking');
+    expect(res.status).toBe(200);
+
+    const slugs = res.body.brutes.map((b: any) => b.slug);
+    expect(slugs).not.toContain('bot-altisimo');
+    expect(slugs.indexOf(fuerte.slug)).toBeLessThan(slugs.indexOf(flojo.slug));
+    expect(res.body.brutes[0].rank).toBe(1);
+    expect(res.body.total).toBe(2);
+  });
+
+  it('la ficha trae el puesto y cuando vuelven las peleas', async () => {
+    const mine = await newFighter('puesto');
+    const perfil = (await new Browser().call('GET', `/api/brutes/${mine.slug}`)).body;
+
+    expect(perfil.rank).toBeGreaterThan(0);
+    // La proxima medianoche esta siempre por delante y dentro de 24 horas.
+    const vuelta = new Date(perfil.nextResetAt).getTime();
+    expect(vuelta).toBeGreaterThan(Date.now());
+    expect(vuelta).toBeLessThanOrEqual(Date.now() + 24 * 3600 * 1000 + 1000);
+  });
+
+  it('listar peleones no cuela el indice del array como puesto', async () => {
+    // brutes.map(rowToProfile) pasaba el indice al segundo parametro y el
+    // primero salia con puesto 0, que el esquema rechaza y tumba la portada.
+    const browser = new Browser();
+    await browser.call('POST', '/api/brutes', { name: 'Primero del Cupo' });
+    await browser.call('POST', '/api/brutes', { name: 'Segundo del Cupo' });
+
+    const me = await browser.call('GET', '/api/me');
+    expect(me.status).toBe(200);
+    expect(me.body.brutes).toHaveLength(2);
+    for (const brute of me.body.brutes) expect(brute.rank).toBeNull();
+  });
+
+  it('un bot no tiene puesto en el ranking', async () => {
+    await prisma.brute.create({
+      data: {
+        name: 'Bot Sin Puesto',
+        slug: 'bot-sin-puesto',
+        isBot: true,
+        level: 3,
+        endurance: 3,
+        strength: 3,
+        agility: 3,
+        speed: 3,
+        appearance: { body: 0, head: 0, hair: 0, skinColor: 0, hairColor: 0, clothColor: 0 },
+      },
+    });
+    const perfil = (await new Browser().call('GET', '/api/brutes/bot-sin-puesto')).body;
+    expect(perfil.rank).toBeNull();
+  });
+});
+
 describe('moderacion', () => {
   it('acepta denuncias sobre un luchador existente', async () => {
     const { slug } = await newFighter('denunciado');
