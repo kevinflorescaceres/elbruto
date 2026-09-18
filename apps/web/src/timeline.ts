@@ -13,6 +13,8 @@ import {
   changeWeapon,
   drawActor,
   drawGround,
+  drawHud,
+  makeAnnounce,
   makeFloater,
   makeProjectile,
   makeRing,
@@ -135,6 +137,23 @@ function addMove(
   at: number,
   duration: number,
 ): void {
+  // El cartel no es de nadie: se pinta en medio de la pantalla.
+  if (move.kind === 'announce') {
+    const label = makeAnnounce(move.text, move.grande);
+    label.alpha = 0;
+    stage.addChild(label);
+    fromTo(
+      tl,
+      label.scale,
+      { x: 0.6, y: 0.6 },
+      { x: 1, y: 1, duration: duration * 0.45, ease: 'back.out(2)' },
+      at,
+    );
+    fromTo(tl, label, { alpha: 0 }, { alpha: 1, duration: duration * 0.25 }, at);
+    tl.to(label, { alpha: 0, duration: duration * 0.3 }, at + duration * 0.7);
+    return;
+  }
+
   const view = views.get(move.kind === 'projectile' ? move.from : move.id);
   if (view === undefined) return;
   const { root, body } = view;
@@ -273,13 +292,20 @@ export function buildTimeline(
 ): gsap.core.Timeline {
   stage.addChild(drawGround());
 
+  const brutoA = scene.actors.find((a) => a.id === 'A');
+  const brutoB = scene.actors.find((a) => a.id === 'B');
+  const hud = drawHud(brutoA?.name ?? 'A', brutoB?.name ?? 'B');
+
   const views = new Map<string, ActorView>();
   for (const actor of scene.actors) {
-    const view = drawActor(actor);
+    const barra = actor.id === 'A' ? hud.fillA : actor.id === 'B' ? hud.fillB : undefined;
+    const view = drawActor(actor, barra);
     view.root.alpha = 0;
     stage.addChild(view.root);
     views.set(actor.id, view);
   }
+  // El marcador, por encima de todo lo demas.
+  stage.addChild(hud.root);
 
   const timeline = gsap.timeline();
   for (const beat of scene.beats) {

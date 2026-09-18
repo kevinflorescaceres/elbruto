@@ -17,6 +17,71 @@ export function weaponOf(id: string): { category: WeaponCategory; reach: number 
   return { category: weapon.category, reach: weapon.reach };
 }
 
+/** Marcador superior: dos barras enfrentadas, al estilo de los juegos de pelea. */
+export interface Hud {
+  root: Container;
+  fillA: Graphics;
+  fillB: Graphics;
+}
+
+const HUD = { margen: 24, ancho: 330, alto: 18, arriba: 22 } as const;
+
+export function drawHud(nombreA: string, nombreB: string): Hud {
+  const root = new Container();
+
+  const lado = (izquierda: boolean, nombre: string): Graphics => {
+    const x = izquierda ? HUD.margen : SIZE.width - HUD.margen;
+    const signo = izquierda ? 1 : -1;
+
+    const marco = new Graphics()
+      .roundRect(Math.min(x, x + signo * HUD.ancho), HUD.arriba, HUD.ancho, HUD.alto, 4)
+      .fill({ color: 0x000000, alpha: 0.28 })
+      .stroke({ width: 2, color: TRAZO });
+    root.addChild(marco);
+
+    // La barra se vacia hacia AFUERA: el borde interior es el que retrocede.
+    const fill = new Graphics().roundRect(0, 0, HUD.ancho, HUD.alto, 4).fill(0x8fbf5a);
+    fill.x = izquierda ? x : x - HUD.ancho;
+    fill.y = HUD.arriba;
+    fill.pivot.x = izquierda ? 0 : HUD.ancho;
+    if (!izquierda) fill.x = x;
+    root.addChild(fill);
+
+    const texto = new Text({
+      text: nombre,
+      style: { fontFamily: 'system-ui', fontSize: 15, fontWeight: 'bold', fill: 0x2a2a2a },
+    });
+    texto.anchor.set(izquierda ? 0 : 1, 0);
+    texto.x = x;
+    texto.y = HUD.arriba + HUD.alto + 5;
+    root.addChild(texto);
+
+    return fill;
+  };
+
+  const fillA = lado(true, nombreA);
+  const fillB = lado(false, nombreB);
+  return { root, fillA, fillB };
+}
+
+/** Cartel grande de apertura y de cierre. */
+export function makeAnnounce(text: string, grande: boolean): Text {
+  const label = new Text({
+    text,
+    style: {
+      fontFamily: 'Georgia, serif',
+      fontSize: grande ? 54 : 40,
+      fontWeight: 'bold',
+      fill: 0x2a2a2a,
+      align: 'center',
+    },
+  });
+  label.anchor.set(0.5);
+  label.x = SIZE.width / 2;
+  label.y = SIZE.height * 0.42;
+  return label;
+}
+
 export interface ActorView {
   root: Container;
   /** Lo que se voltea, se tine y se apaga. */
@@ -49,7 +114,7 @@ function drawPet(petId: string): Container {
   return container;
 }
 
-export function drawActor(actor: Actor): ActorView {
+export function drawActor(actor: Actor, hudFill?: Graphics): ActorView {
   const root = new Container();
   root.x = actor.home.x * SIZE.width;
   root.y = actor.home.y * SIZE.height;
@@ -65,27 +130,32 @@ export function drawActor(actor: Actor): ActorView {
     body.addChild(drawPet(actor.petId ?? 'chucho'));
   }
 
-  const alto = actor.isPet ? 34 : 118;
-  const hpWidth = actor.isPet ? 34 : 60;
+  root.addChild(body);
 
+  // El luchador usa la barra del marcador. La mascota lleva la suya encima,
+  // que es secundaria y conviene verla junto al bicho.
+  if (hudFill !== undefined) return { root, body, rig, hpFill: hudFill, actor };
+
+  const alto = 34;
+  const hpWidth = 34;
   const hpFondo = new Graphics()
-    .roundRect(0, 0, hpWidth, 6, 3)
+    .roundRect(0, 0, hpWidth, 5, 3)
     .fill({ color: 0x000000, alpha: 0.22 });
   hpFondo.x = -hpWidth / 2;
-  hpFondo.y = -alto - 16;
+  hpFondo.y = -alto - 14;
 
-  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 6, 3).fill(0x44aa77);
+  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 5, 3).fill(0x8fbf5a);
   hpFill.x = -hpWidth / 2;
-  hpFill.y = -alto - 16;
+  hpFill.y = -alto - 14;
 
   const nombre = new Text({
     text: actor.name,
-    style: { fontFamily: 'system-ui', fontSize: actor.isPet ? 11 : 14, fill: 0x333333 },
+    style: { fontFamily: 'system-ui', fontSize: 11, fill: 0x555555 },
   });
   nombre.anchor.set(0.5);
-  nombre.y = -alto - 30;
+  nombre.y = -alto - 28;
 
-  root.addChild(body, hpFondo, hpFill, nombre);
+  root.addChild(hpFondo, hpFill, nombre);
   return { root, body, rig, hpFill, actor };
 }
 

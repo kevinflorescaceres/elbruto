@@ -56,7 +56,9 @@ export type Move =
   /** Latido breve: marca de quien tiene el turno. */
   | { kind: 'pulse'; id: string }
   /** Se apaga al morir. */
-  | { kind: 'fall'; id: string };
+  | { kind: 'fall'; id: string }
+  /** Cartel grande de apertura o de cierre. */
+  | { kind: 'announce'; text: string; grande: boolean };
 
 export interface Beat {
   /** Segundos desde el principio. */
@@ -95,8 +97,8 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
   };
 
   for (const crudo of crudos) {
-    // `turn` y `end` abren grupo: son las fronteras naturales del combate.
-    if (crudo.type === 'turn' || crudo.type === 'end') cerrar();
+    // `start`, `turn` y `end` abren grupo: son las fronteras del combate.
+    if (crudo.type === 'turn' || crudo.type === 'end' || crudo.type === 'start') cerrar();
     actual.push(crudo);
     if (crudo.type === 'end') cerrar();
   }
@@ -108,13 +110,16 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
   for (const grupo of grupos) {
     const esTurno = grupo.some((c) => c.type === 'turn');
     const esCierre = grupo.some((c) => c.type === 'end');
+    const esApertura = grupo.some((c) => c.type === 'start');
     const contras = grupo.filter((c) => c.type === 'counter').length;
 
     const total = esCierre
       ? SEGUNDOS_DE_CIERRE
-      : esTurno
-        ? SEGUNDOS_POR_ACCION * (1 + contras)
-        : SEGUNDOS_DE_ENTRADA;
+      : esApertura
+        ? SEGUNDOS_DE_APERTURA
+        : esTurno
+          ? SEGUNDOS_POR_ACCION * (1 + contras)
+          : SEGUNDOS_DE_ENTRADA;
 
     const peso = grupo.reduce((suma, c) => suma + c.weight, 0);
     for (const crudo of grupo) {
@@ -153,6 +158,8 @@ export const SEGUNDOS_POR_ACCION = 1 * TIME_SCALE;
 const SEGUNDOS_DE_ENTRADA = 0.8 * TIME_SCALE;
 /** El remate final: merece respirar. */
 const SEGUNDOS_DE_CIERRE = 1.4 * TIME_SCALE;
+/** El cartel de apertura, despues de que entren los dos. */
+const SEGUNDOS_DE_APERTURA = 1.2 * TIME_SCALE;
 
 /**
  * Peso de cada evento DENTRO de su turno. Ya no son segundos: son la parte del
@@ -352,10 +359,27 @@ export function planFight(replay: Replayable): Scene {
         ]);
         break;
 
-      case 'end':
-        push(event, [{ kind: 'pose', id: event.winner, anim: 'victory' }]);
+      case 'end': {
+        const ganador = byId.get(event.winner)?.name ?? event.winner;
+        push(event, [
+          { kind: 'pose', id: event.winner, anim: 'victory' },
+          { kind: 'announce', text: `Gana ${ganador}`, grande: false },
+        ]);
         break;
+      }
     }
+  }
+
+  // El cartel de apertura va DESPUES de que entren los dos, no antes: si no,
+  // saluda a un escenario vacio.
+  const ultimoSpawn = crudos.map((c) => c.type).lastIndexOf('spawn');
+  if (ultimoSpawn >= 0) {
+    crudos.splice(ultimoSpawn + 1, 0, {
+      type: 'start',
+      weight: 1,
+      caption: null,
+      moves: [{ kind: 'announce', text: '¡Camorra!', grande: true }],
+    });
   }
 
   const { beats, duration } = repartirTiempo(crudos);

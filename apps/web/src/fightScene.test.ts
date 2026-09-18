@@ -18,6 +18,7 @@ function fight(seed: number) {
 
 /** Todo id de combatiente al que apunta un movimiento. */
 function referenced(move: Move): string[] {
+  if (move.kind === 'announce') return [];
   if (move.kind === 'projectile') return [move.from, move.to];
   if (move.kind === 'approach' || move.kind === 'lunge') return [move.id, move.toward];
   return [move.id];
