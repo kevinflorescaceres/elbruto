@@ -124,49 +124,60 @@ Fight
 
 - La semilla del luchador es un hash del slug.
 - Estadísticas iniciales: `endurance`, `strength`, `agility` y `speed` repartiendo 12 puntos, con mínimo 2 en cada una, usando el PRNG.
-- Vida máxima: `50 + endurance * 10`. _(Ajustado en Fase 1: con `* 6` los combates duraban ~27 turnos, demasiado poco para animarlos.)_
-- Empieza con 1 mejora aleatoria: arma o habilidad. _(Ajustado en Fase 1: una mascota a nivel 1 desequilibra el combate.)_
+- Vida máxima: `floor(50 + endurance * 6 + level * 1.5)`. El término por nivel sube la vida en paralelo al daño, para que el combate no se acorte al subir de nivel.
+- Empieza con 1 mejora aleatoria: arma o habilidad. Nunca mascota: a nivel 1 desequilibra.
 
 ### Progresión
 
-- Victoria: +2 XP. Derrota: +1 XP.
+- Victoria: +2 XP. Derrota: +1 XP. Solo gana XP quien ataca; el récord se apunta a los dos.
 - XP para subir: `level * 5`.
-- Al subir de nivel se generan 2 opciones distintas con el PRNG, ponderadas: arma 35%, habilidad 35%, mascota 10%, estadística 20% (+2 a una o +1 a dos).
-- A partir de la cuarta arma el peso de "arma" baja de 35% a 10%. _(Ajustado en Fase 1: solo se empuña un arma a la vez, así que la quinta no aportaba nada y la elección era un trámite.)_
-- No se ofrece nada que el luchador ya tenga.
-- Con una elección pendiente no se puede pelear.
-- Peleas diarias: 6. El reinicio ocurre a medianoche según `GAME_TIMEZONE` (variable de entorno).
+- Al subir de nivel se ofrecen 2 opciones distintas. **La primera es siempre de estadística**, para no obligar a llevarse un arma o un bicho que no se quiere.
+- Opción de estadística: **+3 a una**, o **+2 y +1** repartidos entre dos.
+- La segunda opción se sortea ponderada: arma 35%, habilidad 35%, mascota 10%, estadística 20%. A partir de la cuarta arma, el peso de "arma" baja a 10%: solo se empuña una, así que la quinta no aporta.
+- No se ofrece nada que el luchador ya tenga. Con una elección pendiente no se puede pelear.
+- Peleas diarias: 6. El reinicio ocurre a medianoche según `GAME_TIMEZONE`.
 
 ### Oponentes
 
 - Mostrar 6 luchadores de nivel `level ± 1`, al azar, excluyendo los propios.
-- Si no hay suficientes, completar con bots (`isBot = true`) creados por el script de seed para los niveles 1 a 30.
+- Si no hay suficientes, completar con bots (`isBot = true`) del script de seed, niveles 1 a 30.
+- **El seed es correctivo, no solo idempotente:** al cambiar las reglas del motor hay que volver a correrlo, o los bots se quedan congelados en las reglas del día que se sembraron y el juego se descalibra sin que se note.
 
 ### Combate
 
-- Participantes: los dos luchadores y sus mascotas. Las mascotas son combatientes con sus propias stats, pero el combate termina solo cuando un luchador llega a 0 de vida.
-- **Iniciativa:** cada combatiente tiene un tiempo de próxima acción. Actúa el menor. Tras actuar suma `delay = weapon.baseDelay * 10 / (10 + speed)` (redondeado).
-- Cada luchador **entra al combate empuñando su mejor arma contra ese rival** (mayor daño esperado por unidad de tiempo), no una al azar. _(Ajustado tras la Fase 6: con un arma al azar, conseguir un arma mejor no te mejoraba, solo añadía un boleto más al sorteo, y las armas eran la peor categoría del catálogo.)_ _(Ajustado en Fase 1: empezar desarmado gastaba turnos y hundía a todas las armas por debajo del 40% de victorias.)_
-- **Acción del luchador** en su turno, elegida con el PRNG según pesos: atacar 60, sacar un arma nueva 12, lanzar el arma 5, activar una habilidad activa 18. Los pesos de las acciones imposibles pasan a 0.
+Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya conflicto. Resumen de lo implementado:
+
+- Participantes: los dos luchadores y sus mascotas. El combate termina solo cuando un **luchador** llega a 0.
+- **Iniciativa:** actúa quien tenga menor tiempo de próxima acción. Tras actuar suma `round(weapon.interval * 100 / (10 + speed))`, con un **±18% de azar**. Sin ese azar, dos luchadores iguales alternan en lockstep y nunca encadenan dos acciones seguidas.
+- Cada luchador entra empuñando **su mejor arma contra ese rival** (mayor daño esperado por unidad de tiempo), no una al azar.
+- **Acción**, por pesos: atacar 60, sacar otra arma 12, lanzar 12, habilidad activa 18. Lo imposible pasa a 0.
 - **Objetivo:** el luchador rival (peso 5) o una de sus mascotas vivas (peso 1 cada una).
-- **Resolución:**
-  - Probabilidad de impacto: `clamp(weapon.accuracy - defender.agility * 2, 10, 95)` (en porcentaje).
-  - Si falla, el log registra `evade`. Si el defensor tiene una habilidad de bloqueo, puede registrar `block`.
-  - Daño: `weapon.damage + floor(strength * weapon.strengthScale / 100)`, con variación de ±20% vía PRNG.
-  - `counter`: el defensor contraataca una vez si tiene la habilidad. No encadena.
-  - **Cada categoría de arma tiene un efecto propio**, y cada uno contrarresta una habilidad concreta _(añadido tras la Fase 6, para que elegir arma compita con elegir habilidad o mascota)_:
-    - **pesada** ignora la armadura del defensor (contra _Callo Viejo_).
-    - **larga** reduce a la mitad su probabilidad de bloqueo (contra _Mano Zurda_).
-    - **rápida** no admite contraataque (contra _Revire_).
-    - Lanzar un arma hace **el doble de daño**: se pierde, así que si no doliera nunca compensaría.
-  - `disarm`: solo mediante la habilidad activa correspondiente. _(Simplificación de Fase 1: ningún arma desarma por sí sola.)_
-- **Tope de turnos:** 500. Si se alcanza, gana quien tenga mayor porcentaje de vida restante.
+
+**Resolución, en este orden:**
+
+1. **Esquiva:** `clamp(22 + defender.agility * 2 - weapon.accuracyBonus, 5, 36)` por ciento. Si esquiva, el defensor puede **contraatacar**: su probabilidad de contra, más 25 si empuña un arma larga. El contraataque no encadena.
+2. **Bloqueo:** solo si el defensor tiene habilidad de bloqueo.
+3. **Daño:** `weapon.damage + floor(aporte * strengthScale / 100)`, con variación ±20%. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor, salvo con arma **pesada**, que la ignora. Mínimo 1.
+4. **Combos:** tras un impacto, se tira `clamp(weapon.comboRate + agility * 2, 0, 45)`. Hasta **3 impactos** por acción, y cada uno hace el **70% del anterior** (del impacto previo, no de la base). Cada impacto emite su propio `hit` y `damage`.
+
+**Gestión de armas:**
+
+- Cambiar de arma **descarta** la que se llevaba: por eso el arsenal se agota dentro del combate.
+- Las **arrojadizas solo se lanzan**, nunca se usan de cerca, y **no se agotan**. Cualquier otra arma lanzada queda inutilizable.
+- Ser desarmado deja el arma inservible. Sin arma se pelea a puños, siempre disponibles.
+- `disarm` solo mediante la habilidad activa correspondiente.
+
+**Mascotas:** cuestan resistencia al dueño (chucho 2, mastín 4, jabalí 8, con suelo en 0). Pelean por ti, pero te hacen más frágil.
+
+**Tope de turnos:** 500. Si se alcanza, gana quien tenga mayor porcentaje de vida restante.
+
+**Cómo se mide el equilibrio:** `pnpm balance` comprueba los objetivos de sensación de `COMBATE.md` §3 y las victorias por categoría de arma **cara a cara, con ambos armados**. Medir "tener arma contra no tenerla" da 86% para cualquier categoría: eso mide que un arma vale más que una habilidad, no que una categoría domine a otra.
 
 ### Catálogo inicial (nombres y efectos originales)
 
-- **10 armas** en categorías: rápida, pesada, larga, arrojadiza. Campos: `id, name, category, damage, accuracy, baseDelay, strengthScale, reach, throwable`.
+- **10 armas**, dos por cada una de las 5 categorías: rápida, media, larga, pesada, arrojadiza. Campos: `id, name, category, damage, accuracyBonus, interval, comboRate, strengthScale, reach, throwable`.
 - **10 habilidades**, mezcla de pasivas (más vida, más agilidad, bloqueo, contraataque) y activas (curación única, golpe fuerte, desarmar). Campos: `id, name, type, effect`. _(Ajustado en Fase 1: `trigger` era redundante, `type` + `effect` ya determinan cuándo se aplica.)_
-- **3 mascotas** (p. ej. perro, lobo, oso) con stats propias.
+- **3 mascotas** con stats propias y un `enduranceCost` que paga el dueño.
 
 ## 7. Eventos del combate
 
