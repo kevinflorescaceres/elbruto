@@ -139,7 +139,11 @@ export function BrutePage() {
 
       {mine && (
         <div className="tarjeta">
-          {b.pendingLevelUp ? (
+          {/* Mientras se refresca, lo cacheado puede estar viejo: ensenar el boton
+              de pelear cuando ya hay mejora pendiente lleva a un 409 sin sentido. */}
+          {brute.isFetching ? (
+            <p className="apagado">Comprobando...</p>
+          ) : b.pendingLevelUp ? (
             <>
               <p>Tienes una mejora sin elegir. Hasta que la elijas no puedes pelear.</p>
               <Link to={`/b/${slug}/level-up`}>

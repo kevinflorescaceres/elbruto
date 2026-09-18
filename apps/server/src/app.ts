@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerRoutes } from './routes.js';
+import { registerWeb } from './web.js';
 
 export interface AppOptions {
   /** Peticiones por minuto y por IP. */
@@ -20,5 +21,7 @@ export async function buildApp({
   await app.register(rateLimit, { max: globalLimit, timeWindow: '1 minute' });
 
   registerRoutes(app, { createLimit });
+  // En produccion el mismo servidor sirve el frontend; en desarrollo lo hace Vite.
+  await registerWeb(app);
   return app;
 }

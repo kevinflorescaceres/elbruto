@@ -20,10 +20,12 @@
     "db:deploy": "pnpm --filter @rufianes/server exec prisma migrate deploy",
     "db:test:prepare": "DATABASE_URL=\"${TEST_DATABASE_URL:-postgresql://rufianes:rufianes@localhost:5432/rufianes_test}\" pnpm --filter @rufianes/server exec prisma migrate deploy",
     "seed": "pnpm --filter @rufianes/server seed",
-    "admin": "pnpm --filter @rufianes/server admin"
+    "admin": "pnpm --filter @rufianes/server admin",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
+    "@playwright/test": "^1.63.0",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.3.0",

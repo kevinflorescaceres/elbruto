@@ -82,6 +82,25 @@ tests, asi que nunca pisan la base de desarrollo.
 al medir el balance. Si vuelves a tocar los números del catálogo, corre `pnpm balance`:
 es la única forma de saber si un cambio rompe algo.
 
+## Despliegue
+
+- `Dockerfile` generico: una sola imagen con la API y el frontend construido. Vale para
+  Fly.io, Railway o Render sin cambios. Las migraciones corren al arrancar.
+- **`PUBLIC_URL`** debe apuntar al dominio real: se usa en `og:url`. Sin ella, los enlaces
+  compartidos llevan `localhost`.
+- El servidor sirve el frontend solo si existe `apps/web/dist`. En desarrollo no existe y
+  de eso se encarga Vite con su proxy, asi que `pnpm dev` no cambia.
+- **Pendiente antes de publicar** (plan.md §11): nombre y dominio propios verificados
+  contra el registro de marcas, y la direccion real en `CORREO_DE_CONTACTO_PENDIENTE`
+  dentro de `apps/web/src/pages/Legal.tsx`.
+
+## Pruebas end-to-end
+
+`pnpm e2e` levanta el servidor de produccion contra `rufianes_test`, limpia la base y
+juega el ciclo completo en Chromium. Es lo mismo que se despliega, no una version de
+mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
+
 ## Estado
 
-Fases 0 a 5 completas. Siguiente: Fase 6 (pulido y despliegue).
+Fases 0 a 6 completas, salvo el despliegue en si, que necesita cuenta y dominio.
+Fases futuras del plan: pupilos, torneos, ranking y sonido.

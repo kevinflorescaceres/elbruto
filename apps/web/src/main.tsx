@@ -8,6 +8,7 @@ import { ArenaPage } from './pages/Arena.js';
 import { LevelUpPage } from './pages/LevelUp.js';
 import { FightPage } from './pages/Fight.js';
 import { ClaimPage } from './pages/Claim.js';
+import { LegalPage } from './pages/Legal.js';
 import './styles.css';
 
 // Un 403 o un 404 no se arreglan repitiendo la peticion.
@@ -35,6 +36,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/b/:slug/level-up" element={<LevelUpPage />} />
           <Route path="/fight/:id" element={<FightPage />} />
           <Route path="/claim/:token" element={<ClaimPage />} />
+          <Route path="/legal" element={<LegalPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -35,3 +35,5 @@ jobs:
       - run: pnpm test
       # El criterio de balance de la fase 1: nada puede pasar del 60% de victorias.
       - run: pnpm balance
+      - run: pnpm exec playwright install chromium
+      - run: pnpm e2e

@@ -2,9 +2,11 @@
  * Criterio de "listo" de la Fase 2: crear un luchador, pelear, subir de nivel y
  * ver el combate, solo con llamadas HTTP.
  */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { NAME_MAX, NAME_MIN } from '@rufianes/shared';
+import { NAME_MAX, NAME_MIN, NAME_PATTERN } from '@rufianes/shared';
 import { buildApp } from './app.js';
 import { prisma } from './db.js';
 
@@ -245,6 +247,44 @@ describe('anti-abuso', () => {
     expect((await post(unique('cupo'))).statusCode).toBe(429);
 
     await limited.close();
+  });
+});
+
+describe('metadatos para compartir', () => {
+  // Solo aplica con el frontend construido; en desarrollo la web la sirve Vite.
+  const construido = existsSync(resolve(import.meta.dirname, '../../web/dist/index.html'));
+
+  it.runIf(construido)('el combate lleva titulo y descripcion propios', async () => {
+    const mine = await newFighter('comparte');
+    const theirs = await newFighter('rivalote');
+    const res = await mine.browser.call('POST', `/api/brutes/${mine.slug}/fights`, {
+      opponentSlug: theirs.slug,
+    });
+
+    const page = await app.inject({ method: 'GET', url: `/fight/${res.body.fightId}` });
+    expect(page.statusCode).toBe(200);
+    expect(page.headers['content-type']).toContain('text/html');
+    expect(page.body).toContain('og:title');
+    expect(page.body).toContain('le gano a');
+  });
+
+  it('ningun nombre aceptado puede llevar HTML', async () => {
+    // El nombre acaba dentro de content="..." en la cabecera. La primera defensa
+    // es el patron: si algun dia se amplia, este test cae y avisa.
+    const browser = new Browser();
+    for (const peligroso of ['ma"><script x', 'uno<b>dos', 'tres & cuatro', "cinco'seis"]) {
+      const res = await browser.call('POST', '/api/brutes', { name: peligroso });
+      expect(res.status).toBe(400);
+    }
+    for (const caracter of ['<', '>', '"', '&', "'", '/']) {
+      expect(NAME_PATTERN.test(`nombre${caracter}malo`)).toBe(false);
+    }
+  });
+
+  it.runIf(construido)('una ruta de api inexistente sigue devolviendo JSON', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/no-existe' });
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toHaveProperty('error');
   });
 });
 
