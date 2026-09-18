@@ -30,6 +30,16 @@ Hay dos caminos y ambos valen:
 Los tests de integracion corren contra `rufianes_test` y truncan las tablas entre
 tests, asi que nunca pisan la base de desarrollo.
 
+## Frontend
+
+- `src/api.ts` es el unico sitio que habla con el servidor, y **valida cada respuesta**
+  con los esquemas de `shared`. No hacer `fetch` suelto desde un componente.
+- Los nombres de armas, mañas y bichos salen de `@rufianes/engine` (`getWeapon`,
+  `getSkill`, `getPet`). No duplicar tablas de nombres en la web.
+- `src/fightLines.ts` es puro y no depende de React: convierte el log en lineas de
+  texto. La Fase 4 reutiliza ese mismo recorrido para la linea de tiempo de PixiJS.
+- Estilos: un `styles.css` y ya. Sin framework de CSS. El aspecto de verdad es Fase 5.
+
 ## Convenciones
 
 - Paquetes del workspace: `@rufianes/engine`, `@rufianes/shared`, `@rufianes/server`,
@@ -60,4 +70,4 @@ es la única forma de saber si un cambio rompe algo.
 
 ## Estado
 
-Fases 0, 1 y 2 completas. Siguiente: Fase 3 (frontend funcional).
+Fases 0, 1, 2 y 3 completas. Siguiente: Fase 4 (render del combate con PixiJS).
