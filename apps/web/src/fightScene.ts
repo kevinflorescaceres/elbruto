@@ -33,10 +33,10 @@ export interface Actor {
 export type Move =
   /** Entra en escena. */
   | { kind: 'appear'; id: string }
-  /** Se acerca al objetivo y vuelve. */
-  | { kind: 'approach'; id: string; toward: string }
-  /** Embiste: golpe seco hacia el objetivo. */
-  | { kind: 'lunge'; id: string; toward: string }
+  /** Se planta a distancia de golpe y se queda ahi. */
+  | { kind: 'approach'; id: string; toward: string; weapon: string }
+  /** Embiste desde esa distancia y vuelve a su sitio. */
+  | { kind: 'lunge'; id: string; toward: string; weapon: string }
   /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
   | { kind: 'pose'; id: string; anim: AnimName }
   /** Destello de color (parada, maña, curacion). */
@@ -141,7 +141,7 @@ const COLOR = {
  * los gestos dentro de una accion y la espera entre la accion de uno y la del
  * otro, porque ambos salen del mismo reparto.
  */
-export const TIME_SCALE = 2;
+export const TIME_SCALE = 1.5;
 
 /**
  * Un turno es una accion de un peleon, y dura lo mismo siempre: el combate se
@@ -182,9 +182,10 @@ const WEIGHT: Record<FightEvent['type'], number> = {
 function placeActor(side: 'A' | 'B', isPet: boolean, petIndex: number): Actor['home'] {
   const facing = side === 'A' ? 1 : -1;
   const bruteX = side === 'A' ? 0.28 : 0.72;
-  if (!isPet) return { x: bruteX, y: 0.62 };
-  // Las mascotas quedan detras del suyo y algo mas abajo, sin salirse del lienzo.
-  return { x: bruteX - facing * (0.11 + petIndex * 0.06), y: 0.78 };
+  // La y es la del SUELO: el rig cuelga hacia arriba desde los pies.
+  if (!isPet) return { x: bruteX, y: 0.85 };
+  // Las mascotas, detras del suyo y un pelin por delante en profundidad.
+  return { x: bruteX - facing * (0.11 + petIndex * 0.06), y: 0.88 };
 }
 
 /** La categoria del arma decide el gesto. Las mascotas muerden: gesto rapido. */
@@ -254,14 +255,19 @@ export function planFight(replay: Replayable): Scene {
 
       case 'move':
         push(event, [
-          { kind: 'approach', id: event.id, toward: event.target },
+          {
+            kind: 'approach',
+            id: event.id,
+            toward: event.target,
+            weapon: byId.get(event.id)?.weapon ?? 'punos',
+          },
           { kind: 'pose', id: event.id, anim: 'walk' },
         ]);
         break;
 
       case 'attack':
         push(event, [
-          { kind: 'lunge', id: event.id, toward: event.target },
+          { kind: 'lunge', id: event.id, toward: event.target, weapon: event.weapon },
           { kind: 'pose', id: event.id, anim: attackAnim(event.weapon) },
         ]);
         break;
@@ -269,7 +275,12 @@ export function planFight(replay: Replayable): Scene {
       // El contraataque no dice con que: es con lo que se tenga en la mano.
       case 'counter':
         push(event, [
-          { kind: 'lunge', id: event.id, toward: event.target },
+          {
+            kind: 'lunge',
+            id: event.id,
+            toward: event.target,
+            weapon: byId.get(event.id)?.weapon ?? 'punos',
+          },
           { kind: 'pose', id: event.id, anim: attackAnim(byId.get(event.id)?.weapon ?? 'punos') },
         ]);
         break;

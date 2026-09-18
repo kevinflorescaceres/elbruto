@@ -17,10 +17,43 @@ import {
   makeProjectile,
   makeRing,
   SIZE,
+  weaponOf,
   type ActorView,
 } from './pixiScene.js';
 
 const BLANCO = 0xffffff;
+
+/** Medio cuerpo de cada uno. El rig mide unos 50 px de ancho. */
+const MEDIO_CUERPO = 26;
+
+/**
+ * A que distancia del rival se planta quien ataca. Con punos se acercan hasta
+ * casi tocarse; con un chuzo se quedan a un par de cuerpos, que para eso tiene
+ * alcance (COMBATE.md §1.5).
+ */
+function hueco(weaponId: string): number {
+  const alcance = weaponOf(weaponId)?.reach ?? 1;
+  return MEDIO_CUERPO * 2 + alcance * 12;
+}
+
+/**
+ * Envoltorio de `fromTo` que fuerza `immediateRender: false`. NO usar
+ * `timeline.fromTo` directamente.
+ *
+ * Por defecto GSAP aplica los valores de inicio al CREAR el tween, no cuando le
+ * toca sonar. Como la linea de tiempo se construye entera de golpe, sin esto los
+ * numeros de dano, los anillos y los proyectiles aparecen visibles desde el
+ * primer fotograma y se quedan ahi quietos hasta su turno.
+ */
+function fromTo(
+  linea: gsap.core.Timeline,
+  objetivo: object,
+  desde: gsap.TweenVars,
+  hasta: gsap.TweenVars,
+  at: number,
+): void {
+  linea.fromTo(objetivo, desde, { ...hasta, immediateRender: false }, at);
+}
 
 /** Posicion de reposo de cada articulacion, para sumarle los desplazamientos. */
 const BASE = new Map<PartName, { x: number; y: number }>(
@@ -111,7 +144,7 @@ function addMove(
 
   switch (move.kind) {
     case 'appear':
-      tl.fromTo(root, { alpha: 0, y: homeY - 40 }, { alpha: 1, y: homeY, duration }, at);
+      fromTo(tl, root, { alpha: 0, y: homeY - 40 }, { alpha: 1, y: homeY, duration }, at);
       break;
 
     case 'approach':
@@ -119,9 +152,17 @@ function addMove(
       const target = views.get(move.toward);
       if (target === undefined) return;
       const targetX = target.actor.home.x * SIZE.width;
-      const cerca = move.kind === 'lunge' ? 0.3 : 0.2;
-      tl.to(root, { x: homeX + (targetX - homeX) * cerca, duration: mitad, ease: 'power2.in' }, at);
-      tl.to(root, { x: homeX, duration: mitad, ease: 'power1.out' }, at + mitad);
+      const hacia = targetX > homeX ? 1 : -1;
+      const contacto = targetX - hacia * hueco(move.weapon);
+
+      if (move.kind === 'approach') {
+        // Se acerca y SE QUEDA: el golpe sale de ahi, no de su sitio de espera.
+        tl.to(root, { x: contacto, duration, ease: 'power2.out' }, at);
+      } else {
+        // Con arma larga no hubo acercamiento previo, asi que este tramo lo cubre.
+        tl.to(root, { x: contacto, duration: mitad, ease: 'power2.in' }, at);
+        tl.to(root, { x: homeX, duration: mitad, ease: 'power1.out' }, at + mitad);
+      }
       break;
     }
 
@@ -154,14 +195,14 @@ function addMove(
       label.y = homeY - 130;
       label.alpha = 0;
       stage.addChild(label);
-      tl.fromTo(label, { alpha: 1, y: homeY - 130 }, { alpha: 0, y: homeY - 180, duration }, at);
+      fromTo(tl, label, { alpha: 1, y: homeY - 130 }, { alpha: 0, y: homeY - 180, duration }, at);
       break;
     }
 
     case 'weapon':
       // Cambiar la forma no se puede interpolar: se hace de golpe y se marca con un salto.
       tl.call(() => changeWeapon(view, move.weapon), undefined, at);
-      tl.fromTo(body.scale, { y: 0.94 }, { y: 1, duration, ease: 'back.out(2)' }, at);
+      fromTo(tl, body.scale, { y: 0.94 }, { y: 1, duration, ease: 'back.out(2)' }, at);
       break;
 
     case 'projectile': {
@@ -170,7 +211,8 @@ function addMove(
       const bala = makeProjectile();
       bala.alpha = 0;
       stage.addChild(bala);
-      tl.fromTo(
+      fromTo(
+        tl,
         bala,
         { alpha: 1, x: homeX, y: homeY - 70 },
         {
@@ -191,7 +233,8 @@ function addMove(
       perdida.alpha = 0;
       stage.addChild(perdida);
       tl.call(() => changeWeapon(view, 'punos'), undefined, at);
-      tl.fromTo(
+      fromTo(
+        tl,
         perdida,
         { alpha: 1, x: homeX, y: homeY - 70 },
         {
@@ -212,8 +255,8 @@ function addMove(
       anillo.y = homeY - 60;
       anillo.alpha = 0;
       stage.addChild(anillo);
-      tl.fromTo(anillo, { alpha: 0.9 }, { alpha: 0, duration, ease: 'power1.out' }, at);
-      tl.fromTo(anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.7, y: 1.7, duration }, at);
+      fromTo(tl, anillo, { alpha: 0.9 }, { alpha: 0, duration, ease: 'power1.out' }, at);
+      fromTo(tl, anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.7, y: 1.7, duration }, at);
       break;
     }
 
