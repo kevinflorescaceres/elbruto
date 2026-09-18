@@ -250,6 +250,24 @@ describe('anti-abuso', () => {
   });
 });
 
+describe('detras de un proxy', () => {
+  it('sin TRUST_PROXY no se hace caso a X-Forwarded-For', async () => {
+    // Si se creyera a ciegas, cualquiera se saltaria el limite cambiando la cabecera.
+    const suyo = await buildApp({ createLimit: 1 });
+    const crear = (ip: string) =>
+      suyo.inject({
+        method: 'POST',
+        url: '/api/brutes',
+        payload: { name: `proxy ${Math.random().toString(36).slice(2, 7)}` },
+        headers: { 'x-forwarded-for': ip },
+      });
+
+    expect((await crear('1.1.1.1')).statusCode).toBe(201);
+    expect((await crear('2.2.2.2')).statusCode).toBe(429);
+    await suyo.close();
+  });
+});
+
 describe('metadatos para compartir', () => {
   // Solo aplica con el frontend construido; en desarrollo la web la sirve Vite.
   const construido = existsSync(resolve(import.meta.dirname, '../../web/dist/index.html'));

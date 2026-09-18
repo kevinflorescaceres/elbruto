@@ -1,6 +1,14 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute } from '@rufianes/engine';
-import { lookFrom, RIG, weaponShapes, Z_ORDER, type PartName } from './parts.js';
+import {
+  lookFrom,
+  RIG,
+  scaleForTest,
+  weaponShapes,
+  Z_ORDER,
+  type PartName,
+  type Shape,
+} from './parts.js';
 import { ANIMATIONS, REST, type AnimName } from './poses.js';
 
 const PARTES = new Set<PartName>(RIG.map((p) => p.name));
@@ -133,5 +141,15 @@ group('armas', () => {
       expect(corta[0]?.d).not.toBe(larga[0]?.d);
       for (const shape of larga) expect(shape.d).not.toMatch(/NaN/);
     }
+  });
+});
+
+group('scalePath', () => {
+  it('revienta en vez de corromper si la ruta lleva un arco', () => {
+    // Los arcos tienen siete parametros y solo dos son un punto: escalarlos por
+    // pares deforma la figura sin avisar. Mejor fallar al escribir la pieza.
+    expect(() => weaponShapes('rapida', 3)).not.toThrow();
+    const conArco: Shape[] = [{ d: 'M 0 0 a 5 5 0 1 0 0.1 0 Z', fill: 'metal' }];
+    expect(() => scaleForTest(conArco[0]?.d ?? '')).toThrow(/arcos/);
   });
 });

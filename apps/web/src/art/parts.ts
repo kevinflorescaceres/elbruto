@@ -257,11 +257,19 @@ export function weaponShapes(category: WeaponCategory, reach: number): Shape[] {
 
 /**
  * Escala solo el eje x de una ruta: alarga el arma sin engordarla.
- * ponytail: da por hecho que los numeros van en pares x,y. Vale para M/L/Q/Z,
- * que es todo lo que usan las armas. Si alguna pieza lleva un arco (a), hay que
- * parsear la ruta de verdad.
+ *
+ * Da por hecho que los numeros van en pares x,y, que es cierto para M/L/Q/Z.
+ * En un arco (a/A) no lo es: siete parametros de los que solo dos son un punto.
+ * Antes eso corrompia la forma en silencio; ahora revienta al escribirla.
  */
+export function scaleForTest(d: string, factor = 2): string {
+  return scalePath(d, factor);
+}
+
 function scalePath(d: string, factor: number): string {
+  if (/[aA]/.test(d)) {
+    throw new Error(`scalePath no sabe escalar arcos, y esta ruta lleva uno: ${d}`);
+  }
   let index = 0;
   return d.replace(/-?\d+(\.\d+)?/g, (raw) => {
     const value = Number(raw);
