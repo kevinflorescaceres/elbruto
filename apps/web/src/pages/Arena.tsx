@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
+import { getWeapon } from '@rufianes/engine';
+import { Fighter } from '../art/Fighter.js';
 import { api, ApiError } from '../api.js';
+
+function armaVisible(ids: string[]) {
+  const arma = ids.map(getWeapon).sort((a, b) => b.reach - a.reach)[0];
+  return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
+}
 
 export function ArenaPage() {
   const { slug = '' } = useParams();
@@ -57,13 +64,22 @@ export function ArenaPage() {
             disabled={fight.isPending}
             onClick={() => fight.mutate(rival.slug)}
           >
-            <strong>{rival.name}</strong>
-            <div className="apagado">
-              Nivel {rival.level} · {rival.wins}V {rival.losses}D · {rival.maxHp} de vida
-            </div>
-            <div className="apagado">
-              {rival.weapons.length} armas · {rival.skills.length} mañas · {rival.pets.length}{' '}
-              bichos
+            <div className="fila" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+              <Fighter
+                appearance={rival.appearance}
+                weapon={armaVisible(rival.weapons)}
+                height={92}
+              />
+              <div>
+                <strong>{rival.name}</strong>
+                <div className="apagado">
+                  Nivel {rival.level} · {rival.wins}V {rival.losses}D · {rival.maxHp} de vida
+                </div>
+                <div className="apagado">
+                  {rival.weapons.length} armas · {rival.skills.length} mañas · {rival.pets.length}{' '}
+                  bichos
+                </div>
+              </div>
             </div>
           </button>
         ))}

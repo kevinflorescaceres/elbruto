@@ -1,14 +1,16 @@
 /**
- * Del guion (`fightScene.ts`) a una linea de tiempo de GSAP sobre objetos Pixi.
+ * Del guion (`fightScene.ts`) a una linea de tiempo de GSAP sobre el rig de Pixi.
  *
- * Todo lo que se anima se crea aqui, antes de reproducir: si se crearan objetos
- * sobre la marcha, saltar al final o repetir dejaria la escena a medias.
+ * Todo lo que se anima se crea antes de reproducir: si se crearan objetos sobre
+ * la marcha, saltar al final o repetir dejaria la escena a medias.
  */
 import { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { getWeapon } from '@rufianes/engine';
+import { RIG, type PartName } from './art/parts.js';
+import { ANIMATIONS, type AnimName } from './art/poses.js';
 import type { Move, Scene } from './fightScene.js';
 import {
+  changeWeapon,
   drawActor,
   drawGround,
   makeFloater,
@@ -20,10 +22,76 @@ import {
 
 const BLANCO = 0xffffff;
 
-/** Largo del arma segun su alcance. Las mascotas y los punos no pintan arma. */
-function weaponScale(id: string): number {
-  if (id === 'punos' || id.startsWith('pet:')) return 0;
-  return 0.6 + getWeapon(id).reach * 0.22;
+/** Posicion de reposo de cada articulacion, para sumarle los desplazamientos. */
+const BASE = new Map<PartName, { x: number; y: number }>(
+  RIG.map((part) => [part.name, { x: part.at[0], y: part.at[1] }]),
+);
+
+/**
+ * Toca una animacion del rig estirando sus keyframes a lo que dure el evento.
+ * Las mascotas no tienen rig: se les hace un gesto equivalente de una pieza.
+ */
+function playAnimation(
+  tl: gsap.core.Timeline,
+  view: ActorView,
+  anim: AnimName,
+  at: number,
+  duration: number,
+): void {
+  if (view.rig === null) return playFallback(tl, view, anim, at, duration);
+
+  const { frames } = ANIMATIONS[anim];
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i];
+    if (frame === undefined) continue;
+    const previo = i === 0 ? undefined : frames[i - 1];
+    const desde = at + (previo?.t ?? 0) * duration;
+    const tramo = i === 0 ? 0 : (frame.t - (previo?.t ?? 0)) * duration;
+
+    for (const [name, pose] of Object.entries(frame.parts)) {
+      const node = view.rig.parts.get(name as PartName);
+      const base = BASE.get(name as PartName);
+      if (node === undefined || base === undefined) continue;
+
+      const destino: Record<string, number> = {};
+      if (pose.rot !== undefined) destino['rotation'] = pose.rot;
+      if (pose.x !== undefined) destino['x'] = base.x + pose.x;
+      if (pose.y !== undefined) destino['y'] = base.y + pose.y;
+      if (Object.keys(destino).length === 0) continue;
+
+      // El primer frame se fija de golpe: es el punto de partida del gesto.
+      if (tramo === 0) tl.set(node, destino, desde);
+      else tl.to(node, { ...destino, duration: tramo, ease: 'power1.inOut' }, desde);
+    }
+  }
+}
+
+/** Gesto minimo para quien no tiene articulaciones. */
+function playFallback(
+  tl: gsap.core.Timeline,
+  view: ActorView,
+  anim: AnimName,
+  at: number,
+  duration: number,
+): void {
+  const { body, actor } = view;
+  const mitad = duration / 2;
+
+  if (anim === 'hit') {
+    tl.to(body, { x: actor.facing * -10, duration: mitad, ease: 'power3.out' }, at);
+    tl.to(body, { x: 0, duration: mitad, ease: 'elastic.out(1, 0.4)' }, at + mitad);
+  } else if (anim === 'evade') {
+    tl.to(body, { y: -16, duration: mitad, ease: 'power2.out' }, at);
+    tl.to(body, { y: 0, duration: mitad, ease: 'power2.in' }, at + mitad);
+  } else if (anim === 'death') {
+    tl.to(body, { rotation: actor.facing * 1.4, duration, ease: 'power2.in' }, at);
+  } else if (anim.startsWith('attack')) {
+    tl.to(body, { x: actor.facing * 12, duration: mitad, ease: 'power2.in' }, at);
+    tl.to(body, { x: 0, duration: mitad, ease: 'power1.out' }, at + mitad);
+  } else {
+    tl.to(body.scale, { y: 1.06, duration: mitad }, at);
+    tl.to(body.scale, { y: 1, duration: mitad }, at + mitad);
+  }
 }
 
 function addMove(
@@ -34,9 +102,9 @@ function addMove(
   at: number,
   duration: number,
 ): void {
-  const view = views.get('id' in move ? move.id : move.from);
+  const view = views.get(move.kind === 'projectile' ? move.from : move.id);
   if (view === undefined) return;
-  const { root, body, weapon } = view;
+  const { root, body } = view;
   const homeX = view.actor.home.x * SIZE.width;
   const homeY = view.actor.home.y * SIZE.height;
   const mitad = duration / 2;
@@ -51,34 +119,14 @@ function addMove(
       const target = views.get(move.toward);
       if (target === undefined) return;
       const targetX = target.actor.home.x * SIZE.width;
-      const cerca = move.kind === 'lunge' ? 0.34 : 0.22;
+      const cerca = move.kind === 'lunge' ? 0.3 : 0.2;
       tl.to(root, { x: homeX + (targetX - homeX) * cerca, duration: mitad, ease: 'power2.in' }, at);
       tl.to(root, { x: homeX, duration: mitad, ease: 'power1.out' }, at + mitad);
-      if (move.kind === 'lunge') {
-        tl.to(weapon, { rotation: -1.1, duration: mitad, ease: 'power2.in' }, at);
-        tl.to(weapon, { rotation: 0, duration: mitad, ease: 'power1.out' }, at + mitad);
-      }
       break;
     }
 
-    case 'shake': {
-      const empuje = view.actor.facing * -14;
-      tl.to(body, { x: empuje, duration: duration * 0.35, ease: 'power3.out' }, at);
-      tl.to(
-        body,
-        { x: 0, duration: duration * 0.65, ease: 'elastic.out(1, 0.4)' },
-        at + duration * 0.35,
-      );
-      break;
-    }
-
-    case 'hop':
-      tl.to(
-        root,
-        { y: homeY - 26, x: homeX - view.actor.facing * 18, duration: mitad, ease: 'power2.out' },
-        at,
-      );
-      tl.to(root, { y: homeY, x: homeX, duration: mitad, ease: 'power2.in' }, at + mitad);
+    case 'pose':
+      playAnimation(tl, view, move.anim, at, duration);
       break;
 
     case 'flash':
@@ -88,8 +136,8 @@ function addMove(
       break;
 
     case 'pulse':
-      tl.to(body.scale, { x: view.actor.facing * 1.06, y: 1.06, duration: mitad }, at);
-      tl.to(body.scale, { x: view.actor.facing, y: 1, duration: mitad }, at + mitad);
+      tl.to(body.scale, { y: 1.05, duration: mitad }, at);
+      tl.to(body.scale, { y: 1, duration: mitad }, at + mitad);
       break;
 
     case 'hp':
@@ -103,24 +151,18 @@ function addMove(
     case 'float': {
       const label = makeFloater(move.text, move.color);
       label.x = homeX;
-      label.y = homeY - 90;
+      label.y = homeY - 130;
       label.alpha = 0;
       stage.addChild(label);
-      tl.fromTo(label, { alpha: 1, y: homeY - 90 }, { alpha: 0, y: homeY - 140, duration }, at);
+      tl.fromTo(label, { alpha: 1, y: homeY - 130 }, { alpha: 0, y: homeY - 180, duration }, at);
       break;
     }
 
-    case 'weapon': {
-      const escala = weaponScale(move.weapon);
-      tl.set(weapon, { visible: escala > 0 }, at);
-      tl.fromTo(
-        weapon.scale,
-        { x: 0.2, y: 0.6 },
-        { x: escala, y: 1, duration, ease: 'back.out(2)' },
-        at,
-      );
+    case 'weapon':
+      // Cambiar la forma no se puede interpolar: se hace de golpe y se marca con un salto.
+      tl.call(() => changeWeapon(view, move.weapon), undefined, at);
+      tl.fromTo(body.scale, { y: 0.94 }, { y: 1, duration, ease: 'back.out(2)' }, at);
       break;
-    }
 
     case 'projectile': {
       const target = views.get(move.to);
@@ -130,10 +172,10 @@ function addMove(
       stage.addChild(bala);
       tl.fromTo(
         bala,
-        { alpha: 1, x: homeX, y: homeY - 40 },
+        { alpha: 1, x: homeX, y: homeY - 70 },
         {
           x: target.actor.home.x * SIZE.width,
-          y: target.actor.home.y * SIZE.height - 40,
+          y: target.actor.home.y * SIZE.height - 70,
           rotation: 8,
           duration,
           ease: 'none',
@@ -148,11 +190,12 @@ function addMove(
       const perdida = makeProjectile();
       perdida.alpha = 0;
       stage.addChild(perdida);
+      tl.call(() => changeWeapon(view, 'punos'), undefined, at);
       tl.fromTo(
         perdida,
-        { alpha: 1, x: homeX, y: homeY - 40 },
+        { alpha: 1, x: homeX, y: homeY - 70 },
         {
-          x: homeX + view.actor.facing * -70,
+          x: homeX - view.actor.facing * 80,
           y: homeY - 5,
           rotation: 12,
           duration,
@@ -166,50 +209,25 @@ function addMove(
     case 'ring': {
       const anillo = makeRing(move.color);
       anillo.x = homeX;
-      anillo.y = homeY - 35;
+      anillo.y = homeY - 60;
       anillo.alpha = 0;
       stage.addChild(anillo);
       tl.fromTo(anillo, { alpha: 0.9 }, { alpha: 0, duration, ease: 'power1.out' }, at);
-      tl.fromTo(anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.6, y: 1.6, duration }, at);
+      tl.fromTo(anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.7, y: 1.7, duration }, at);
       break;
     }
 
     case 'fall':
-      tl.to(body, { rotation: view.actor.facing * 1.4, duration, ease: 'power2.in' }, at);
-      tl.to(root, { alpha: 0.35, duration }, at);
-      break;
-
-    case 'cheer':
-      tl.to(root, { y: homeY - 30, duration: duration * 0.25, ease: 'power2.out' }, at);
-      tl.to(
-        root,
-        { y: homeY, duration: duration * 0.25, ease: 'bounce.out' },
-        at + duration * 0.25,
-      );
-      tl.to(
-        root,
-        { y: homeY - 20, duration: duration * 0.25, ease: 'power2.out' },
-        at + duration * 0.5,
-      );
-      tl.to(
-        root,
-        { y: homeY, duration: duration * 0.25, ease: 'bounce.out' },
-        at + duration * 0.75,
-      );
+      tl.to(root, { alpha: 0.4, duration }, at);
       break;
   }
-}
-
-export interface BuiltTimeline {
-  timeline: gsap.core.Timeline;
-  views: Map<string, ActorView>;
 }
 
 export function buildTimeline(
   stage: Container,
   scene: Scene,
   onCaption: (text: string | null) => void,
-): BuiltTimeline {
+): gsap.core.Timeline {
   stage.addChild(drawGround());
 
   const views = new Map<string, ActorView>();
@@ -228,5 +246,5 @@ export function buildTimeline(
     for (const move of beat.moves) addMove(timeline, views, stage, move, beat.at, beat.duration);
   }
 
-  return { timeline, views };
+  return timeline;
 }

@@ -6,10 +6,14 @@ import { planFight, type Move } from './fightScene.js';
 function fight(seed: number) {
   const rng = mulberry32(seed);
   const level = (seed % 30) + 1;
-  const a = growTo(createBrute(`escena-${seed}-a`), level, rng);
+  const base = growTo(createBrute(`escena-${seed}-a`), level, rng);
+  const a = seed % 3 === 0 ? { ...base, pets: ['chucho', 'mastin'] } : base;
   const b = growTo(createBrute(`escena-${seed}-b`), level, rng);
-  const conBichos = seed % 3 === 0;
-  return simulate(conBichos ? { ...a, pets: ['chucho', 'mastin'] } : a, b, seed * 17 + 3);
+  return {
+    ...simulate(a, b, seed * 17 + 3),
+    snapshotA: { appearance: a.appearance },
+    snapshotB: { appearance: b.appearance },
+  };
 }
 
 /** Todo id de combatiente al que apunta un movimiento. */
@@ -80,6 +84,8 @@ group('planFight', () => {
       if (type === 'start') continue;
       const scene = planFight({
         winner: 'A',
+        snapshotA: { appearance: createBrute('uno de prueba').appearance },
+        snapshotB: { appearance: createBrute('otro de prueba').appearance },
         log: [
           {
             type: 'spawn',

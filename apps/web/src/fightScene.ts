@@ -8,8 +8,9 @@
  * Las coordenadas van en 0..1 sobre el ancho y alto del lienzo: el renderer las
  * escala y el guion no sabe nada de pixeles.
  */
-import type { FightEvent } from '@rufianes/engine';
+import { getWeapon, type Appearance, type FightEvent } from '@rufianes/engine';
 import type { FightReplay } from '@rufianes/shared';
+import type { AnimName } from './art/poses.js';
 import { describe } from './fightLines.js';
 
 export interface Actor {
@@ -19,6 +20,10 @@ export interface Actor {
   isPet: boolean;
   maxHp: number;
   weapon: string;
+  /** Solo los luchadores tienen rig; las mascotas se dibujan de una pieza. */
+  appearance: Appearance | null;
+  /** Id de catalogo de la mascota, para elegir su silueta. */
+  petId: string | null;
   /** Sitio en el suelo al que vuelve siempre. */
   home: { x: number; y: number };
   /** Hacia donde mira: 1 a la derecha, -1 a la izquierda. */
@@ -32,10 +37,8 @@ export type Move =
   | { kind: 'approach'; id: string; toward: string }
   /** Embiste: golpe seco hacia el objetivo. */
   | { kind: 'lunge'; id: string; toward: string }
-  /** Encaja: retrocede y se sacude. */
-  | { kind: 'shake'; id: string }
-  /** Salta hacia atras esquivando. */
-  | { kind: 'hop'; id: string }
+  /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
+  | { kind: 'pose'; id: string; anim: AnimName }
   /** Destello de color (parada, maña, curacion). */
   | { kind: 'flash'; id: string; color: number }
   /** Mueve la barra de vida a su nuevo valor. */
@@ -52,10 +55,8 @@ export type Move =
   | { kind: 'ring'; id: string; color: number }
   /** Latido breve: marca de quien tiene el turno. */
   | { kind: 'pulse'; id: string }
-  /** Cae derribado y se apaga. */
-  | { kind: 'fall'; id: string }
-  /** Da un brinco de victoria. */
-  | { kind: 'cheer'; id: string };
+  /** Se apaga al morir. */
+  | { kind: 'fall'; id: string };
 
 export interface Beat {
   /** Segundos desde el principio. */
@@ -109,7 +110,28 @@ function placeActor(side: 'A' | 'B', isPet: boolean, petIndex: number): Actor['h
   return { x: bruteX - facing * (0.11 + petIndex * 0.06), y: 0.78 };
 }
 
-export function planFight(replay: Pick<FightReplay, 'log' | 'winner'>): Scene {
+/** La categoria del arma decide el gesto. Las mascotas muerden: gesto rapido. */
+function attackAnim(weaponId: string): AnimName {
+  if (weaponId.startsWith('pet:')) return 'attackRapida';
+  switch (getWeapon(weaponId).category) {
+    case 'pesada':
+      return 'attackPesada';
+    case 'larga':
+      return 'attackLarga';
+    case 'arrojadiza':
+      return 'attackArrojadiza';
+    default:
+      return 'attackRapida';
+  }
+}
+
+/** Solo se necesita la apariencia de los snapshots, no la ficha entera. */
+export type Replayable = Pick<FightReplay, 'log' | 'winner'> & {
+  snapshotA: { appearance: Appearance };
+  snapshotB: { appearance: Appearance };
+};
+
+export function planFight(replay: Replayable): Scene {
   const actors: Actor[] = [];
   const byId = new Map<string, Actor>();
   const petCount = { A: 0, B: 0 };
@@ -138,6 +160,10 @@ export function planFight(replay: Pick<FightReplay, 'log' | 'winner'>): Scene {
           isPet: event.isPet,
           maxHp: event.maxHp,
           weapon: event.weapon,
+          appearance: event.isPet
+            ? null
+            : (event.side === 'A' ? replay.snapshotA : replay.snapshotB).appearance,
+          petId: event.isPet ? event.weapon.replace('pet:', '') : null,
           home: placeActor(event.side, event.isPet, petIndex),
           facing: event.side === 'A' ? 1 : -1,
         };
@@ -152,30 +178,40 @@ export function planFight(replay: Pick<FightReplay, 'log' | 'winner'>): Scene {
         break;
 
       case 'move':
-        push(event, [{ kind: 'approach', id: event.id, toward: event.target }]);
+        push(event, [
+          { kind: 'approach', id: event.id, toward: event.target },
+          { kind: 'pose', id: event.id, anim: 'walk' },
+        ]);
         break;
 
       case 'attack':
-        push(event, [{ kind: 'lunge', id: event.id, toward: event.target }]);
+        push(event, [
+          { kind: 'lunge', id: event.id, toward: event.target },
+          { kind: 'pose', id: event.id, anim: attackAnim(event.weapon) },
+        ]);
+        break;
+
+      // El contraataque no dice con que: es con lo que se tenga en la mano.
+      case 'counter':
+        push(event, [
+          { kind: 'lunge', id: event.id, toward: event.target },
+          { kind: 'pose', id: event.id, anim: attackAnim(byId.get(event.id)?.weapon ?? 'punos') },
+        ]);
         break;
 
       case 'hit':
-        push(event, [{ kind: 'shake', id: event.target }]);
+        push(event, [{ kind: 'pose', id: event.target, anim: 'hit' }]);
         break;
 
       case 'evade':
-        push(event, [{ kind: 'hop', id: event.id }]);
+        push(event, [{ kind: 'pose', id: event.id, anim: 'evade' }]);
         break;
 
       case 'block':
         push(event, [
+          { kind: 'pose', id: event.id, anim: 'block' },
           { kind: 'flash', id: event.id, color: COLOR.parada },
-          { kind: 'shake', id: event.id },
         ]);
-        break;
-
-      case 'counter':
-        push(event, [{ kind: 'lunge', id: event.id, toward: event.target }]);
         break;
 
       case 'damage':
@@ -203,6 +239,7 @@ export function planFight(replay: Pick<FightReplay, 'log' | 'winner'>): Scene {
 
       case 'throwWeapon':
         push(event, [
+          { kind: 'pose', id: event.id, anim: 'throw' },
           { kind: 'projectile', from: event.id, to: event.target, weapon: event.weapon },
           { kind: 'weapon', id: event.id, weapon: 'punos' },
         ]);
@@ -223,11 +260,14 @@ export function planFight(replay: Pick<FightReplay, 'log' | 'winner'>): Scene {
         break;
 
       case 'death':
-        push(event, [{ kind: 'fall', id: event.id }]);
+        push(event, [
+          { kind: 'pose', id: event.id, anim: 'death' },
+          { kind: 'fall', id: event.id },
+        ]);
         break;
 
       case 'end':
-        push(event, [{ kind: 'cheer', id: event.winner }]);
+        push(event, [{ kind: 'pose', id: event.winner, anim: 'victory' }]);
         break;
     }
   }

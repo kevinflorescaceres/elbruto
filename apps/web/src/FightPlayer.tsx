@@ -51,8 +51,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         aplicacion.canvas.style.height = 'auto';
         contenedor.appendChild(aplicacion.canvas);
 
-        const built = buildTimeline(aplicacion.stage, planFight(replay), setPie);
-        timeline.current = built.timeline;
+        timeline.current = buildTimeline(aplicacion.stage, planFight(replay), setPie);
         setListo(true);
       } catch (error) {
         if (!cancelado) setFallo(error instanceof Error ? error.message : 'Error de dibujo');

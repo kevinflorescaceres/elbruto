@@ -38,7 +38,21 @@ tests, asi que nunca pisan la base de desarrollo.
   `getSkill`, `getPet`). No duplicar tablas de nombres en la web.
 - `src/fightLines.ts` es puro y no depende de React: convierte el log en lineas de
   texto. La Fase 4 reutiliza ese mismo recorrido para la linea de tiempo de PixiJS.
-- Estilos: un `styles.css` y ya. Sin framework de CSS. El aspecto de verdad es Fase 5.
+- Estilos: un `styles.css` y ya. Sin framework de CSS.
+
+## Arte (Fase 5)
+
+- **El arte son datos.** `art/parts.ts` tiene las rutas SVG y las paletas; `art/poses.ts`
+  las animaciones como keyframes. Ninguno de los dos sabe de Pixi ni del DOM.
+- **Dos renderers, un origen.** `art/Fighter.tsx` pinta `<svg>` para la ficha y la arena;
+  `art/pixiRig.ts` monta el mismo personaje como rig de contenedores para el combate.
+  Si tocas una ruta, cambia en los dos sitios a la vez.
+- **`pnpm --filter @rufianes/web art <dir>`** escribe hojas de contacto en SVG
+  (variedad, poses, armas, bichos). Es la unica forma de mirar el arte sin navegador:
+  usalo antes de dar por buena cualquier ruta nueva. Para verlas como PNG hace falta un
+  rasterizador (`@resvg/resvg-js` en un directorio aparte, no es dependencia del repo).
+- La apariencia sale de `Appearance`, que se genera en el motor y **se guarda en la BD**:
+  cambiar el arte no debe cambiar la cara de un peleon ya creado.
 
 ## Convenciones
 
@@ -70,4 +84,4 @@ es la única forma de saber si un cambio rompe algo.
 
 ## Estado
 
-Fases 0, 1, 2 y 3 completas. Siguiente: Fase 4 (render del combate con PixiJS).
+Fases 0 a 5 completas. Siguiente: Fase 6 (pulido y despliegue).

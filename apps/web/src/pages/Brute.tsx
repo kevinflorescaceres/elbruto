@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon } from '@rufianes/engine';
+import { Fighter } from '../art/Fighter.js';
 import { api } from '../api.js';
 import { useBrute, useIsMine } from '../hooks.js';
 
@@ -59,6 +60,15 @@ function Denuncia({ slug }: { slug: string }) {
   );
 }
 
+/** El arma que se lleva a la vista: la de mas alcance, que es la que mas luce. */
+function mejorArma(
+  ids: string[],
+): { category: 'rapida' | 'pesada' | 'larga' | 'arrojadiza'; reach: number } | undefined {
+  const armas = ids.map(getWeapon).sort((a, b) => b.reach - a.reach);
+  const arma = armas[0];
+  return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
+}
+
 export function BrutePage() {
   const { slug = '' } = useParams();
   const brute = useBrute(slug);
@@ -87,8 +97,9 @@ export function BrutePage() {
         derrotas{b.isBot && ' · peleon de la casa'}
       </p>
 
-      <div className="tarjeta">
-        <table>
+      <div className="tarjeta fila" style={{ alignItems: 'flex-start', gap: '1.5rem' }}>
+        <Fighter appearance={b.appearance} weapon={mejorArma(b.weapons)} height={170} />
+        <table style={{ flex: '1 1 16rem' }}>
           <tbody>
             <tr>
               <th>Vida</th>

@@ -1,32 +1,52 @@
 /**
- * Dibujo de la escena con PixiJS. Formas geometricas simples: en la fase 5 se
- * sustituyen por el rig de partes SVG sin tocar el guion (`fightScene.ts`) ni la
- * linea de tiempo (`FightPlayer.tsx`).
+ * Puesta en escena: suelo, actores y adornos. El personaje lo monta el rig de
+ * `art/pixiRig.ts`; aqui solo se coloca y se le cuelga la barra de vida.
  */
 import { Container, Graphics, Text } from 'pixi.js';
+import { getWeapon } from '@rufianes/engine';
+import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
+import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
 import type { Actor } from './fightScene.js';
 
 export const SIZE = { width: 900, height: 420 };
 
-const PALETA = {
-  fondoA: 0x8a5a3c,
-  fondoB: 0x4a6a8a,
-  piel: 0xe8c39e,
-  suelo: 0xd8d4cc,
-  arma: 0x6b6b6b,
-  barra: 0x44aa77,
-  barraFondo: 0x000000,
-} as const;
+/** Categoria y alcance del arma. Los punos y los bichos no llevan nada. */
+export function weaponOf(id: string): { category: WeaponCategory; reach: number } | undefined {
+  if (id === 'punos' || id.startsWith('pet:')) return undefined;
+  const weapon = getWeapon(id);
+  return { category: weapon.category, reach: weapon.reach };
+}
 
-/** Cada combatiente es un contenedor con cuerpo, cabeza, arma y barra de vida. */
 export interface ActorView {
   root: Container;
-  /** Solo el cuerpo: se sacude y gira sin arrastrar la barra de vida. */
+  /** Lo que se voltea, se tine y se apaga. */
   body: Container;
-  weapon: Graphics;
+  /** Solo los luchadores tienen rig; las mascotas van de una pieza. */
+  rig: Rig | null;
   hpFill: Graphics;
-  hpWidth: number;
   actor: Actor;
+}
+
+function drawPet(petId: string): Container {
+  const container = new Container();
+  const shapes = MASCOTAS[petId] ?? MASCOTAS['chucho'] ?? [];
+  const colors = {
+    piel: PALETA.piel[2] ?? '#c68a5e',
+    pelo: PALETA.pelo[1] ?? '#5b3a22',
+    ropa: '#000',
+  };
+  const svg = shapes
+    .map(
+      (shape) =>
+        `<path d="${shape.d}" fill="${colorOf(shape.fill, colors)}"` +
+        (shape.stroke === false
+          ? ' stroke="none"'
+          : ` stroke="${TRAZO}" stroke-width="${GROSOR}" stroke-linejoin="round"`) +
+        ' />',
+    )
+    .join('');
+  container.addChild(new Graphics().svg(`<svg xmlns="http://www.w3.org/2000/svg">${svg}</svg>`));
+  return container;
 }
 
 export function drawActor(actor: Actor): ActorView {
@@ -34,64 +54,52 @@ export function drawActor(actor: Actor): ActorView {
   root.x = actor.home.x * SIZE.width;
   root.y = actor.home.y * SIZE.height;
 
-  const escala = actor.isPet ? 0.55 : 1;
-  const color = actor.side === 'A' ? PALETA.fondoA : PALETA.fondoB;
-  const alto = 70 * escala;
-  const ancho = 30 * escala;
-
   const body = new Container();
   body.scale.x = actor.facing;
 
-  const torso = new Graphics()
-    .roundRect(-ancho / 2, -alto, ancho, alto, 6 * escala)
-    .fill(color)
-    .stroke({ width: 3, color: 0x2a2a2a });
+  let rig: Rig | null = null;
+  if (actor.appearance !== null) {
+    rig = buildRig(actor.appearance, weaponOf(actor.weapon));
+    body.addChild(rig.root);
+  } else {
+    body.addChild(drawPet(actor.petId ?? 'chucho'));
+  }
 
-  const cabeza = new Graphics()
-    .circle(0, -alto - 14 * escala, 14 * escala)
-    .fill(PALETA.piel)
-    .stroke({ width: 3, color: 0x2a2a2a });
+  const alto = actor.isPet ? 34 : 118;
+  const hpWidth = actor.isPet ? 34 : 60;
 
-  // El arma cuelga de la mano: girarla desde ahi basta para el gesto de golpe.
-  const weapon = new Graphics()
-    .roundRect(0, -3 * escala, 34 * escala, 6 * escala, 3)
-    .fill(PALETA.arma)
-    .stroke({ width: 2, color: 0x2a2a2a });
-  weapon.x = ancho / 2;
-  weapon.y = -alto * 0.55;
-  // Las mascotas muerden: no llevan arma.
-  weapon.visible = !actor.isPet && actor.weapon !== 'punos';
-
-  body.addChild(torso, cabeza, weapon);
-
-  const hpWidth = 56 * escala;
   const hpFondo = new Graphics()
-    .roundRect(-hpWidth / 2, -alto - 34 * escala, hpWidth, 6, 3)
-    .fill({ color: PALETA.barraFondo, alpha: 0.25 });
-  // Dibujada desde su propio origen para que escalar en x la vacie por la derecha.
-  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 6, 3).fill(PALETA.barra);
+    .roundRect(0, 0, hpWidth, 6, 3)
+    .fill({ color: 0x000000, alpha: 0.22 });
+  hpFondo.x = -hpWidth / 2;
+  hpFondo.y = -alto - 16;
+
+  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 6, 3).fill(0x44aa77);
   hpFill.x = -hpWidth / 2;
-  hpFill.y = -alto - 34 * escala;
+  hpFill.y = -alto - 16;
 
   const nombre = new Text({
     text: actor.name,
-    style: { fontFamily: 'system-ui', fontSize: 13 * escala, fill: 0x333333 },
+    style: { fontFamily: 'system-ui', fontSize: actor.isPet ? 11 : 14, fill: 0x333333 },
   });
   nombre.anchor.set(0.5);
-  nombre.y = -alto - 48 * escala;
+  nombre.y = -alto - 30;
 
   root.addChild(body, hpFondo, hpFill, nombre);
-  return { root, body, weapon, hpFill, hpWidth, actor };
+  return { root, body, rig, hpFill, actor };
+}
+
+export function changeWeapon(view: ActorView, weaponId: string): void {
+  if (view.rig !== null) setWeapon(view.rig, weaponOf(weaponId));
 }
 
 export function drawGround(): Graphics {
   return new Graphics()
-    .moveTo(0, SIZE.height * 0.82)
-    .lineTo(SIZE.width, SIZE.height * 0.82)
-    .stroke({ width: 3, color: PALETA.suelo });
+    .moveTo(0, SIZE.height * 0.83)
+    .lineTo(SIZE.width, SIZE.height * 0.83)
+    .stroke({ width: 3, color: 0xd8d4cc });
 }
 
-/** Numero flotante de dano o curacion. */
 export function makeFloater(text: string, color: number): Text {
   const label = new Text({
     text,
@@ -101,10 +109,8 @@ export function makeFloater(text: string, color: number): Text {
   return label;
 }
 
-export function makeRing(color: number): Graphics {
-  return new Graphics().circle(0, 0, 30).stroke({ width: 3, color });
-}
+export const makeRing = (color: number): Graphics =>
+  new Graphics().circle(0, 0, 30).stroke({ width: 3, color });
 
-export function makeProjectile(): Graphics {
-  return new Graphics().circle(0, 0, 7).fill(PALETA.arma).stroke({ width: 2, color: 0x2a2a2a });
-}
+export const makeProjectile = (): Graphics =>
+  new Graphics().circle(0, 0, 7).fill(PALETA.metal).stroke({ width: 2, color: TRAZO });
