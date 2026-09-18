@@ -35,8 +35,10 @@ export type Move =
   | { kind: 'appear'; id: string }
   /** Se planta a distancia de golpe y se queda ahi. */
   | { kind: 'approach'; id: string; toward: string; weapon: string }
-  /** Embiste desde esa distancia y vuelve a su sitio. */
+  /** Embiste desde esa distancia y SE QUEDA: el combo encadena ahi mismo. */
   | { kind: 'lunge'; id: string; toward: string; weapon: string }
+  /** Vuelve a su sitio de espera. Se emite al cerrar el turno, no antes. */
+  | { kind: 'retreat'; id: string }
   /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
   | { kind: 'pose'; id: string; anim: AnimName }
   /** Destello de color (parada, maña, curacion). */
@@ -96,13 +98,31 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
     actual = [];
   };
 
+  const cerrarConRetirada = (): void => {
+    // Quien embistio vuelve a su sitio al ACABAR el turno, no tras el primer
+    // golpe: si volviera antes, los impactos de un combo saldrian desde lejos
+    // en vez de encadenarse en el sitio (COMBATE.md §5).
+    const embestida = actual.flatMap((c) => c.moves).find((m) => m.kind === 'lunge');
+    if (embestida !== undefined && embestida.kind === 'lunge') {
+      actual.push({
+        type: 'turn',
+        weight: PESO_RETIRADA,
+        caption: null,
+        moves: [{ kind: 'retreat', id: embestida.id }],
+      });
+    }
+    cerrar();
+  };
+
   for (const crudo of crudos) {
     // `start`, `turn` y `end` abren grupo: son las fronteras del combate.
-    if (crudo.type === 'turn' || crudo.type === 'end' || crudo.type === 'start') cerrar();
+    if (crudo.type === 'turn' || crudo.type === 'end' || crudo.type === 'start') {
+      cerrarConRetirada();
+    }
     actual.push(crudo);
     if (crudo.type === 'end') cerrar();
   }
-  cerrar();
+  cerrarConRetirada();
 
   const beats: Beat[] = [];
   let at = 0;
@@ -121,14 +141,21 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
           ? SEGUNDOS_POR_ACCION * (1 + contras)
           : SEGUNDOS_DE_ENTRADA;
 
+    // El respiro sale del final del turno: se reparte lo que queda.
+    const util = esTurno ? Math.max(0, total - RESPIRO) : total;
     const peso = grupo.reduce((suma, c) => suma + c.weight, 0);
+    let usado = 0;
+
     for (const crudo of grupo) {
       // Si todo el grupo pesa 0, se reparte a partes iguales.
       const parte = peso > 0 ? crudo.weight / peso : 1 / grupo.length;
-      const duration = total * parte;
+      const duration = util * parte;
       beats.push({ at, duration, caption: crudo.caption, moves: crudo.moves });
       at += duration;
+      usado += duration;
     }
+    // Lo que sobra es la quietud antes de que actue el otro.
+    at += total - usado;
   }
 
   return { beats, duration: at };
@@ -162,28 +189,39 @@ const SEGUNDOS_DE_CIERRE = 1.4 * TIME_SCALE;
 const SEGUNDOS_DE_APERTURA = 1.2 * TIME_SCALE;
 
 /**
- * Peso de cada evento DENTRO de su turno. Ya no son segundos: son la parte del
- * segundo que le toca a cada uno.
+ * Peso de cada evento dentro de su turno, en los milisegundos de referencia de
+ * COMBATE.md §5. No son tiempos absolutos: son la parte del turno que le toca a
+ * cada uno, y TIME_SCALE escala el conjunto.
  */
 const WEIGHT: Record<FightEvent['type'], number> = {
   start: 0,
-  spawn: 0.12,
-  turn: 0.06,
-  move: 0.22,
-  attack: 0.26,
-  hit: 0.08,
-  evade: 0.26,
-  block: 0.26,
-  counter: 0.22,
-  damage: 0.3,
-  heal: 0.34,
-  drawWeapon: 0.26,
-  throwWeapon: 0.45,
-  disarm: 0.4,
-  skill: 0.34,
-  death: 0.55,
-  end: 0.9,
+  spawn: 120,
+  turn: 60,
+  move: 300,
+  attack: 300,
+  hit: 100,
+  evade: 300,
+  block: 350,
+  counter: 450,
+  damage: 250,
+  heal: 350,
+  drawWeapon: 400,
+  throwWeapon: 500,
+  disarm: 400,
+  skill: 350,
+  death: 800,
+  end: 900,
 };
+
+/** Lo que tarda en volver a su sitio tras golpear (COMBATE.md §5). */
+const PESO_RETIRADA = 300;
+
+/**
+ * Quietud al final de cada turno, para que no se pise la accion de uno con la
+ * del otro (COMBATE.md §5). Sale del propio turno, asi que las acciones siguen
+ * empezando exactamente cada SEGUNDOS_POR_ACCION.
+ */
+const RESPIRO = 0.15 * TIME_SCALE;
 
 /** Coloca a cada bando: A mira a la derecha, B a la izquierda. */
 function placeActor(side: 'A' | 'B', isPet: boolean, petIndex: number): Actor['home'] {

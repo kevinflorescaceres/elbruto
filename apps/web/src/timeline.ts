@@ -8,7 +8,7 @@ import { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
 import { RIG, type PartName } from './art/parts.js';
 import { ANIMATIONS, type AnimName } from './art/poses.js';
-import type { Move, Scene } from './fightScene.js';
+import { TIME_SCALE, type Move, type Scene } from './fightScene.js';
 import {
   changeWeapon,
   drawActor,
@@ -27,6 +27,9 @@ const BLANCO = 0xffffff;
 
 /** Medio cuerpo de cada uno. El rig mide unos 50 px de ancho. */
 const MEDIO_CUERPO = 26;
+
+/** Lo que tarda un numero de dano en subir y apagarse (COMBATE.md §5). */
+const FLOTA = 0.6 * TIME_SCALE;
 
 /**
  * A que distancia del rival se planta quien ataca. Con punos se acercan hasta
@@ -174,14 +177,11 @@ function addMove(
       const hacia = targetX > homeX ? 1 : -1;
       const contacto = targetX - hacia * hueco(move.weapon);
 
-      if (move.kind === 'approach') {
-        // Se acerca y SE QUEDA: el golpe sale de ahi, no de su sitio de espera.
-        tl.to(root, { x: contacto, duration, ease: 'power2.out' }, at);
-      } else {
-        // Con arma larga no hubo acercamiento previo, asi que este tramo lo cubre.
-        tl.to(root, { x: contacto, duration: mitad, ease: 'power2.in' }, at);
-        tl.to(root, { x: homeX, duration: mitad, ease: 'power1.out' }, at + mitad);
-      }
+      // Los dos se plantan y SE QUEDAN. La vuelta la hace el movimiento
+      // `retreat`, al cerrar el turno: si volviera aqui, los impactos
+      // encadenados de un combo saldrian desde lejos (COMBATE.md §5).
+      const ease = move.kind === 'approach' ? 'power2.out' : 'power2.in';
+      tl.to(root, { x: contacto, duration, ease }, at);
       break;
     }
 
@@ -214,7 +214,15 @@ function addMove(
       label.y = homeY - 130;
       label.alpha = 0;
       stage.addChild(label);
-      fromTo(tl, label, { alpha: 1, y: homeY - 130 }, { alpha: 0, y: homeY - 180, duration }, at);
+      // Los numeros viven 600 ms propios (COMBATE.md §5), no lo que dure su
+      // hueco: en un combo el hueco es corto y se irian antes de poder leerlos.
+      fromTo(
+        tl,
+        label,
+        { alpha: 1, y: homeY - 130 },
+        { alpha: 0, y: homeY - 180, duration: FLOTA },
+        at,
+      );
       break;
     }
 
@@ -278,6 +286,10 @@ function addMove(
       fromTo(tl, anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.7, y: 1.7, duration }, at);
       break;
     }
+
+    case 'retreat':
+      tl.to(root, { x: homeX, duration, ease: 'power1.out' }, at);
+      break;
 
     case 'fall':
       tl.to(root, { alpha: 0.4, duration }, at);
