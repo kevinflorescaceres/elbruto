@@ -11,7 +11,7 @@ import fastifyStatic from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
 import { prisma } from './db.js';
 
-const SITE = 'Rufianes';
+const SITE = 'Camorra';
 
 /** Rutas que el frontend sabe pintar. Lo que no encaje es un 404 de verdad. */
 const RUTAS = [

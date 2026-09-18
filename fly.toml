@@ -1,0 +1,38 @@
+# Camorra en Fly.io. Los secretos NO van aqui: se ponen con `fly secrets set`.
+app = "camorra"
+primary_region = "scl"   # Santiago. `fly platform regions` para ver el resto.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  # Un salto de proxy: sin esto el limite por IP no protege de nada tras el edge de Fly.
+  TRUST_PROXY = "1"
+  GAME_TIMEZONE = "America/Santiago"
+  PUBLIC_URL = "https://camorra.fly.dev"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Escalar a cero: un juego asincrono no necesita estar despierto de madrugada,
+  # y el arranque en frio de un par de segundos no molesta a nadie.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 200
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "20s"
+  method = "GET"
+  path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

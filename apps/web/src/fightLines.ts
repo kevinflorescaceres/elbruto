@@ -2,8 +2,8 @@
  * Del log del motor a lineas de texto. Puro y sin React: la fase 4 reutilizara
  * este mismo recorrido para construir la linea de tiempo de PixiJS.
  */
-import { getSkill, getWeapon, type FightEvent } from '@rufianes/engine';
-import type { FightReplay } from '@rufianes/shared';
+import { getSkill, getWeapon, type FightEvent } from '@camorra/engine';
+import type { FightReplay } from '@camorra/shared';
 
 export interface Step {
   text: string;

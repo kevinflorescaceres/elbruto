@@ -1,6 +1,6 @@
 /**
  * Cliente de la API. Cada respuesta se valida con los esquemas de
- * `@rufianes/shared`: es el otro extremo del contrato que ya cumple el servidor.
+ * `@camorra/shared`: es el otro extremo del contrato que ya cumple el servidor.
  */
 import type { z } from 'zod';
 import {
@@ -14,7 +14,7 @@ import {
   meSchema,
   opponentsSchema,
   startFightResponse,
-} from '@rufianes/shared';
+} from '@camorra/shared';
 
 export class ApiError extends Error {
   constructor(

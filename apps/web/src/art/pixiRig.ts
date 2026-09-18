@@ -5,7 +5,7 @@
  * Comparte rutas y paleta con `Fighter.tsx` (PLAN.md fase 5).
  */
 import { Container, Graphics } from 'pixi.js';
-import type { Appearance } from '@rufianes/engine';
+import type { Appearance } from '@camorra/engine';
 import {
   colorOf,
   GROSOR,

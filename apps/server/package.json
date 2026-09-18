@@ -1,14 +1,14 @@
 {
-  "name": "@rufianes/server",
+  "name": "@camorra/server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/index.ts",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx src/seed.ts",
-    "admin": "tsx src/admin.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "admin": "tsx --env-file-if-exists=../../.env src/admin.ts",
     "prisma": "prisma"
   },
   "dependencies": {
@@ -17,8 +17,8 @@
     "@fastify/static": "^10.1.4",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@rufianes/engine": "workspace:*",
-    "@rufianes/shared": "workspace:*",
+    "@camorra/engine": "workspace:*",
+    "@camorra/shared": "workspace:*",
     "fastify": "^5.12.5",
     "zod": "^4.6.5"
   },

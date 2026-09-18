@@ -3,7 +3,7 @@
  * `art/pixiRig.ts`; aqui solo se coloca y se le cuelga la barra de vida.
  */
 import { Container, Graphics, Text } from 'pixi.js';
-import { getWeapon } from '@rufianes/engine';
+import { getWeapon } from '@camorra/engine';
 import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
 import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
 import type { Actor } from './fightScene.js';

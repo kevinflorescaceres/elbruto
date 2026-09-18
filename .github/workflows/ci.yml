@@ -12,16 +12,16 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: rufianes
-          POSTGRES_PASSWORD: rufianes
-          POSTGRES_DB: rufianes
+          POSTGRES_USER: camorra
+          POSTGRES_PASSWORD: camorra
+          POSTGRES_DB: camorra
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     # En CI la base es desechable: los tests usan la misma que las migraciones.
     env:
-      DATABASE_URL: postgresql://rufianes:rufianes@localhost:5432/rufianes
-      TEST_DATABASE_URL: postgresql://rufianes:rufianes@localhost:5432/rufianes
+      DATABASE_URL: postgresql://camorra:camorra@localhost:5432/camorra
+      TEST_DATABASE_URL: postgresql://camorra:camorra@localhost:5432/camorra
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

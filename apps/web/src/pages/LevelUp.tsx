@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
-import { getPet, getSkill, getWeapon, type LevelUpOption } from '@rufianes/engine';
+import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
 import { api } from '../api.js';
 
 const STAT_NAMES: Record<string, string> = {

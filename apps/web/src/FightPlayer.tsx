@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Application } from 'pixi.js';
-import type { FightReplay } from '@rufianes/shared';
+import type { FightReplay } from '@camorra/shared';
 import { planFight } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';

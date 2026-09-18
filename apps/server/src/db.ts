@@ -1,11 +1,11 @@
 /** Cliente Prisma y traduccion entre fila de BD y tipos del motor. */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient, type Brute as BruteRow } from '@prisma/client';
-import { combatStats, maxHpFor, xpForLevel, type Brute } from '@rufianes/engine';
-import { appearanceSchema, type BruteProfile } from '@rufianes/shared';
+import { combatStats, maxHpFor, xpForLevel, type Brute } from '@camorra/engine';
+import { appearanceSchema, type BruteProfile } from '@camorra/shared';
 
 const connectionString =
-  process.env.DATABASE_URL ?? 'postgresql://rufianes:rufianes@localhost:5432/rufianes';
+  process.env.DATABASE_URL ?? 'postgresql://camorra:camorra@localhost:5432/camorra';
 
 export const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 

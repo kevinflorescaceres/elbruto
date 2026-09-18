@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest';
-import { createBrute, growTo, mulberry32, simulate } from '@rufianes/engine';
+import { createBrute, growTo, mulberry32, simulate } from '@camorra/engine';
 import { buildSteps } from './fightLines.js';
 
 const replay = (seed: number) => {

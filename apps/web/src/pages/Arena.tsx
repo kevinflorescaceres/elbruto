@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
-import { getWeapon } from '@rufianes/engine';
+import { getWeapon } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
 import { api, ApiError } from '../api.js';
 

@@ -1,13 +1,13 @@
 /**
  * Esquemas Zod de los eventos de combate (PLAN.md §7).
  *
- * La fuente de verdad son los tipos de `@rufianes/engine`: el motor es quien
+ * La fuente de verdad son los tipos de `@camorra/engine`: el motor es quien
  * produce los eventos y no puede depender de zod (§12). Aqui se construye el
  * esquema encima y `assertSameShape` hace fallar `pnpm typecheck` si los dos
  * se desincronizan.
  */
 import { z } from 'zod';
-import type { Appearance, Brute, FightEvent, FightResult, Side } from '@rufianes/engine';
+import type { Appearance, Brute, FightEvent, FightResult, Side } from '@camorra/engine';
 
 const id = z.string().min(1);
 const sideSchema = z.enum(['A', 'B']);

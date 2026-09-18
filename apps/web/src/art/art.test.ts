@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest';
-import { createBrute } from '@rufianes/engine';
+import { createBrute } from '@camorra/engine';
 import {
   lookFrom,
   RIG,

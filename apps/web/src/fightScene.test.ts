@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest';
-import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@rufianes/engine';
+import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
 import { planFight, type Move } from './fightScene.js';
 
 /** Combates variados: con mascotas, de todos los niveles. */

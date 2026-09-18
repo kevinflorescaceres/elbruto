@@ -1,6 +1,6 @@
 /** DTOs de la API (PLAN.md §8). Se validan en los dos lados de la red. */
 import { z } from 'zod';
-import type { LevelUpOption } from '@rufianes/engine';
+import type { LevelUpOption } from '@camorra/engine';
 import { appearanceSchema, fightEventSchema } from './fight.js';
 
 /**

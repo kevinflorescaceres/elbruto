@@ -3,7 +3,7 @@
  * se construye aqui es la misma que alimentara al render de PixiJS en la fase 4.
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { FightReplay } from '@rufianes/shared';
+import type { FightReplay } from '@camorra/shared';
 import { buildSteps } from './fightLines.js';
 
 function Vida({ nombre, hp, maxHp }: { nombre: string; hp: number; maxHp: number }) {

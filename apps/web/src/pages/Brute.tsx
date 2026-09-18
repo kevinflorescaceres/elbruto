@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
-import { getPet, getSkill, getWeapon } from '@rufianes/engine';
+import { getPet, getSkill, getWeapon } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
 import { api } from '../api.js';
 import { useBrute, useIsMine } from '../hooks.js';

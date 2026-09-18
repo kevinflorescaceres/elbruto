@@ -12,11 +12,11 @@ COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm --filter @rufianes/server exec prisma generate
-RUN pnpm --filter @rufianes/web build
+RUN pnpm --filter @camorra/server exec prisma generate
+RUN pnpm --filter @camorra/web build
 # Sin las dependencias de desarrollo la imagen baja a la mitad; tsx se queda
 # porque los paquetes del workspace se publican como TypeScript fuente.
-RUN pnpm prune --prod && pnpm --filter @rufianes/server add -D tsx
+RUN pnpm prune --prod && pnpm --filter @camorra/server add -D tsx
 
 FROM node:22-alpine
 WORKDIR /app
@@ -25,6 +25,7 @@ RUN corepack enable pnpm
 
 COPY --from=build /app /app
 
-EXPOSE 3000
-# Las migraciones corren al arrancar: un despliegue nuevo deja la base al dia.
-CMD ["sh", "-c", "pnpm --filter @rufianes/server exec prisma migrate deploy && pnpm --filter @rufianes/server start"]
+EXPOSE 8080
+# Las migraciones corren al arrancar y van por DIRECT_URL: a traves del pooler
+# de Supabase en modo transaccion fallarian.
+CMD ["sh", "-c", "pnpm --filter @camorra/server exec prisma migrate deploy && pnpm --filter @camorra/server start"]

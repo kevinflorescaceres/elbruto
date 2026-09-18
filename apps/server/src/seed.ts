@@ -4,7 +4,7 @@
  *
  * Idempotente: los slugs son fijos, se vuelve a correr sin duplicar nada.
  */
-import { createBrute, growTo, mulberry32 } from '@rufianes/engine';
+import { createBrute, growTo, mulberry32 } from '@camorra/engine';
 import { asJson, prisma } from './db.js';
 
 const PER_LEVEL = 8;

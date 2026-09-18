@@ -5,7 +5,7 @@
  *   pnpm admin rename <slug> <nombre nuevo>
  *   pnpm admin delete <slug>
  */
-import { createBrute } from '@rufianes/engine';
+import { createBrute } from '@camorra/engine';
 import { asJson, prisma } from './db.js';
 import { checkName } from './names.js';
 

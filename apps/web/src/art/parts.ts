@@ -11,7 +11,7 @@
  * Sistema de coordenadas del personaje: origen entre los pies, la altura crece
  * hacia -y. Un peleon mide unas 96 unidades.
  */
-import type { Appearance } from '@rufianes/engine';
+import type { Appearance } from '@camorra/engine';
 
 export type PartName =
   | 'hips'

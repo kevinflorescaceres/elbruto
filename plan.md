@@ -1,6 +1,8 @@
 # PLAN.md — Juego de peleas automáticas inspirado en El Bruto
 
-> Nombre provisional: **Rufianes** (cambiar antes de publicar).
+> Nombre: **Camorra**. Pendiente de verificar contra el registro de marcas antes de publicar.
+> Ojo: "Camorra" es tambien el nombre de la mafia napolitana. En espanol es palabra corriente
+> ("buscar camorra"), pero la asociacion existe.
 > Mecánicas inspiradas en El Bruto (Motion Twin). **No usar** su nombre, arte, textos ni sonidos: todo el contenido visual y textual debe ser original.
 
 ## 1. Visión

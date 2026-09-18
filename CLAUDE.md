@@ -1,4 +1,4 @@
-# CLAUDE.md — Rufianes
+# CLAUDE.md — Camorra
 
 El plan completo está en `plan.md`. Se trabaja **una fase a la vez** (sección 10) y no se
 avanza sin cumplir el criterio de "Listo cuando". La sección 11 (contenido original) no es
@@ -17,24 +17,32 @@ negociable.
 
 `pnpm` se activa con `corepack enable pnpm` (Node 22 lo trae; no hay instalación global).
 
-## Base de datos
+## Base de datos (local)
+
+El `.env` de la raiz (ignorado por git) manda sobre los valores por defecto, y la shell
+manda sobre el `.env`. Lo leen los scripts del servidor, vitest, playwright y Prisma.
+
+**En esta maquina el rol de Postgres se llama `rufianes`** por herencia del nombre
+provisional del proyecto, y no tengo permisos para crear roles. Para dejarlo parejo:
+`sudo -u postgres psql -c "CREATE ROLE camorra LOGIN PASSWORD 'camorra' CREATEDB"` y luego
+borrar el `.env`. Mientras tanto, funciona igual.
 
 Hay dos caminos y ambos valen:
 
 - **Docker** (`pnpm db:up`): `docker-compose.yml` levanta PostgreSQL 16 y crea
-  `rufianes` y `rufianes_test`. Es lo que usa CI.
+  `camorra` y `camorra_test`. Es lo que usa CI.
 - **PostgreSQL nativo**: esta maquina de desarrollo lo tiene instalado y es lo que
   se ha usado. `sudo service postgresql start` y listo. **La instancia es compartida
-  con otros proyectos** (`hattrick_db`): no tocar nada fuera de `rufianes*`.
+  con otros proyectos** (`hattrick_db`): no tocar nada fuera de `camorra*`.
 
-Los tests de integracion corren contra `rufianes_test` y truncan las tablas entre
+Los tests de integracion corren contra `camorra_test` y truncan las tablas entre
 tests, asi que nunca pisan la base de desarrollo.
 
 ## Frontend
 
 - `src/api.ts` es el unico sitio que habla con el servidor, y **valida cada respuesta**
   con los esquemas de `shared`. No hacer `fetch` suelto desde un componente.
-- Los nombres de armas, mañas y bichos salen de `@rufianes/engine` (`getWeapon`,
+- Los nombres de armas, mañas y bichos salen de `@camorra/engine` (`getWeapon`,
   `getSkill`, `getPet`). No duplicar tablas de nombres en la web.
 - `src/fightLines.ts` es puro y no depende de React: convierte el log en lineas de
   texto. La Fase 4 reutiliza ese mismo recorrido para la linea de tiempo de PixiJS.
@@ -47,7 +55,7 @@ tests, asi que nunca pisan la base de desarrollo.
 - **Dos renderers, un origen.** `art/Fighter.tsx` pinta `<svg>` para la ficha y la arena;
   `art/pixiRig.ts` monta el mismo personaje como rig de contenedores para el combate.
   Si tocas una ruta, cambia en los dos sitios a la vez.
-- **`pnpm --filter @rufianes/web art <dir>`** escribe hojas de contacto en SVG
+- **`pnpm --filter @camorra/web art <dir>`** escribe hojas de contacto en SVG
   (variedad, poses, armas, bichos). Es la unica forma de mirar el arte sin navegador:
   usalo antes de dar por buena cualquier ruta nueva. Para verlas como PNG hace falta un
   rasterizador (`@resvg/resvg-js` en un directorio aparte, no es dependencia del repo).
@@ -56,8 +64,8 @@ tests, asi que nunca pisan la base de desarrollo.
 
 ## Convenciones
 
-- Paquetes del workspace: `@rufianes/engine`, `@rufianes/shared`, `@rufianes/server`,
-  `@rufianes/web`.
+- Paquetes del workspace: `@camorra/engine`, `@camorra/shared`, `@camorra/server`,
+  `@camorra/web`.
 - Los paquetes exportan **TypeScript fuente** (`exports: "./src/index.ts"`), sin paso de
   build intermedio. Vite y tsx los consumen directamente.
 - Un solo `eslint.config.js` en la raíz, y un `vitest.config.ts` raíz. La única
@@ -82,21 +90,41 @@ tests, asi que nunca pisan la base de desarrollo.
 al medir el balance. Si vuelves a tocar los números del catálogo, corre `pnpm balance`:
 es la única forma de saber si un cambio rompe algo.
 
-## Despliegue
+## Despliegue (Fly.io + Supabase)
 
-- `Dockerfile` generico: una sola imagen con la API y el frontend construido. Vale para
-  Fly.io, Railway o Render sin cambios. Las migraciones corren al arrancar.
-- **`PUBLIC_URL`** debe apuntar al dominio real: se usa en `og:url`. Sin ella, los enlaces
-  compartidos llevan `localhost`.
+**Dos URLs de base de datos, y no son intercambiables:**
+
+- `DATABASE_URL` la usa la aplicacion → el **pooler** de Supabase (puerto 6543).
+- `DIRECT_URL` la usan las migraciones → la conexion **directa** (puerto 5432).
+  A traves de un pooler en modo transaccion, `prisma migrate` falla.
+
+Primer despliegue:
+
+```bash
+fly launch --no-deploy          # usa el fly.toml que ya existe
+fly secrets set DATABASE_URL='...pooler...' DIRECT_URL='...directa...'
+fly deploy
+```
+
+Las migraciones corren al arrancar el contenedor, asi que no hay paso aparte.
+`PUBLIC_URL` en `fly.toml` debe apuntar al dominio real: se usa en `og:url`.
+
+**El rate limit vive en memoria de cada maquina.** Con `min_machines_running = 0`
+se reinicia en cada arranque en frio, y con varias maquinas el limite es por
+maquina. Para un juego pequeno da igual; si deja de dar igual, hace falta un
+almacen compartido.
+
+## Antes de publicar
+
 - El servidor sirve el frontend solo si existe `apps/web/dist`. En desarrollo no existe y
   de eso se encarga Vite con su proxy, asi que `pnpm dev` no cambia.
-- **Pendiente antes de publicar** (plan.md §11): nombre y dominio propios verificados
-  contra el registro de marcas, y la direccion real en `CORREO_DE_CONTACTO_PENDIENTE`
-  dentro de `apps/web/src/pages/Legal.tsx`.
+- **Pendiente** (plan.md §11): verificar "Camorra" contra el registro de marcas, y poner
+  una direccion real en `CORREO_DE_CONTACTO_PENDIENTE` dentro de
+  `apps/web/src/pages/Legal.tsx`. Nada de esto bloquea desplegar en privado.
 
 ## Pruebas end-to-end
 
-`pnpm e2e` levanta el servidor de produccion contra `rufianes_test`, limpia la base y
+`pnpm e2e` levanta el servidor de produccion contra `camorra_test`, limpia la base y
 juega el ciclo completo en Chromium. Es lo mismo que se despliega, no una version de
 mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
 

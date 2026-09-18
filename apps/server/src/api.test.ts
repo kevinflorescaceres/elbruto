@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { NAME_MAX, NAME_MIN, NAME_PATTERN } from '@rufianes/shared';
+import { NAME_MAX, NAME_MIN, NAME_PATTERN } from '@camorra/shared';
 import { buildApp } from './app.js';
 import { prisma } from './db.js';
 
@@ -66,7 +66,7 @@ beforeEach(async () => {
 
 describe('creacion de luchadores', () => {
   it('crea, devuelve enlace de recuperacion y lo lista en /me', async () => {
-    const { browser, slug } = await newFighter('rufian');
+    const { browser, slug } = await newFighter('camorrista');
 
     const me = await browser.call('GET', '/api/me');
     expect(me.body.brutes).toHaveLength(1);

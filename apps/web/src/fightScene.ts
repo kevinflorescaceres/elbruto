@@ -8,8 +8,8 @@
  * Las coordenadas van en 0..1 sobre el ancho y alto del lienzo: el renderer las
  * escala y el guion no sabe nada de pixeles.
  */
-import { getWeapon, type Appearance, type FightEvent } from '@rufianes/engine';
-import type { FightReplay } from '@rufianes/shared';
+import { getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
+import type { FightReplay } from '@camorra/shared';
 import type { AnimName } from './art/poses.js';
 import { describe } from './fightLines.js';
 

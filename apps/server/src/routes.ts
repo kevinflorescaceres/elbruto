@@ -1,6 +1,6 @@
 /**
  * Endpoints de PLAN.md §8. Aqui no hay ninguna regla de juego: todo lo que
- * decide viene de `@rufianes/engine`.
+ * decide viene de `@camorra/engine`.
  */
 import { randomInt } from 'node:crypto';
 import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
@@ -11,7 +11,7 @@ import {
   rollLevelUpOptions,
   simulate,
   type LevelUpOption,
-} from '@rufianes/engine';
+} from '@camorra/engine';
 import {
   claimBody,
   createBruteBody,
@@ -19,7 +19,7 @@ import {
   levelUpOptionSchema,
   reportBody,
   startFightBody,
-} from '@rufianes/shared';
+} from '@camorra/shared';
 import { z } from 'zod';
 import {
   asJson,

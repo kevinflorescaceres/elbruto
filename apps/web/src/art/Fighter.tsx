@@ -4,7 +4,7 @@
  * sitios), pero sin arrastrar Pixi a esta pantalla.
  */
 import { Fragment } from 'react';
-import type { Appearance } from '@rufianes/engine';
+import type { Appearance } from '@camorra/engine';
 import {
   colorOf,
   GROSOR,

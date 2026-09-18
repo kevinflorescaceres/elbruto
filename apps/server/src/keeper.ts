@@ -8,7 +8,7 @@ import '@fastify/cookie';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from './db.js';
 
-export const COOKIE = 'rufian';
+export const COOKIE = 'camorra';
 
 export const newToken = (): string => randomBytes(32).toString('base64url');
 export const hashToken = (token: string): string =>

@@ -6,8 +6,8 @@
  * el comando `pnpm admin`. Para ampliarla basta anadir lineas aqui o rellenar
  * BLOCKED_NAMES_EXTRA con una lista separada por comas.
  */
-import { slugify } from '@rufianes/engine';
-import { NAME_HINT, NAME_MIN } from '@rufianes/shared';
+import { slugify } from '@camorra/engine';
+import { NAME_HINT, NAME_MIN } from '@camorra/shared';
 
 const BASE_BLOCKED = [
   'puta',

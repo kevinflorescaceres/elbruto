@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router';
-import { NAME_MAX, NAME_MIN } from '@rufianes/shared';
+import { NAME_MAX, NAME_MIN } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
 import { useMe } from '../hooks.js';
 
@@ -24,7 +24,7 @@ export function Home() {
 
   return (
     <main>
-      <h1>Rufianes</h1>
+      <h1>Camorra</h1>
       <p className="apagado">
         Pon un nombre y tendras un peleon. Lo demas lo decide el y la mala suerte.
       </p>

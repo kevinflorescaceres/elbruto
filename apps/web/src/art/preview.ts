@@ -1,9 +1,9 @@
 /**
  * Genera hojas de contacto del arte en SVG para poder mirarlas.
- * Herramienta de desarrollo: `pnpm --filter @rufianes/web art`.
+ * Herramienta de desarrollo: `pnpm --filter @camorra/web art`.
  */
 import { writeFileSync } from 'node:fs';
-import { createBrute, WEAPONS } from '@rufianes/engine';
+import { createBrute, WEAPONS } from '@camorra/engine';
 import {
   colorOf,
   GROSOR,

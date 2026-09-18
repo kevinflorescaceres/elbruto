@@ -38,6 +38,12 @@ importers:
 
   apps/server:
     dependencies:
+      '@camorra/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@camorra/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@fastify/cookie':
         specifier: ^11.1.2
         version: 11.1.2
@@ -53,12 +59,6 @@ importers:
       '@prisma/client':
         specifier: ^7.10.0
         version: 7.10.0(prisma@7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3)
-      '@rufianes/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@rufianes/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
@@ -78,10 +78,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@rufianes/engine':
+      '@camorra/engine':
         specifier: workspace:*
         version: link:../../packages/engine
-      '@rufianes/shared':
+      '@camorra/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tanstack/react-query':
@@ -130,7 +130,7 @@ importers:
 
   packages/shared:
     dependencies:
-      '@rufianes/engine':
+      '@camorra/engine':
         specifier: workspace:*
         version: link:../engine
       zod:

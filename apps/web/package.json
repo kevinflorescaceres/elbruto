@@ -1,5 +1,5 @@
 {
-  "name": "@rufianes/web",
+  "name": "@camorra/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "art": "tsx src/art/preview.ts"
   },
   "dependencies": {
-    "@rufianes/engine": "workspace:*",
-    "@rufianes/shared": "workspace:*",
+    "@camorra/engine": "workspace:*",
+    "@camorra/shared": "workspace:*",
     "@tanstack/react-query": "^5.103.1",
     "gsap": "^3.15.0",
     "pixi.js": "^8.21.0",

@@ -1,8 +1,15 @@
 import { defineConfig } from '@playwright/test';
 
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// El .env local manda salvo que la shell diga otra cosa (CI no tiene .env).
+const envFile = resolve(import.meta.dirname, '.env');
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+
 const PORT = 3200;
 const DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgresql://rufianes:rufianes@localhost:5432/rufianes_test';
+  process.env.TEST_DATABASE_URL ?? 'postgresql://camorra:camorra@localhost:5432/camorra_test';
 
 /**
  * El end-to-end corre contra el servidor de produccion, que sirve la API y el
@@ -19,7 +26,7 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: `http://127.0.0.1:${PORT}` },
   webServer: {
-    command: 'pnpm --filter @rufianes/web build && pnpm --filter @rufianes/server start',
+    command: 'pnpm --filter @camorra/web build && pnpm --filter @camorra/server start',
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
