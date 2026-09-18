@@ -3,16 +3,22 @@ import { z } from 'zod';
 import type { LevelUpOption } from '@rufianes/engine';
 import { appearanceSchema, fightEventSchema } from './fight.js';
 
-/** 3 a 20 caracteres: letras, numeros, espacio, guion y guion bajo. */
-export const NAME_PATTERN = /^[\p{L}\p{N} _-]{3,20}$/u;
+/**
+ * Limites del nombre, en un unico sitio: los usan el esquema, la validacion del
+ * servidor y el formulario de la web. Cambiarlos aqui los cambia en los tres.
+ */
+export const NAME_MIN = 5;
+export const NAME_MAX = 20;
+
+/** Letras, numeros, espacio, guion y guion bajo. */
+export const NAME_PATTERN = new RegExp(`^[\\p{L}\\p{N} _-]{${NAME_MIN},${NAME_MAX}}$`, 'u');
+
+export const NAME_HINT = `El nombre debe tener de ${NAME_MIN} a ${NAME_MAX} letras, numeros, guiones o espacios`;
 
 export const nameSchema = z
   .string()
   .trim()
-  .refine(
-    (v) => NAME_PATTERN.test(v),
-    'El nombre debe tener de 3 a 20 letras, numeros, guiones o espacios',
-  );
+  .refine((v) => NAME_PATTERN.test(v), NAME_HINT);
 
 export const statsSchema = z.object({
   endurance: z.number().int(),

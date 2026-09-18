@@ -73,7 +73,8 @@ export function registerRoutes(
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error instanceof HttpError) return reply.code(error.status).send({ error: error.message });
     if (error instanceof z.ZodError) {
-      return reply.code(400).send({ error: z.prettifyError(error) });
+      // El mensaje del primer fallo, no el volcado de Zod: esto se ensena al jugador.
+      return reply.code(400).send({ error: error.issues[0]?.message ?? 'Datos no validos' });
     }
     app.log.error(error);
     const status = typeof error.statusCode === 'number' ? error.statusCode : 500;

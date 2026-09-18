@@ -7,6 +7,7 @@
  * BLOCKED_NAMES_EXTRA con una lista separada por comas.
  */
 import { slugify } from '@rufianes/engine';
+import { NAME_HINT, NAME_MIN } from '@rufianes/shared';
 
 const BASE_BLOCKED = [
   'puta',
@@ -41,7 +42,7 @@ export type NameCheck = { ok: true; slug: string } | { ok: false; reason: string
 /** Comprueba forma y contenido. El slug es la identidad canonica. */
 export function checkName(name: string): NameCheck {
   const slug = slugify(name);
-  if (slug.length < 3) return { ok: false, reason: 'El nombre es demasiado corto' };
+  if (slug.length < NAME_MIN) return { ok: false, reason: NAME_HINT };
   // El slug ya viene sin acentos ni mayusculas: esquivarlo con "PuTa" no funciona.
   const hit = blocked.find((word) => slug.includes(word));
   if (hit !== undefined) return { ok: false, reason: 'Ese nombre no esta permitido' };

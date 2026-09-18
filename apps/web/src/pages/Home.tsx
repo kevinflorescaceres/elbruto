@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router';
+import { NAME_MAX, NAME_MIN } from '@rufianes/shared';
 import { api, ApiError } from '../api.js';
 import { useMe } from '../hooks.js';
 
@@ -41,10 +42,10 @@ export function Home() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Chirlo de la Cava"
-            maxLength={20}
+            maxLength={NAME_MAX}
             aria-label="Nombre del peleon"
           />
-          <button type="submit" disabled={name.trim().length < 3 || create.isPending}>
+          <button type="submit" disabled={name.trim().length < NAME_MIN || create.isPending}>
             {create.isPending ? 'Creando...' : 'Crear'}
           </button>
         </form>

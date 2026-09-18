@@ -4,6 +4,7 @@
  */
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { NAME_MAX, NAME_MIN } from '@rufianes/shared';
 import { buildApp } from './app.js';
 import { prisma } from './db.js';
 
@@ -77,8 +78,22 @@ describe('creacion de luchadores', () => {
     await browser.call('POST', '/api/brutes', { name: 'Chirlo Tuerto' });
 
     expect((await browser.call('POST', '/api/brutes', { name: 'chirlo tuerto' })).status).toBe(409);
-    expect((await browser.call('POST', '/api/brutes', { name: 'ab' })).status).toBe(400);
     expect((await browser.call('POST', '/api/brutes', { name: 'el puta amo' })).status).toBe(400);
+  });
+
+  it('fija el limite de longitud en NAME_MIN y NAME_MAX', async () => {
+    const browser = new Browser();
+    const largo = 'x'.repeat(NAME_MAX);
+
+    // Justo por debajo y justo por encima fallan; los extremos validos pasan.
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: 'x'.repeat(NAME_MIN - 1) })).status,
+    ).toBe(400);
+    expect((await browser.call('POST', '/api/brutes', { name: largo + 'x' })).status).toBe(400);
+    expect((await browser.call('POST', '/api/brutes', { name: 'x'.repeat(NAME_MIN) })).status).toBe(
+      201,
+    );
+    expect((await browser.call('POST', '/api/brutes', { name: largo })).status).toBe(201);
   });
 
   it('el perfil es publico pero pelear no lo es', async () => {
