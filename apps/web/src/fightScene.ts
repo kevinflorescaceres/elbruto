@@ -137,15 +137,22 @@ const COLOR = {
 } as const;
 
 /**
+ * Mando unico del ritmo (COMBATE.md §5). Subirlo ralentiza el combate entero:
+ * los gestos dentro de una accion y la espera entre la accion de uno y la del
+ * otro, porque ambos salen del mismo reparto.
+ */
+export const TIME_SCALE = 2;
+
+/**
  * Un turno es una accion de un peleon, y dura lo mismo siempre: el combate se
  * sigue con la vista sin tirones. Antes cada evento traia su propia duracion y
  * un turno podia durar 0,32 s (sacar un arma) o 2,0 s (ataque con contraataque).
  */
-const SEGUNDOS_POR_ACCION = 1;
+export const SEGUNDOS_POR_ACCION = 1 * TIME_SCALE;
 /** La entrada en escena de todos los combatientes, junta. */
-const SEGUNDOS_DE_ENTRADA = 0.8;
+const SEGUNDOS_DE_ENTRADA = 0.8 * TIME_SCALE;
 /** El remate final: merece respirar. */
-const SEGUNDOS_DE_CIERRE = 1.4;
+const SEGUNDOS_DE_CIERRE = 1.4 * TIME_SCALE;
 
 /**
  * Peso de cada evento DENTRO de su turno. Ya no son segundos: son la parte del

@@ -1,6 +1,6 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
-import { planFight, type Move } from './fightScene.js';
+import { planFight, SEGUNDOS_POR_ACCION, type Move } from './fightScene.js';
 
 /** Combates variados: con mascotas, de todos los niveles. */
 function fight(seed: number) {
@@ -119,7 +119,7 @@ group('planFight', () => {
     expect(animados.size).toBe(16);
   }, 30_000);
 
-  it('cada accion de un peleon dura un segundo', () => {
+  it('cada accion de un peleon dura lo mismo', () => {
     // El ritmo es lo que hace que un combate se siga con la vista. Antes cada
     // evento traia su duracion y un turno podia durar 0,32 s o 2,0 s.
     for (let seed = 0; seed < 120; seed++) {
@@ -132,8 +132,10 @@ group('planFight', () => {
 
       for (let i = 1; i < inicios.length; i++) {
         const dura = (inicios[i] ?? 0) - (inicios[i - 1] ?? 0);
-        // 1 s, o 2 s si en ese turno hubo contraataque, que es otra accion.
-        const valido = Math.abs(dura - 1) < 1e-6 || Math.abs(dura - 2) < 1e-6;
+        // Una accion, o dos si en ese turno hubo contraataque.
+        const valido =
+          Math.abs(dura - SEGUNDOS_POR_ACCION) < 1e-6 ||
+          Math.abs(dura - SEGUNDOS_POR_ACCION * 2) < 1e-6;
         if (!valido) throw new Error(`semilla ${seed}: una accion duro ${dura.toFixed(3)} s`);
       }
     }

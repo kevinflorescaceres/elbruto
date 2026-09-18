@@ -8,7 +8,7 @@
  *   pnpm --filter @camorra/web ritmo
  */
 import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
-import { planFight } from './fightScene.js';
+import { planFight, SEGUNDOS_POR_ACCION } from './fightScene.js';
 
 const COMBATES = Number(process.argv[2] ?? 400);
 
@@ -56,7 +56,10 @@ console.log(`duracion media         ${(duracion / COMBATES).toFixed(1)} s`);
 console.log(`  mas corto (p5)       ${percentil(0.05).toFixed(1)} s`);
 console.log(`  mediana              ${percentil(0.5).toFixed(1)} s`);
 console.log(`  mas largo (p95)      ${percentil(0.95).toFixed(1)} s`);
-console.log(`\nSEGUNDOS POR ACCION    ${(duracion / turnos).toFixed(2)} s   (objetivo ~1.00)`);
+console.log(
+  `\nSEGUNDOS POR ACCION    ${(duracion / turnos).toFixed(2)} s   ` +
+    `(objetivo ~${SEGUNDOS_POR_ACCION.toFixed(2)})`,
+);
 
 porAccion.sort((x, y) => x - y);
 const pa = (p: number): number => porAccion[Math.floor(porAccion.length * p)] ?? 0;
