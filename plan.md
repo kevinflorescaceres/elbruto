@@ -295,9 +295,9 @@ Cada fase termina con tests pasando, lint limpio y un commit.
 
 ### Fases futuras
 
+- ~~Ranking.~~ **Hecho:** `GET /api/ranking` y la página `/ranking`, ordenando por nivel y victorias, con los bots fuera. La ficha trae el puesto y una cuenta atrás hasta la próxima tanda de peleas.
 - Pupilos: enlace de invitación, bonificaciones para el maestro.
 - Torneos diarios por nivel.
-- Ranking.
 - Sonido.
 
 ## 11. Restricciones de contenido original (obligatorias)
