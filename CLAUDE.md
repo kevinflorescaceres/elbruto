@@ -82,7 +82,13 @@ tests, asi que nunca pisan la base de desarrollo.
 - Prisma 7 no admite `url` en el schema: la conexión va en `apps/server/prisma.config.ts`
   y el cliente usa el driver adapter de `pg`. `prisma` está fijado en 7.10.0 porque su
   tag `latest` en npm apunta a una release candidate de la 8.
-- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate.
+- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **2**.
+  Los combates antiguos se siguen viendo: se reproducen desde su log guardado, no se
+  vuelven a simular.
+- **Los textos que ve el jugador llevan tildes.** Los comentarios del código no, para
+  evitar problemas de codificación, pero la interfaz es español correcto.
+- `apps/web/public/og.png` se genera con `pnpm --filter @camorra/web art` y se rasteriza
+  a mano (ver la seccion de Arte). Se versiona: no se construye en cada despliegue.
 
 ## Ajustes de reglas
 

@@ -16,7 +16,10 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
   const timeline = useRef<gsap.core.Timeline | null>(null);
   const [listo, setListo] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
-  const [reproduciendo, setReproduciendo] = useState(true);
+  // Quien pide menos movimiento no deberia encontrarse un combate animandose solo.
+  const sinMovimiento =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [reproduciendo, setReproduciendo] = useState(!sinMovimiento);
   const [velocidad, setVelocidad] = useState(1);
   const [pie, setPie] = useState<string | null>(null);
 
@@ -51,7 +54,9 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         aplicacion.canvas.style.height = 'auto';
         contenedor.appendChild(aplicacion.canvas);
 
-        timeline.current = buildTimeline(aplicacion.stage, planFight(replay), setPie);
+        const tl = buildTimeline(aplicacion.stage, planFight(replay), setPie);
+        if (sinMovimiento) tl.pause();
+        timeline.current = tl;
         setListo(true);
       } catch (error) {
         if (!cancelado) setFallo(error instanceof Error ? error.message : 'Error de dibujo');
@@ -64,7 +69,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
       timeline.current = null;
       app?.destroy(true, { children: true });
     };
-  }, [replay]);
+  }, [replay, sinMovimiento]);
 
   useEffect(() => {
     timeline.current?.timeScale(velocidad);
@@ -88,7 +93,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
 
       {fallo !== null && (
         <p className="error">
-          No se ha podido dibujar el combate: {fallo}. Lo tienes entero en texto mas abajo.
+          No se ha podido dibujar el combate: {fallo}. Lo tienes entero en texto más abajo.
         </p>
       )}
 

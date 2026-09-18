@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#241f1c"/>
+  <!-- Dos chuzos cruzados: la camorra en un icono. -->
+  <g stroke="#e8c39e" stroke-width="5" stroke-linecap="round">
+    <path d="M16 48 L44 18"/>
+    <path d="M48 48 L20 18"/>
+  </g>
+  <g fill="#c94f3d">
+    <path d="M44 18 l6 -6 l1 9 l-9 -1 Z"/>
+    <path d="M20 18 l-6 -6 l-1 9 l9 -1 Z"/>
+  </g>
+</svg>

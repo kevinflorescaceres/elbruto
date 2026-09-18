@@ -34,8 +34,8 @@ export function ArenaPage() {
   if (opponents.error)
     return (
       <main>
-        <h1>Aqui no pintas nada</h1>
-        <p className="apagado">Solo el dueno de un peleon puede buscarle pelea.</p>
+        <h1>Aquí no pintas nada</h1>
+        <p className="apagado">Solo el dueño de un peleón puede buscarle pelea.</p>
         <Link to={`/b/${slug}`}>Volver a la ficha</Link>
       </main>
     );
@@ -46,7 +46,7 @@ export function ArenaPage() {
         <Link to={`/b/${slug}`}>← Volver a la ficha</Link>
       </p>
       <h1>Elige rival</h1>
-      <p className="apagado">Gente de tu nivel, mas o menos. Elige y ya no hay vuelta atras.</p>
+      <p className="apagado">Gente de tu nivel, más o menos. Elige y ya no hay vuelta atrás.</p>
 
       {fight.error && (
         <p className="error">

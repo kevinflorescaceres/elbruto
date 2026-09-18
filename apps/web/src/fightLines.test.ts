@@ -26,7 +26,7 @@ group('buildSteps', () => {
       .join('\n');
 
     expect(texto).not.toMatch(/\bA-pet-0\b/);
-    expect(texto).toMatch(/Mastin/);
+    expect(texto).toMatch(/Mastín/);
   });
 
   it('la vida solo baja hasta 0 y nunca es negativa', () => {

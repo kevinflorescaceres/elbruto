@@ -22,7 +22,7 @@ const RUTAS = [
   /^\/claim\/[\w-]+$/,
 ];
 const DESCRIPTION_POR_DEFECTO =
-  'Pon un nombre y tendras un peleon. Lo demas lo deciden el y la mala suerte.';
+  'Pon un nombre y tendrás un peleón. Lo demás lo deciden él y la mala suerte.';
 
 /** Los nombres los escribe el jugador: nunca van al HTML sin escapar. */
 function escape(value: string): string {
@@ -75,7 +75,7 @@ async function metaFor(pathname: string): Promise<Meta> {
   return { title: SITE, description: DESCRIPTION_POR_DEFECTO, found: true };
 }
 
-function inject(template: string, meta: Meta, url: string): string {
+function inject(template: string, meta: Meta, url: string, base: string): string {
   const title = escape(meta.title === SITE ? SITE : `${meta.title} · ${SITE}`);
   const description = escape(meta.description);
   const tags = [
@@ -86,7 +86,10 @@ function inject(template: string, meta: Meta, url: string): string {
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
     `<meta property="og:url" content="${escape(url)}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    `<meta property="og:image" content="${escape(base)}/og.png" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
   ].join('\n    ');
 
   // El <title> del build se sustituye; el resto se anade antes de cerrar la cabecera.
@@ -101,7 +104,9 @@ export async function registerWeb(app: FastifyInstance): Promise<boolean> {
   const dist = resolve(import.meta.dirname, '../../web/dist');
   if (!existsSync(join(dist, 'index.html'))) return false;
 
-  await app.register(fastifyStatic, { root: dist, wildcard: false });
+  // index: false a proposito. Si @fastify/static sirviera index.html en "/", la
+  // portada se saltaria la inyeccion de metadatos y llegaria sin og: a nadie.
+  await app.register(fastifyStatic, { root: dist, wildcard: false, index: false });
   const template = readFileSync(join(dist, 'index.html'), 'utf8');
 
   app.setNotFoundHandler(async (request, reply) => {
@@ -117,7 +122,7 @@ export async function registerWeb(app: FastifyInstance): Promise<boolean> {
     return reply
       .code(conocida && meta.found ? 200 : 404)
       .type('text/html')
-      .send(inject(template, meta, `${base}${pathname}`));
+      .send(inject(template, meta, `${base}${pathname}`, base));
   });
 
   return true;

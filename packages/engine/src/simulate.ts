@@ -4,7 +4,7 @@
  */
 import { maxHpFor } from './brute.js';
 import { FISTS, getPet, getSkill, getWeapon } from './catalog.js';
-import { chance, clamp, mulberry32, pick, randInt, weightedPick, type Rng } from './prng.js';
+import { chance, clamp, mulberry32, randInt, weightedPick, type Rng } from './prng.js';
 import type {
   Brute,
   Combatant,
@@ -16,7 +16,10 @@ import type {
   Weapon,
 } from './types.js';
 
-export const ENGINE_VERSION = 1;
+// 2: el luchador empuna su mejor arma en vez de una al azar, y cada categoria
+// tiene efecto propio (pesada ignora armadura, larga rompe guardias, rapida no
+// se contesta, lanzar dobla el dano).
+export const ENGINE_VERSION = 2;
 
 const MAX_TURNS = 500;
 
@@ -92,13 +95,12 @@ export function combatStats(brute: Brute): CombatStats {
   return { maxHp, strength, agility, speed, armor, block, counter, actives };
 }
 
-function buildFighter(brute: Brute, side: Side, rng: Rng): Combatant {
+function buildFighter(brute: Brute, side: Side): Combatant {
   const { maxHp, strength, agility, speed, armor, block, counter, actives } = combatStats(brute);
 
-  // Entra a la pelea con un arma ya en la mano: empezar siempre a punos
-  // desperdiciaba turnos y dejaba todas las armas por debajo del 40% de victorias.
+  // Entra con un arma en la mano: empezar a punos desperdiciaba turnos. Cual,
+  // se decide despues, cuando se conoce al rival (ver `equipBest`).
   const weapons = brute.weapons.map(getWeapon);
-  const weapon = weapons.length > 0 ? pick(rng, weapons) : FISTS;
 
   return {
     id: side,
@@ -111,7 +113,7 @@ function buildFighter(brute: Brute, side: Side, rng: Rng): Combatant {
     agility,
     speed,
     weapons,
-    weapon,
+    weapon: FISTS,
     armor,
     block,
     counter,
@@ -141,6 +143,32 @@ function buildPet(petId: string, side: Side, index: number): Combatant {
     actives: [],
     next: 0,
   };
+}
+
+/**
+ * Dano esperado por unidad de tiempo contra un rival concreto. Es la medida que
+ * decide que arma se empuna.
+ */
+export function weaponScore(weapon: Weapon, attacker: Combatant, defender: Combatant): number {
+  const dano = weapon.damage + Math.floor((attacker.strength * weapon.strengthScale) / 100);
+  const acierto = clamp(weapon.accuracy - defender.agility * 2, 10, 95);
+  const espera = Math.max(1, Math.round((weapon.baseDelay * 10) / (10 + attacker.speed)));
+  return (dano * acierto) / espera;
+}
+
+/** La mejor de las que lleva encima, o los punos si no lleva ninguna. */
+function bestWeapon(fighter: Combatant, rival: Combatant): Weapon {
+  let mejor = FISTS;
+  let puntos = weaponScore(FISTS, fighter, rival);
+  for (const weapon of fighter.weapons) {
+    const suyo = weaponScore(weapon, fighter, rival);
+    // A igualdad gana la primera: el recorrido es estable y el resultado determinista.
+    if (suyo > puntos) {
+      puntos = suyo;
+      mejor = weapon;
+    }
+  }
+  return mejor;
 }
 
 interface State {
@@ -191,7 +219,9 @@ function resolveAttack(
     return;
   }
 
-  if (defender.block > 0 && chance(state.rng, defender.block)) {
+  // Un arma larga es dificil de parar: llega antes de que cierres la guardia.
+  const bloqueo = weapon.category === 'larga' ? Math.floor(defender.block / 2) : defender.block;
+  if (bloqueo > 0 && chance(state.rng, bloqueo)) {
     state.log.push({ type: 'block', id: defender.id });
     return;
   }
@@ -200,7 +230,9 @@ function resolveAttack(
 
   const base = weapon.damage + Math.floor((attacker.strength * weapon.strengthScale) / 100);
   const varied = Math.floor((base * randInt(state.rng, 80, 120)) / 100);
-  const amount = Math.max(1, Math.floor(varied * multiplier) - defender.armor);
+  // Un golpe pesado pasa por encima del acolchado: la dureza no lo amortigua.
+  const armadura = weapon.category === 'pesada' ? 0 : defender.armor;
+  const amount = Math.max(1, Math.floor(varied * multiplier) - armadura);
 
   defender.hp = Math.max(0, defender.hp - amount);
   state.log.push({ type: 'damage', id: defender.id, amount, hp: defender.hp });
@@ -210,7 +242,9 @@ function resolveAttack(
     return;
   }
 
-  if (allowCounter && defender.counter > 0 && chance(state.rng, defender.counter)) {
+  // A un arma rapida no se le contesta: ya ha vuelto a la guardia.
+  const contestable = allowCounter && weapon.category !== 'rapida';
+  if (contestable && defender.counter > 0 && chance(state.rng, defender.counter)) {
     state.log.push({ type: 'counter', id: defender.id, target: attacker.id });
     resolveAttack(state, defender, attacker, defender.weapon, {
       allowCounter: false,
@@ -226,12 +260,14 @@ function attack(state: State, actor: Combatant, multiplier = 1): void {
 }
 
 function drawWeapon(state: State, actor: Combatant): void {
-  const candidates = actor.weapons.filter((w) => w.id !== actor.weapon.id);
-  if (candidates.length === 0) return attack(state, actor);
-  const next = weightedPick(
-    state.rng,
-    candidates.map((w) => ({ value: w, weight: 1 })),
-  );
+  const rival = state.fighters.find((c) => c.side !== actor.side && !c.isPet);
+  if (rival === undefined) return attack(state, actor);
+
+  // Se echa mano de la mejor que quede, no de una al azar: tras perder un arma
+  // esto es lo que devuelve al luchador a su mejor forma.
+  const next = bestWeapon(actor, rival);
+  if (next.id === actor.weapon.id) return attack(state, actor);
+
   actor.weapon = next;
   state.log.push({ type: 'drawWeapon', id: actor.id, weapon: next.id });
 }
@@ -245,7 +281,8 @@ function throwWeapon(state: State, actor: Combatant): void {
   // Se lanza y se pierde: vuelve a los punos antes de que el arma haga efecto.
   actor.weapons = actor.weapons.filter((w) => w.id !== thrown.id);
   actor.weapon = FISTS;
-  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 1 });
+  // Tirar el arma es jugarsela: si no doliera el doble, nunca compensaria.
+  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 2 });
 }
 
 /** Solo tiene sentido desarmar a quien lleva algo. */
@@ -299,7 +336,9 @@ function act(state: State, actor: Combatant): void {
   const action = weightedPick<'attack' | 'draw' | 'throw' | 'skill'>(state.rng, [
     { value: 'attack', weight: 60 },
     { value: 'draw', weight: canDraw ? 12 : 0 },
-    { value: 'throw', weight: canThrow ? 5 : 0 },
+    // Tirar el arma dobla el dano pero la pierdes: merece considerarse mas a menudo
+    // ahora que compensa.
+    { value: 'throw', weight: canThrow ? 12 : 0 },
     { value: 'skill', weight: canSkill ? 18 : 0 },
   ]);
 
@@ -334,8 +373,8 @@ const brutesOf = (state: State): [Combatant, Combatant] => {
 
 export function simulate(bruteA: Brute, bruteB: Brute, seed: number): FightResult {
   const rng = mulberry32(seed);
-  const a = buildFighter(bruteA, 'A', rng);
-  const b = buildFighter(bruteB, 'B', rng);
+  const a = buildFighter(bruteA, 'A');
+  const b = buildFighter(bruteB, 'B');
   const state: State = {
     rng,
     log: [{ type: 'start', seed }],
@@ -347,6 +386,11 @@ export function simulate(bruteA: Brute, bruteB: Brute, seed: number): FightResul
     ],
     turns: 0,
   };
+
+  // Cada uno empuna su mejor arma contra ESE rival: tener un arma mejor debe
+  // mejorarte, no anadir un boleto mas al sorteo.
+  a.weapon = bestWeapon(a, b);
+  b.weapon = bestWeapon(b, a);
 
   // Iniciativa inicial repartida al azar: si no, el lado A siempre pega primero.
   for (const c of state.fighters) {

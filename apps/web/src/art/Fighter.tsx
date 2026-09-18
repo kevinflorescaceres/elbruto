@@ -90,7 +90,7 @@ export function Fighter({ appearance, weapon, height = 150 }: Props) {
       viewBox="-58 -116 116 124"
       height={height}
       role="img"
-      aria-label="Retrato del peleon"
+      aria-label="Retrato del peleón"
       style={{ display: 'block', overflow: 'visible' }}
     >
       {render('hips')}

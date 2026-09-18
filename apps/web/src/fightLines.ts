@@ -40,7 +40,7 @@ export function describe(event: FightEvent, nameOf: (id: string) => string): str
     case 'death':
       return `${nameOf(event.id)} se desploma.`;
     case 'end':
-      return `Se acabo en ${event.turns} turnos.`;
+      return `Se acabó en ${event.turns} turnos.`;
     // start, spawn, turn, move y hit son estructurales: el cliente los usa para
     // animar, pero como texto solo serian ruido.
     default:

@@ -6,7 +6,7 @@ const nombre = (prefijo: string): string => `${prefijo} ${Math.random().toString
 async function crearPeleon(page: Page, prefijo: string): Promise<string> {
   const suyo = nombre(prefijo);
   await page.goto('/');
-  await page.getByLabel('Nombre del peleon').fill(suyo);
+  await page.getByLabel('Nombre del peleón').fill(suyo);
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Guarda este enlace')).toBeVisible();
   await expect(page.getByRole('button', { name: suyo })).toBeVisible();
@@ -33,7 +33,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
 
   await paginaMia.getByRole('button', { name: propio }).click();
   await expect(paginaMia.getByRole('heading', { name: propio })).toBeVisible();
-  await expect(paginaMia.getByRole('img', { name: 'Retrato del peleon' })).toBeVisible();
+  await expect(paginaMia.getByRole('img', { name: 'Retrato del peleón' })).toBeVisible();
 
   // Perder da 1 XP y ganar 2: cinco peleas suben de nivel pase lo que pase.
   let peleas = 0;
@@ -48,7 +48,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
     await expect(paginaMia.locator('canvas')).toBeVisible();
     await paginaMia.getByRole('button', { name: 'Ir al final' }).click();
     // El pie de escena del player: "Gana" vive en el log de texto, que va plegado.
-    await expect(paginaMia.getByText(/Se acabo en \d+ turnos/)).toBeVisible();
+    await expect(paginaMia.getByText(/Se acabó en \d+ turnos/)).toBeVisible();
     peleas += 1;
 
     await paginaMia
@@ -74,7 +74,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
 
   // La repeticion es publica: se ve sin la cookie del dueno.
   await paginaMia
-    .getByRole('link', { name: /Gano|Perdio/ })
+    .getByRole('link', { name: /Ganó|Perdió/ })
     .first()
     .click();
   await expect(paginaMia).toHaveURL(/\/fight\//);

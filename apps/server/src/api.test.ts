@@ -283,7 +283,16 @@ describe('metadatos para compartir', () => {
     expect(page.statusCode).toBe(200);
     expect(page.headers['content-type']).toContain('text/html');
     expect(page.body).toContain('og:title');
+    expect(page.body).toContain('og:image');
     expect(page.body).toContain('le gano a');
+  });
+
+  it.runIf(construido)('la portada tambien lleva metadatos', async () => {
+    // @fastify/static servia index.html en "/" y se saltaba la inyeccion.
+    const page = await app.inject({ method: 'GET', url: '/' });
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('og:site_name');
+    expect(page.body).toContain('og:image');
   });
 
   it('ningun nombre aceptado puede llevar HTML', async () => {

@@ -8,6 +8,7 @@ import {
   addXp,
   applyLevelUpOption,
   createBrute,
+  ENGINE_VERSION,
   rollLevelUpOptions,
   simulate,
   type LevelUpOption,
@@ -81,7 +82,7 @@ export function registerRoutes(
     return reply.code(status).send({ error: status === 500 ? 'Error interno' : error.message });
   });
 
-  app.get('/api/health', () => ({ ok: true as const, engineVersion: 1 }));
+  app.get('/api/health', () => ({ ok: true as const, engineVersion: ENGINE_VERSION }));
 
   // --- Identidad ---
 

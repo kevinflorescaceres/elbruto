@@ -50,7 +50,7 @@ function Denuncia({ slug }: { slug: string }) {
       <input
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        placeholder="Que problema hay con este peleon"
+        placeholder="Qué problema hay con este peleón"
         style={{ flex: 1 }}
       />
       <button type="submit" disabled={reason.trim().length < 3}>
@@ -94,7 +94,7 @@ export function BrutePage() {
       <h1>{b.name}</h1>
       <p className="apagado">
         Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {b.wins} victorias, {b.losses}{' '}
-        derrotas{b.isBot && ' · peleon de la casa'}
+        derrotas{b.isBot && ' · peleón de la casa'}
       </p>
 
       <div className="tarjeta fila" style={{ alignItems: 'flex-start', gap: '1.5rem' }}>
@@ -164,11 +164,11 @@ export function BrutePage() {
       )}
 
       <h2>Peleas</h2>
-      {history.data?.fights.length === 0 && <p className="apagado">Todavia no ha peleado.</p>}
+      {history.data?.fights.length === 0 && <p className="apagado">Todavía no ha peleado.</p>}
       {history.data?.fights.map((fight) => (
         <p key={fight.id}>
           <Link to={`/fight/${fight.id}`}>
-            {fight.won ? 'Gano' : 'Perdio'} contra {fight.opponent.name} (nivel{' '}
+            {fight.won ? 'Ganó' : 'Perdió'} contra {fight.opponent.name} (nivel{' '}
             {fight.opponent.level})
           </Link>{' '}
           <span className="apagado">{new Date(fight.createdAt).toLocaleDateString()}</span>

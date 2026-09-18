@@ -146,7 +146,7 @@ Fight
 
 - Participantes: los dos luchadores y sus mascotas. Las mascotas son combatientes con sus propias stats, pero el combate termina solo cuando un luchador llega a 0 de vida.
 - **Iniciativa:** cada combatiente tiene un tiempo de próxima acción. Actúa el menor. Tras actuar suma `delay = weapon.baseDelay * 10 / (10 + speed)` (redondeado).
-- Cada luchador **entra al combate con una de sus armas ya empuñada** (elegida con el PRNG), no a puños. _(Ajustado en Fase 1: empezar desarmado gastaba turnos y hundía a todas las armas por debajo del 40% de victorias.)_
+- Cada luchador **entra al combate empuñando su mejor arma contra ese rival** (mayor daño esperado por unidad de tiempo), no una al azar. _(Ajustado tras la Fase 6: con un arma al azar, conseguir un arma mejor no te mejoraba, solo añadía un boleto más al sorteo, y las armas eran la peor categoría del catálogo.)_ _(Ajustado en Fase 1: empezar desarmado gastaba turnos y hundía a todas las armas por debajo del 40% de victorias.)_
 - **Acción del luchador** en su turno, elegida con el PRNG según pesos: atacar 60, sacar un arma nueva 12, lanzar el arma 5, activar una habilidad activa 18. Los pesos de las acciones imposibles pasan a 0.
 - **Objetivo:** el luchador rival (peso 5) o una de sus mascotas vivas (peso 1 cada una).
 - **Resolución:**
@@ -154,6 +154,11 @@ Fight
   - Si falla, el log registra `evade`. Si el defensor tiene una habilidad de bloqueo, puede registrar `block`.
   - Daño: `weapon.damage + floor(strength * weapon.strengthScale / 100)`, con variación de ±20% vía PRNG.
   - `counter`: el defensor contraataca una vez si tiene la habilidad. No encadena.
+  - **Cada categoría de arma tiene un efecto propio**, y cada uno contrarresta una habilidad concreta _(añadido tras la Fase 6, para que elegir arma compita con elegir habilidad o mascota)_:
+    - **pesada** ignora la armadura del defensor (contra _Callo Viejo_).
+    - **larga** reduce a la mitad su probabilidad de bloqueo (contra _Mano Zurda_).
+    - **rápida** no admite contraataque (contra _Revire_).
+    - Lanzar un arma hace **el doble de daño**: se pierde, así que si no doliera nunca compensaría.
   - `disarm`: solo mediante la habilidad activa correspondiente. _(Simplificación de Fase 1: ningún arma desarma por sí sola.)_
 - **Tope de turnos:** 500. Si se alcanza, gana quien tenga mayor porcentaje de vida restante.
 

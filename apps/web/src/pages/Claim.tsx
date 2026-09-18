@@ -23,10 +23,10 @@ export function ClaimPage() {
     return (
       <main>
         <h1>Ese enlace no vale</h1>
-        <p className="apagado">O esta mal copiado, o el peleon ya no existe.</p>
+        <p className="apagado">O está mal copiado, o el peleón ya no existe.</p>
         <Link to="/">Volver</Link>
       </main>
     );
 
-  return <main className="apagado">Recuperando tu peleon...</main>;
+  return <main className="apagado">Recuperando tu peleón...</main>;
 }

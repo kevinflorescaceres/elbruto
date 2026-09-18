@@ -165,4 +165,21 @@ sheet(
   3,
 );
 
+// 5. Imagen para compartir (Open Graph). Se rasteriza una vez y se versiona.
+const og = (): string => {
+  const izq = figure('Chirlo de la Cava', REST, { category: 'pesada', reach: 2 });
+  const der = figure('Tuerto del Arrabal', REST, { category: 'larga', reach: 3 });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+    <rect width="1200" height="630" fill="#241f1c"/>
+    <rect y="574" width="1200" height="5" fill="#4a423c"/>
+    <g transform="translate(370 570) scale(3)">${izq}</g>
+    <g transform="translate(830 570) scale(3) scale(-1 1)">${der}</g>
+    <text x="600" y="132" text-anchor="middle" font-family="Georgia, serif" font-size="104"
+          font-weight="bold" fill="#f2e8dc" letter-spacing="8">CAMORRA</text>
+    <text x="600" y="190" text-anchor="middle" font-family="Georgia, serif" font-size="32"
+          fill="#a89684">Pon un nombre y tendrás un peleón</text>
+  </svg>`;
+};
+writeFileSync(`${salida}/og.svg`, og());
+
 console.log(`hojas escritas en ${salida}`);
