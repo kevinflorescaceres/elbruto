@@ -2,21 +2,24 @@
 
 export type Stat = 'endurance' | 'strength' | 'agility' | 'speed';
 
-export type WeaponCategory = 'rapida' | 'pesada' | 'larga' | 'arrojadiza';
+export type WeaponCategory = 'rapida' | 'media' | 'larga' | 'pesada' | 'arrojadiza';
 
 export interface Weapon {
   id: string;
   name: string;
   category: WeaponCategory;
   damage: number;
-  /** Precision base, 0-100. Se le resta la agilidad del defensor. */
-  accuracy: number;
-  /** Tiempo hasta la siguiente accion, antes de aplicar velocidad. */
-  baseDelay: number;
+  /** Cuesta esquivarla: se resta de la probabilidad de esquiva (COMBATE.md §4.6). */
+  accuracyBonus: number;
+  /** Tiempo entre acciones antes de aplicar velocidad (COMBATE.md §4.3). */
+  interval: number;
+  /** Probabilidad base de encadenar otro impacto (COMBATE.md §4.2). */
+  comboRate: number;
   /** Porcentaje de la fuerza que se suma al dano. */
   strengthScale: number;
   /** 1 cuerpo a cuerpo, 4 muy larga. Solo afecta a la animacion. */
   reach: number;
+  /** Las arrojadizas solo se lanzan, y no se agotan (COMBATE.md §2). */
   throwable: boolean;
 }
 
@@ -43,9 +46,11 @@ export interface Pet {
   name: string;
   hp: number;
   damage: number;
-  accuracy: number;
-  baseDelay: number;
+  accuracyBonus: number;
+  interval: number;
   agility: number;
+  /** Lo que le cuesta al dueno en resistencia (COMBATE.md §4.8). */
+  enduranceCost: number;
 }
 
 /** Variantes de dibujo derivadas del nombre. Las consume el arte (Fase 5). */

@@ -9,40 +9,43 @@
  */
 import type { Pet, Skill, Weapon } from './types.js';
 
+/**
+ * Valores de partida de COMBATE.md §4.3 y §4.5, por categoria, con variacion
+ * por arma dentro de cada una. Se ajustan con `pnpm balance`.
+ *
+ *   categoria    intervalo  dano  combo  esquivable
+ *   rapida            55      5     20      dificil
+ *   media             80      9     10      normal
+ *   larga             95     10      5      normal
+ *   pesada           140     20      0      facil
+ *   arrojadiza        70      7      0      normal
+ */
+
 /** Arma por defecto. No se ofrece al subir de nivel: todos pelean con ella. */
 export const FISTS: Weapon = {
   id: 'punos',
   name: 'Puños',
   category: 'rapida',
-  damage: 5,
-  accuracy: 85,
-  baseDelay: 8,
+  damage: 3,
+  accuracyBonus: 4,
+  interval: 66,
+  comboRate: 12,
   strengthScale: 60,
   reach: 1,
   throwable: false,
 };
 
 export const WEAPONS: readonly Weapon[] = [
-  // Rapidas: poco dano, muchos turnos.
+  // Rapidas: pegan poco y a menudo, y son dificiles de esquivar.
   {
     id: 'chaira',
     name: 'Chaira',
     category: 'rapida',
-    damage: 12,
-    accuracy: 90,
-    baseDelay: 6,
-    strengthScale: 70,
-    reach: 1,
-    throwable: false,
-  },
-  {
-    id: 'jifero',
-    name: 'Jifero',
-    category: 'rapida',
-    damage: 17,
-    accuracy: 84,
-    baseDelay: 8,
-    strengthScale: 80,
+    damage: 6,
+    accuracyBonus: 5,
+    interval: 50,
+    comboRate: 19,
+    strengthScale: 45,
     reach: 1,
     throwable: false,
   },
@@ -50,55 +53,48 @@ export const WEAPONS: readonly Weapon[] = [
     id: 'puntilla',
     name: 'Puntilla',
     category: 'rapida',
-    damage: 13,
-    accuracy: 88,
-    baseDelay: 7,
+    damage: 7,
+    accuracyBonus: 4,
+    interval: 56,
+    comboRate: 16,
+    strengthScale: 50,
+    reach: 1,
+    throwable: false,
+  },
+  // Medias: el termino medio en todo.
+  {
+    id: 'jifero',
+    name: 'Jifero',
+    category: 'media',
+    damage: 9,
+    accuracyBonus: 4,
+    interval: 76,
+    comboRate: 12,
     strengthScale: 75,
     reach: 1,
-    throwable: true,
+    throwable: false,
   },
-  // Pesadas: mucho dano, lentas, imprecisas.
   {
     id: 'porra',
     name: 'Porra de Corchete',
-    category: 'pesada',
-    damage: 31,
-    accuracy: 81,
-    baseDelay: 13,
-    strengthScale: 120,
-    reach: 1,
-    throwable: false,
-  },
-  {
-    id: 'banqueta',
-    name: 'Banqueta de Taberna',
-    category: 'pesada',
-    damage: 38,
-    accuracy: 76,
-    baseDelay: 15,
-    strengthScale: 130,
+    category: 'media',
+    damage: 10,
+    accuracyBonus: 3,
+    interval: 84,
+    comboRate: 8,
+    strengthScale: 85,
     reach: 2,
     throwable: false,
   },
-  {
-    id: 'tranca',
-    name: 'Tranca de Portón',
-    category: 'pesada',
-    damage: 45,
-    accuracy: 71,
-    baseDelay: 17,
-    strengthScale: 150,
-    reach: 2,
-    throwable: false,
-  },
-  // Largas: alcance y precision, dano medio.
+  // Largas: alcance y contraataque.
   {
     id: 'verduguillo',
     name: 'Verduguillo',
     category: 'larga',
-    damage: 19,
-    accuracy: 86,
-    baseDelay: 9,
+    damage: 10,
+    accuracyBonus: 4,
+    interval: 88,
+    comboRate: 7,
     strengthScale: 80,
     reach: 3,
     throwable: false,
@@ -107,22 +103,49 @@ export const WEAPONS: readonly Weapon[] = [
     id: 'chuzo',
     name: 'Chuzo de Sereno',
     category: 'larga',
-    damage: 22,
-    accuracy: 80,
-    baseDelay: 11,
+    damage: 13,
+    accuracyBonus: 1,
+    interval: 102,
+    comboRate: 4,
     strengthScale: 95,
-    reach: 3,
-    throwable: true,
+    reach: 4,
+    throwable: false,
   },
-  // Arrojadizas: un buen golpe y se acaban.
+  // Pesadas: un golpe hace mucho, pero llega tarde y se ve venir.
+  {
+    id: 'banqueta',
+    name: 'Banqueta de Taberna',
+    category: 'pesada',
+    damage: 18,
+    accuracyBonus: -3,
+    interval: 132,
+    comboRate: 0,
+    strengthScale: 110,
+    reach: 2,
+    throwable: false,
+  },
+  {
+    id: 'tranca',
+    name: 'Tranca de Portón',
+    category: 'pesada',
+    damage: 22,
+    accuracyBonus: -6,
+    interval: 150,
+    comboRate: 0,
+    strengthScale: 130,
+    reach: 2,
+    throwable: false,
+  },
+  // Arrojadizas: solo se lanzan, no se agotan, y el dano va con la mana.
   {
     id: 'cascote',
     name: 'Cascote',
     category: 'arrojadiza',
-    damage: 24,
-    accuracy: 78,
-    baseDelay: 10,
-    strengthScale: 80,
+    damage: 8,
+    accuracyBonus: 3,
+    interval: 64,
+    comboRate: 0,
+    strengthScale: 70,
     reach: 3,
     throwable: true,
   },
@@ -130,10 +153,11 @@ export const WEAPONS: readonly Weapon[] = [
     id: 'botija',
     name: 'Botija de Vino',
     category: 'arrojadiza',
-    damage: 29,
-    accuracy: 72,
-    baseDelay: 11,
-    strengthScale: 75,
+    damage: 10,
+    accuracyBonus: 1,
+    interval: 76,
+    comboRate: 0,
+    strengthScale: 70,
     reach: 3,
     throwable: true,
   },
@@ -204,33 +228,40 @@ export const SKILLS: readonly Skill[] = [
   },
 ];
 
+/**
+ * Las mascotas pelean por ti, pero te cuestan resistencia (COMBATE.md §4.8):
+ * eres mas fragil a cambio de tener otro cuerpo en la pelea.
+ */
 export const PETS: readonly Pet[] = [
   {
     id: 'chucho',
     name: 'Chucho',
-    hp: 20,
-    damage: 4,
-    accuracy: 80,
-    baseDelay: 10,
+    hp: 26,
+    damage: 5,
+    accuracyBonus: 6,
+    interval: 80,
     agility: 5,
+    enduranceCost: 2,
   },
   {
     id: 'mastin',
     name: 'Mastín',
-    hp: 30,
-    damage: 6,
-    accuracy: 75,
-    baseDelay: 13,
+    hp: 46,
+    damage: 9,
+    accuracyBonus: 2,
+    interval: 105,
     agility: 2,
+    enduranceCost: 4,
   },
   {
     id: 'jabali',
     name: 'Jabalí',
-    hp: 27,
-    damage: 7,
-    accuracy: 68,
-    baseDelay: 16,
+    hp: 72,
+    damage: 15,
+    accuracyBonus: -2,
+    interval: 130,
     agility: 0,
+    enduranceCost: 8,
   },
 ];
 

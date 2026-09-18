@@ -16,7 +16,7 @@ function describeOption(option: LevelUpOption): { title: string; detail: string 
       const weapon = getWeapon(option.id);
       return {
         title: weapon.name,
-        detail: `Arma ${weapon.category} · ${weapon.damage} de daño · ${weapon.accuracy}% de acierto`,
+        detail: `Arma ${weapon.category} · ${weapon.damage} de daño · intervalo ${weapon.interval}`,
       };
     }
     case 'skill': {

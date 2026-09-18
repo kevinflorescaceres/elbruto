@@ -9,6 +9,7 @@
 import { createBrute, growTo } from './brute.js';
 import { PETS, SKILLS, WEAPONS } from './catalog.js';
 import { mulberry32, randInt } from './prng.js';
+import { medir, porCategoria } from './sensacion.js';
 import { simulate } from './simulate.js';
 import type { Brute } from './types.js';
 
@@ -75,6 +76,30 @@ for (const row of rows) {
   const flag = row.rate > 60 || row.rate < 40 ? '  <-- fuera de rango' : '';
   const label = (names.get(row.id) ?? row.id).padEnd(28);
   console.log(`${label}${row.rate.toFixed(1).padStart(5)}%  (n=${row.fights})${flag}`);
+}
+
+// --- Objetivos de sensacion (COMBATE.md §3) ---
+const fuera: string[] = [];
+for (const nivel of [1, 10]) {
+  console.log(`\nSensacion, nivel ${nivel} contra nivel ${nivel}, sin bichos:\n`);
+  for (const m of medir(2000, nivel)) {
+    const dentro = m.valor >= m.min && m.valor <= m.max;
+    const marca = dentro ? '' : `  <-- fuera de [${m.min}, ${m.max}]`;
+    console.log(`  ${m.nombre.padEnd(28)}${m.valor.toFixed(1).padStart(6)}${m.unidad}${marca}`);
+    // Nivel 10 comparte objetivos salvo los de conteo, que son de nivel 1.
+    if (!dentro && nivel === 1) fuera.push(`${m.nombre} = ${m.valor.toFixed(1)}${m.unidad}`);
+  }
+}
+
+// --- Categorias de arma cara a cara (COMBATE.md §6) ---
+console.log('\nCategorias de arma, ambos armados, nivel 1:\n');
+for (const [cat, fila] of [...porCategoria(4000)].sort(
+  (x, y) => y[1].gana / y[1].con - x[1].gana / x[1].con,
+)) {
+  const tasa = (fila.gana / fila.con) * 100;
+  const marca = tasa > 60 || tasa < 40 ? '  <-- fuera de [40, 60]' : '';
+  console.log(`  ${cat.padEnd(14)}${tasa.toFixed(1).padStart(5)}%  (n=${fila.con})${marca}`);
+  if (tasa > 60 || tasa < 40) fuera.push(`categoria ${cat} = ${tasa.toFixed(1)}%`);
 }
 
 const worst = rows.filter((r) => r.rate > 60);

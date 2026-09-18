@@ -82,13 +82,36 @@ tests, asi que nunca pisan la base de desarrollo.
 - Prisma 7 no admite `url` en el schema: la conexión va en `apps/server/prisma.config.ts`
   y el cliente usa el driver adapter de `pg`. `prisma` está fijado en 7.10.0 porque su
   tag `latest` en npm apunta a una release candidate de la 8.
-- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **2**.
+- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **3**.
   Los combates antiguos se siguen viendo: se reproducen desde su log guardado, no se
   vuelven a simular.
 - **Los textos que ve el jugador llevan tildes.** Los comentarios del código no, para
   evitar problemas de codificación, pero la interfaz es español correcto.
 - `apps/web/public/og.png` se genera con `pnpm --filter @camorra/web art` y se rasteriza
   a mano (ver la seccion de Arte). Se versiona: no se construye en cada despliegue.
+
+## El combate
+
+`combate.md` manda sobre la sección 6 de `plan.md` donde haya conflicto. Lo implementado:
+
+- **Vida** `floor(50 + resistencia*6 + nivel*1.5)`. El término por nivel sube la vida en
+  paralelo al daño, para que el combate no se acorte al subir.
+- **Intervalo** `round(intervalo*100 / (10 + velocidad))`, con un ±18% de azar. Sin ese
+  azar, dos peleones iguales alternan en lockstep y nunca encadenan dos acciones.
+- **Combos**: hasta 3 impactos, cada uno al 70% del **anterior** (no de la base), con
+  probabilidad `comboRate + agilidad*2`, tope 45%.
+- **Defensa** en orden: esquiva → bloqueo → contraataque. El contraataque responde a la
+  **esquiva**, y un arma larga en la mano añade 25 puntos.
+- **Arrojadizas**: solo se lanzan, no se agotan, y el daño escala con agilidad.
+- **Mascotas**: cuestan resistencia (2/4/8), así que tener bicho te hace más frágil.
+
+**Dos desviaciones del documento, medidas:** la base de esquiva es 22 y no 10 (con 10 los
+fallos se quedaban en 12,6% y el objetivo es 20-35%), y el techo del clamp es 36 y no 40
+(con 40, a nivel 10 los fallos se iban a 35,6%).
+
+**Cómo se mide el equilibrio entre categorías:** cara a cara, con ambos armados y armas de
+distinta clase. Medir "tener arma contra no tenerla" da 86% para cualquier categoría,
+porque mide que un arma vale más que una maña, no que una categoría domine a otra.
 
 ## Ajustes de reglas
 

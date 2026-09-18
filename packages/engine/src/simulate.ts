@@ -16,12 +16,20 @@ import type {
   Weapon,
 } from './types.js';
 
-// 2: el luchador empuna su mejor arma en vez de una al azar, y cada categoria
-// tiene efecto propio (pesada ignora armadura, larga rompe guardias, rapida no
-// se contesta, lanzar dobla el dano).
-export const ENGINE_VERSION = 2;
+// 3: reglas de combate.md. Vida con termino por nivel, intervalos en la escala
+// nueva con azar, combos de hasta 3 impactos, defensa en orden esquiva /
+// bloqueo / contraataque, arrojadizas que no se agotan y mascotas que cuestan
+// resistencia.
+export const ENGINE_VERSION = 3;
 
 const MAX_TURNS = 500;
+
+/** COMBATE.md §4.2: tope de impactos encadenados y cuanto pierde cada uno. */
+const MAX_COMBO_HITS = 3;
+const MAX_COMBO_CHANCE = 45;
+const COMBO_FALLOFF = 0.7;
+/** Lo que anade un arma larga a la probabilidad de contestar tras esquivar. */
+const COUNTER_LARGA = 25;
 
 /** Las mascotas pelean con una "arma" sintetica: asi comparten el camino de ataque. */
 function petWeapon(pet: Pet): Weapon {
@@ -30,8 +38,9 @@ function petWeapon(pet: Pet): Weapon {
     name: pet.name,
     category: 'rapida',
     damage: pet.damage,
-    accuracy: pet.accuracy,
-    baseDelay: pet.baseDelay,
+    accuracyBonus: pet.accuracyBonus,
+    interval: pet.interval,
+    comboRate: 0,
     strengthScale: 0,
     reach: 1,
     throwable: false,
@@ -54,7 +63,11 @@ export interface CombatStats {
  * y tambien lo que debe mostrar la ficha del luchador.
  */
 export function combatStats(brute: Brute): CombatStats {
-  let maxHp = maxHpFor(brute.endurance);
+  // Las mascotas se pagan en resistencia (COMBATE.md §4.8). El suelo es 0: la
+  // vida base de 50 no se toca.
+  const coste = brute.pets.reduce((suma, id) => suma + getPet(id).enduranceCost, 0);
+  const endurance = Math.max(0, brute.endurance - coste);
+  let maxHp = maxHpFor(endurance, brute.level);
   let { strength, agility, speed } = brute;
   let armor = 0;
   let block = 0;
@@ -82,7 +95,7 @@ export function combatStats(brute: Brute): CombatStats {
         counter += effect.chance;
         break;
       case 'stat':
-        if (effect.stat === 'endurance') maxHp += effect.amount * 10;
+        if (effect.stat === 'endurance') maxHp += effect.amount * 6;
         if (effect.stat === 'strength') strength += effect.amount;
         if (effect.stat === 'agility') agility += effect.amount;
         if (effect.stat === 'speed') speed += effect.amount;
@@ -146,14 +159,31 @@ function buildPet(petId: string, side: Side, index: number): Combatant {
 }
 
 /**
+ * Probabilidad de que el defensor se aparte, en tanto por ciento (COMBATE.md §4.6).
+ * La base sale de ajustar hasta que los ataques fallados caen en el 20-35% que
+ * pide §3: con la base 10 del documento se quedaban en el 12,6%.
+ */
+const DODGE_BASE = 22;
+
+export function dodgeChance(weapon: Weapon, defender: Combatant): number {
+  // Techo 36 y no el 40 del documento: con 40, a nivel 10 los fallos se iban al
+  // 35,6% y el objetivo de §3 es 35 como mucho.
+  return clamp(DODGE_BASE + defender.agility * 2 - weapon.accuracyBonus, 5, 36);
+}
+
+/** Tiempo hasta la siguiente accion de quien empuna esta arma (COMBATE.md §4.3). */
+export function delayWith(weapon: Weapon, speed: number): number {
+  return Math.max(1, Math.round((weapon.interval * 100) / (10 + speed)));
+}
+
+/**
  * Dano esperado por unidad de tiempo contra un rival concreto. Es la medida que
  * decide que arma se empuna.
  */
 export function weaponScore(weapon: Weapon, attacker: Combatant, defender: Combatant): number {
   const dano = weapon.damage + Math.floor((attacker.strength * weapon.strengthScale) / 100);
-  const acierto = clamp(weapon.accuracy - defender.agility * 2, 10, 95);
-  const espera = Math.max(1, Math.round((weapon.baseDelay * 10) / (10 + attacker.speed)));
-  return (dano * acierto) / espera;
+  const conecta = 100 - dodgeChance(weapon, defender);
+  return (dano * conecta) / delayWith(weapon, attacker.speed);
 }
 
 /** La mejor de las que lleva encima, o los punos si no lleva ninguna. */
@@ -180,8 +210,18 @@ interface State {
 
 const isAlive = (c: Combatant): boolean => c.hp > 0;
 
-const delayOf = (c: Combatant): number =>
-  Math.max(1, Math.round((c.weapon.baseDelay * 10) / (10 + c.speed)));
+const delayOf = (c: Combatant): number => delayWith(c.weapon, c.speed);
+
+/**
+ * El intervalo real lleva una pizca de azar. Sin esto, dos luchadores iguales
+ * alternan en lockstep perfecto y nunca encadenan dos acciones, que es justo lo
+ * que COMBATE.md §1.2 dice que no debe pasar. `delayWith` se queda limpia
+ * porque la usa la eleccion de arma, que debe ser determinista.
+ */
+const JITTER = 18;
+
+const delayReal = (rng: Rng, c: Combatant): number =>
+  Math.max(1, Math.round((delayOf(c) * randInt(rng, 100 - JITTER, 100 + JITTER)) / 100));
 
 function enemiesOf(state: State, actor: Combatant): Combatant[] {
   return state.fighters.filter((c) => c.side !== actor.side && isAlive(c));
@@ -213,47 +253,67 @@ function resolveAttack(
   if (weapon.reach <= 2) state.log.push({ type: 'move', id: attacker.id, target: defender.id });
   state.log.push({ type: 'attack', id: attacker.id, target: defender.id, weapon: weapon.id });
 
-  const hitChance = clamp(weapon.accuracy - defender.agility * 2, 10, 95);
-  if (!chance(state.rng, hitChance)) {
+  // Defensa en el orden de COMBATE.md §4.6: esquiva, bloqueo, contraataque.
+  if (chance(state.rng, dodgeChance(weapon, defender))) {
     state.log.push({ type: 'evade', id: defender.id });
+
+    // Quien se aparta con un arma larga en la mano tiene sitio para responder.
+    const contra = defender.counter + (defender.weapon.category === 'larga' ? COUNTER_LARGA : 0);
+    if (allowCounter && contra > 0 && chance(state.rng, contra)) {
+      state.log.push({ type: 'counter', id: defender.id, target: attacker.id });
+      resolveAttack(state, defender, attacker, defender.weapon, {
+        allowCounter: false,
+        multiplier: 1,
+      });
+    }
     return;
   }
 
-  // Un arma larga es dificil de parar: llega antes de que cierres la guardia.
-  const bloqueo = weapon.category === 'larga' ? Math.floor(defender.block / 2) : defender.block;
-  if (bloqueo > 0 && chance(state.rng, bloqueo)) {
+  if (defender.block > 0 && chance(state.rng, defender.block)) {
     state.log.push({ type: 'block', id: defender.id });
     return;
   }
 
-  state.log.push({ type: 'hit', id: attacker.id, target: defender.id });
+  // Una piedra bien puesta vale mas que un brazo fuerte (COMBATE.md §4.5).
+  const aporte =
+    weapon.category === 'arrojadiza'
+      ? attacker.agility * 0.7 + attacker.strength * 0.3
+      : attacker.strength;
+  const base = weapon.damage + Math.floor((aporte * weapon.strengthScale) / 100);
 
-  const base = weapon.damage + Math.floor((attacker.strength * weapon.strengthScale) / 100);
+  // Combos (COMBATE.md §4.2): hasta 3 impactos encadenados, cada uno al 70% del
+  // anterior, y cada uno se tira contra la misma probabilidad.
+  const combo = clamp(weapon.comboRate + attacker.agility * 2, 0, MAX_COMBO_CHANCE);
   const varied = Math.floor((base * randInt(state.rng, 80, 120)) / 100);
   // Un golpe pesado pasa por encima del acolchado: la dureza no lo amortigua.
   const armadura = weapon.category === 'pesada' ? 0 : defender.armor;
-  const amount = Math.max(1, Math.floor(varied * multiplier) - armadura);
+  // El 70% es del dano DEL IMPACTO ANTERIOR, no de la base: por eso la variacion
+  // se tira una sola vez y despues solo decae. Asi cada golpe pega menos que el
+  // previo siempre, y no solo de media.
+  let golpeado = Math.floor(varied * multiplier);
 
-  defender.hp = Math.max(0, defender.hp - amount);
-  state.log.push({ type: 'damage', id: defender.id, amount, hp: defender.hp });
+  for (let golpe = 0; golpe < MAX_COMBO_HITS; golpe++) {
+    state.log.push({ type: 'hit', id: attacker.id, target: defender.id });
 
-  if (!isAlive(defender)) {
-    state.log.push({ type: 'death', id: defender.id });
-    return;
-  }
+    const amount = Math.max(1, golpeado - armadura);
 
-  // A un arma rapida no se le contesta: ya ha vuelto a la guardia.
-  const contestable = allowCounter && weapon.category !== 'rapida';
-  if (contestable && defender.counter > 0 && chance(state.rng, defender.counter)) {
-    state.log.push({ type: 'counter', id: defender.id, target: attacker.id });
-    resolveAttack(state, defender, attacker, defender.weapon, {
-      allowCounter: false,
-      multiplier: 1,
-    });
+    defender.hp = Math.max(0, defender.hp - amount);
+    state.log.push({ type: 'damage', id: defender.id, amount, hp: defender.hp });
+
+    if (!isAlive(defender)) {
+      state.log.push({ type: 'death', id: defender.id });
+      return;
+    }
+    if (!chance(state.rng, combo)) return;
+    golpeado = Math.floor(golpeado * COMBO_FALLOFF);
   }
 }
 
 function attack(state: State, actor: Combatant, multiplier = 1): void {
+  // Una arrojadiza no se usa de cerca: atacar con ella es lanzarla.
+  if (actor.weapon.category === 'arrojadiza' && multiplier === 1) {
+    return throwWeapon(state, actor);
+  }
   const target = chooseTarget(state, actor);
   if (target === undefined) return;
   resolveAttack(state, actor, target, actor.weapon, { allowCounter: true, multiplier });
@@ -263,11 +323,16 @@ function drawWeapon(state: State, actor: Combatant): void {
   const rival = state.fighters.find((c) => c.side !== actor.side && !c.isPet);
   if (rival === undefined) return attack(state, actor);
 
-  // Se echa mano de la mejor que quede, no de una al azar: tras perder un arma
-  // esto es lo que devuelve al luchador a su mejor forma.
+  // Se echa mano de la mejor que quede, no de una al azar.
   const next = bestWeapon(actor, rival);
   if (next.id === actor.weapon.id) return attack(state, actor);
 
+  // Cambiar de arma descarta la anterior (COMBATE.md §4.7): por eso el catalogo
+  // se va agotando dentro del combate y no se repite siempre la misma pelea.
+  const soltada = actor.weapon;
+  if (soltada.id !== FISTS.id && soltada.category !== 'arrojadiza') {
+    actor.weapons = actor.weapons.filter((w) => w.id !== soltada.id);
+  }
   actor.weapon = next;
   state.log.push({ type: 'drawWeapon', id: actor.id, weapon: next.id });
 }
@@ -278,11 +343,14 @@ function throwWeapon(state: State, actor: Combatant): void {
   if (target === undefined) return;
 
   state.log.push({ type: 'throwWeapon', id: actor.id, target: target.id, weapon: thrown.id });
-  // Se lanza y se pierde: vuelve a los punos antes de que el arma haga efecto.
-  actor.weapons = actor.weapons.filter((w) => w.id !== thrown.id);
-  actor.weapon = FISTS;
-  // Tirar el arma es jugarsela: si no doliera el doble, nunca compensaria.
-  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 2 });
+
+  // Una arrojadiza es munición: no se agota ni se pierde (COMBATE.md §4.7).
+  // Cualquier otra arma lanzada queda inutilizable el resto del combate.
+  if (thrown.category !== 'arrojadiza') {
+    actor.weapons = actor.weapons.filter((w) => w.id !== thrown.id);
+    actor.weapon = FISTS;
+  }
+  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 1 });
 }
 
 /** Solo tiene sentido desarmar a quien lleva algo. */
@@ -393,8 +461,9 @@ export function simulate(bruteA: Brute, bruteB: Brute, seed: number): FightResul
   b.weapon = bestWeapon(b, a);
 
   // Iniciativa inicial repartida al azar: si no, el lado A siempre pega primero.
+  // El rango va en las unidades de intervalo, que ahora son centenas.
   for (const c of state.fighters) {
-    c.next = randInt(state.rng, 0, 10);
+    c.next = randInt(state.rng, 0, Math.floor(delayOf(c) / 2));
     state.log.push({
       type: 'spawn',
       id: c.id,
@@ -414,7 +483,7 @@ export function simulate(bruteA: Brute, bruteB: Brute, seed: number): FightResul
     state.turns += 1;
     state.log.push({ type: 'turn', id: actor.id });
     act(state, actor);
-    actor.next += delayOf(actor);
+    actor.next += delayReal(state.rng, actor);
   }
 
   const [fa, fb] = brutesOf(state);

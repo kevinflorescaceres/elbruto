@@ -21,9 +21,12 @@ export function slugify(name: string): string {
 
 export const bruteSeed = (slug: string): number => hashString(slug);
 
-// 10 por punto (PLAN.md §6 decia 6): con 6 los combates duraban ~27 turnos,
-// demasiado poco para animarlos. Ajustado con `pnpm balance`.
-export const maxHpFor = (endurance: number): number => 50 + endurance * 10;
+/**
+ * Vida maxima (COMBATE.md §4.1). El termino por nivel sube la vida en paralelo
+ * al dano, para que los combates no se acorten al subir de nivel.
+ */
+export const maxHpFor = (endurance: number, level: number): number =>
+  Math.floor(50 + endurance * 6 + level * 1.5);
 
 export const xpForLevel = (level: number): number => level * 5;
 
@@ -93,14 +96,14 @@ export function optionKey(option: LevelUpOption): string {
 
 function rollStatOption(rng: Rng): LevelUpOption {
   if (randInt(rng, 1, 2) === 1) {
-    return { type: 'stat', gains: { [pick(rng, STATS)]: 2 } };
+    return { type: 'stat', gains: { [pick(rng, STATS)]: 3 } };
   }
   const first = pick(rng, STATS);
   const second = pick(
     rng,
     STATS.filter((s) => s !== first),
   );
-  return { type: 'stat', gains: { [first]: 1, [second]: 1 } };
+  return { type: 'stat', gains: { [first]: 2, [second]: 1 } };
 }
 
 function rollOption(rng: Rng, brute: Brute): LevelUpOption {
@@ -141,12 +144,13 @@ function rollOption(rng: Rng, brute: Brute): LevelUpOption {
  */
 export function rollLevelUpOptions(brute: Brute): [LevelUpOption, LevelUpOption] {
   const rng = mulberry32(hashString(`${brute.slug}:lvl:${brute.level}`));
-  const first = rollOption(rng, brute);
+  // Siempre una de estadistica (COMBATE.md §2): asi nunca te obligan a llevarte
+  // un arma o un bicho que no quieres.
+  const first = rollStatOption(rng);
 
-  // Las opciones de stat siempre existen, asi que esto termina.
   let second = rollOption(rng, brute);
   for (let i = 0; i < 20 && optionKey(second) === optionKey(first); i++) {
-    second = i < 10 ? rollOption(rng, brute) : rollStatOption(rng);
+    second = rollOption(rng, brute);
   }
   if (optionKey(second) === optionKey(first)) {
     second = { type: 'stat', gains: { endurance: 2 } };

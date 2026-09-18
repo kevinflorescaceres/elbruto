@@ -11,7 +11,7 @@
  * Sistema de coordenadas del personaje: origen entre los pies, la altura crece
  * hacia -y. Un peleon mide unas 96 unidades.
  */
-import type { Appearance } from '@camorra/engine';
+import type { Appearance, WeaponCategory } from '@camorra/engine';
 
 export type PartName =
   | 'hips'
@@ -133,12 +133,17 @@ const PELOS: Shape[][] = [
 
 // --- Armas: una silueta por categoria, con variacion segun las stats ---
 
-export type WeaponCategory = 'rapida' | 'pesada' | 'larga' | 'arrojadiza';
+export type { WeaponCategory };
 
 const ARMAS: Record<WeaponCategory, Shape[]> = {
   rapida: [
     { d: 'M 0 -2 L 3 -2 L 3 3 L 0 3 Z', fill: 'madera' },
     { d: 'M 3 -2.5 L 22 -1.5 L 24 0.5 L 22 2.5 L 3 3.5 Z', fill: 'metal' },
+  ],
+  media: [
+    { d: 'M 0 -2.5 L 5 -2.5 L 5 3 L 0 3 Z', fill: 'madera' },
+    { d: 'M 5 -4 L 7 -4 L 7 4 L 5 4 Z', fill: 'metal' },
+    { d: 'M 7 -4 L 26 -3 L 30 0 L 26 4 L 7 5 Z', fill: 'metal' },
   ],
   pesada: [
     { d: 'M 0 -2 L 20 -2 L 20 2 L 0 2 Z', fill: 'madera' },

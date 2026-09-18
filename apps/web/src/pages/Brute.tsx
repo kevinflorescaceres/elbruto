@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
-import { getPet, getSkill, getWeapon } from '@camorra/engine';
+import { getPet, getSkill, getWeapon, type WeaponCategory } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
 import { api } from '../api.js';
 import { useBrute, useIsMine } from '../hooks.js';
@@ -61,9 +61,7 @@ function Denuncia({ slug }: { slug: string }) {
 }
 
 /** El arma que se lleva a la vista: la de mas alcance, que es la que mas luce. */
-function mejorArma(
-  ids: string[],
-): { category: 'rapida' | 'pesada' | 'larga' | 'arrojadiza'; reach: number } | undefined {
+function mejorArma(ids: string[]): { category: WeaponCategory; reach: number } | undefined {
   const armas = ids.map(getWeapon).sort((a, b) => b.reach - a.reach);
   const arma = armas[0];
   return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
