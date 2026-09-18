@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "art": "tsx src/art/preview.ts"
+    "art": "tsx src/art/preview.ts",
+    "ritmo": "tsx src/ritmo.ts"
   },
   "dependencies": {
     "@camorra/engine": "workspace:*",

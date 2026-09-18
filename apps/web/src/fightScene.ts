@@ -73,6 +73,62 @@ export interface Scene {
   duration: number;
 }
 
+/** Un evento ya descrito, todavia sin hora: solo sabe cuanto pesa en su turno. */
+interface Crudo {
+  type: FightEvent['type'];
+  weight: number;
+  caption: string | null;
+  moves: Move[];
+}
+
+/**
+ * Reparte el tiempo. Los eventos se agrupan por turno y cada turno recibe su
+ * segundo, que sus eventos se reparten segun su peso. Un contraataque es una
+ * accion mas de un peleon, asi que anade otro segundo a ese turno.
+ */
+function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
+  const grupos: Crudo[][] = [];
+  let actual: Crudo[] = [];
+  const cerrar = (): void => {
+    if (actual.length > 0) grupos.push(actual);
+    actual = [];
+  };
+
+  for (const crudo of crudos) {
+    // `turn` y `end` abren grupo: son las fronteras naturales del combate.
+    if (crudo.type === 'turn' || crudo.type === 'end') cerrar();
+    actual.push(crudo);
+    if (crudo.type === 'end') cerrar();
+  }
+  cerrar();
+
+  const beats: Beat[] = [];
+  let at = 0;
+
+  for (const grupo of grupos) {
+    const esTurno = grupo.some((c) => c.type === 'turn');
+    const esCierre = grupo.some((c) => c.type === 'end');
+    const contras = grupo.filter((c) => c.type === 'counter').length;
+
+    const total = esCierre
+      ? SEGUNDOS_DE_CIERRE
+      : esTurno
+        ? SEGUNDOS_POR_ACCION * (1 + contras)
+        : SEGUNDOS_DE_ENTRADA;
+
+    const peso = grupo.reduce((suma, c) => suma + c.weight, 0);
+    for (const crudo of grupo) {
+      // Si todo el grupo pesa 0, se reparte a partes iguales.
+      const parte = peso > 0 ? crudo.weight / peso : 1 / grupo.length;
+      const duration = total * parte;
+      beats.push({ at, duration, caption: crudo.caption, moves: crudo.moves });
+      at += duration;
+    }
+  }
+
+  return { beats, duration: at };
+}
+
 const COLOR = {
   dano: 0xcc3333,
   cura: 0x44aa77,
@@ -80,8 +136,22 @@ const COLOR = {
   maña: 0xccaa33,
 } as const;
 
-/** Duracion de cada tipo de evento, en segundos. Se ajustan a ojo. */
-const DURATION: Record<FightEvent['type'], number> = {
+/**
+ * Un turno es una accion de un peleon, y dura lo mismo siempre: el combate se
+ * sigue con la vista sin tirones. Antes cada evento traia su propia duracion y
+ * un turno podia durar 0,32 s (sacar un arma) o 2,0 s (ataque con contraataque).
+ */
+const SEGUNDOS_POR_ACCION = 1;
+/** La entrada en escena de todos los combatientes, junta. */
+const SEGUNDOS_DE_ENTRADA = 0.8;
+/** El remate final: merece respirar. */
+const SEGUNDOS_DE_CIERRE = 1.4;
+
+/**
+ * Peso de cada evento DENTRO de su turno. Ya no son segundos: son la parte del
+ * segundo que le toca a cada uno.
+ */
+const WEIGHT: Record<FightEvent['type'], number> = {
   start: 0,
   spawn: 0.12,
   turn: 0.06,
@@ -135,15 +205,13 @@ export function planFight(replay: Replayable): Scene {
   const actors: Actor[] = [];
   const byId = new Map<string, Actor>();
   const petCount = { A: 0, B: 0 };
-  const beats: Beat[] = [];
-  let at = 0;
+  const crudos: Crudo[] = [];
 
   const push = (event: FightEvent, moves: Move[]): void => {
-    const duration = DURATION[event.type];
-    if (moves.length === 0 && duration === 0) return;
+    const weight = WEIGHT[event.type];
+    if (moves.length === 0 && weight === 0) return;
     const names = (id: string): string => byId.get(id)?.name ?? id;
-    beats.push({ at, duration, caption: describe(event, names), moves });
-    at += duration;
+    crudos.push({ type: event.type, weight, caption: describe(event, names), moves });
   };
 
   for (const event of replay.log as FightEvent[]) {
@@ -272,5 +340,6 @@ export function planFight(replay: Replayable): Scene {
     }
   }
 
-  return { actors, beats, duration: at };
+  const { beats, duration } = repartirTiempo(crudos);
+  return { actors, beats, duration };
 }

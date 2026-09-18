@@ -119,6 +119,26 @@ group('planFight', () => {
     expect(animados.size).toBe(16);
   }, 30_000);
 
+  it('cada accion de un peleon dura un segundo', () => {
+    // El ritmo es lo que hace que un combate se siga con la vista. Antes cada
+    // evento traia su duracion y un turno podia durar 0,32 s o 2,0 s.
+    for (let seed = 0; seed < 120; seed++) {
+      const scene = planFight(fight(seed));
+
+      // Un turno empieza con su latido; el hueco hasta el siguiente es su duracion.
+      const inicios = scene.beats
+        .filter((b) => b.moves.some((m) => m.kind === 'pulse'))
+        .map((b) => b.at);
+
+      for (let i = 1; i < inicios.length; i++) {
+        const dura = (inicios[i] ?? 0) - (inicios[i - 1] ?? 0);
+        // 1 s, o 2 s si en ese turno hubo contraataque, que es otra accion.
+        const valido = Math.abs(dura - 1) < 1e-6 || Math.abs(dura - 2) < 1e-6;
+        if (!valido) throw new Error(`semilla ${seed}: una accion duro ${dura.toFixed(3)} s`);
+      }
+    }
+  });
+
   it('el pie de escena usa nombres y no ids', () => {
     const scene = planFight(fight(3));
     const captions = scene.beats.map((b) => b.caption).filter((c) => c !== null);

@@ -212,6 +212,7 @@ Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los 
 
 - Componente React que monta una `Application` de Pixi y la destruye al desmontar.
 - `FightPlayer` recibe el log y construye una línea de tiempo GSAP: cada tipo de evento tiene una función que genera sus tweens.
+- **Ritmo: una acción de un peleón dura un segundo**, siempre. Los eventos de ese turno se reparten ese segundo según su peso. Un contraataque añade otro segundo, porque es otra acción. _(Antes cada evento traía su propia duración y un turno podía durar 0,32 s o 2,0 s: se veía a tirones.)_ Se mide con `pnpm --filter @camorra/web ritmo`.
 - Controles: reproducir/pausar, velocidad x1/x2, saltar al final.
 - Barras de vida y nombres como overlay.
 - Diseño responsive, pensado también para móvil.
