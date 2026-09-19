@@ -46,6 +46,21 @@ export async function buildApp({
   await app.register(cookie);
   await app.register(rateLimit, { max: globalLimit, timeWindow: '1 minute' });
 
+  /**
+   * Nada de /api se guarda en cache. Estas respuestas dicen QUIEN ERES (/me, el
+   * puesto, las peleas que te quedan) y sin esta cabecera un navegador o un
+   * proxy intermedio puede reutilizar la de una persona para otra: los peleones
+   * de otro apareciendo en tu lista. El resto son estado de juego que cambia a
+   * cada pelea y que nunca conviene servir viejo.
+   */
+  app.addHook('onSend', (request, reply, payload, done) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-store, private');
+      reply.header('Vary', 'Cookie');
+    }
+    done(null, payload);
+  });
+
   registerRoutes(app, { createLimit });
   // En produccion el mismo servidor sirve el frontend; en desarrollo lo hace Vite.
   await registerWeb(app);

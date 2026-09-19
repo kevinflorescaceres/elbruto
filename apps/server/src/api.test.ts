@@ -567,3 +567,18 @@ describe('moderacion', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe('cache', () => {
+  it('ninguna respuesta de /api se puede guardar', async () => {
+    // Estas respuestas dicen quien eres. Si un proxy o el navegador guarda una,
+    // se la sirve a otra persona: los peleones de otro en tu lista.
+    const { slug, browser } = await newFighter('cacheado');
+    await browser.call('GET', '/api/me');
+
+    for (const url of ['/api/me', `/api/brutes/${slug}`, '/api/ranking', '/api/health']) {
+      const res = await app.inject({ method: 'GET', url });
+      expect(res.headers['cache-control'], url).toBe('no-store, private');
+      expect(res.headers['vary'], url).toBe('Cookie');
+    }
+  });
+});

@@ -123,6 +123,9 @@ export async function registerWeb(app: FastifyInstance): Promise<boolean> {
     return reply
       .code(conocida && meta.found ? 200 : 404)
       .type('text/html')
+      // El HTML cambia por ruta (titulo y descripcion del peleon) y acompana a
+      // la cookie del guardian: se revalida siempre.
+      .header('Cache-Control', 'no-cache, private')
       .send(inject(template, meta, `${base}${pathname}`, base));
   });
 
