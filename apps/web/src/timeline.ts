@@ -13,9 +13,7 @@ import {
   changeWeapon,
   drawActor,
   drawEscenario,
-  drawFrame,
   drawGround,
-  drawHud,
   ESCALA_ACTOR,
   makeAnnounce,
   makeFloater,
@@ -211,13 +209,17 @@ function addMove(
       tl.to(body.scale, { y: ESCALA_ACTOR, duration: mitad }, at + mitad);
       break;
 
-    case 'hp':
-      tl.to(
-        view.hpFill.scale,
-        { x: Math.max(0, move.hp / view.actor.maxHp), duration, ease: 'power1.out' },
-        at,
-      );
+    case 'hp': {
+      const parte = Math.max(0, move.hp / view.actor.maxHp);
+      // El peleon lleva su barra en el marcador de HTML; el bicho, una propia
+      // de Pixi encima. Se animan igual, pero no por la misma propiedad.
+      if (view.hpFill !== null) {
+        tl.to(view.hpFill.scale, { x: parte, duration, ease: 'power1.out' }, at);
+      } else if (view.hpDom !== null) {
+        tl.to(view.hpDom, { scaleX: parte, duration, ease: 'power1.out' }, at);
+      }
       break;
+    }
 
     case 'float': {
       const label = makeFloater(move.text, move.color);
@@ -316,30 +318,29 @@ function addMove(
   }
 }
 
+/** Las barras del marcador, que vive en el DOM y no en el lienzo. */
+export interface Marcador {
+  A: HTMLElement | null;
+  B: HTMLElement | null;
+}
+
 export function buildTimeline(
   stage: Container,
   scene: Scene,
   onCaption: (text: string | null) => void,
+  marcador: Marcador,
 ): gsap.core.Timeline {
   stage.addChild(drawEscenario(scene.escenario));
   stage.addChild(drawGround());
 
-  const brutoA = scene.actors.find((a) => a.id === 'A');
-  const brutoB = scene.actors.find((a) => a.id === 'B');
-  const hud = drawHud(brutoA?.name ?? 'A', brutoB?.name ?? 'B');
-
   const views = new Map<string, ActorView>();
   for (const actor of scene.actors) {
-    const barra = actor.id === 'A' ? hud.fillA : actor.id === 'B' ? hud.fillB : undefined;
-    const view = drawActor(actor, barra);
+    const view = drawActor(actor);
+    if (actor.id === 'A' || actor.id === 'B') view.hpDom = marcador[actor.id];
     view.root.alpha = 0;
     stage.addChild(view.root);
     views.set(actor.id, view);
   }
-  // El marco va sobre los actores, para que recorte a quien se asome al borde.
-  // El marcador, encima de todo: es lo que siempre tiene que leerse.
-  stage.addChild(drawFrame());
-  stage.addChild(hud.root);
 
   const timeline = gsap.timeline();
   for (const beat of scene.beats) {

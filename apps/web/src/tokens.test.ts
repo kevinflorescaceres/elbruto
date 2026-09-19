@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe as group, expect, it } from 'vitest';
-import { BORDE, RADIO, TOKENS } from '@camorra/shared';
+import { BORDE, LIENZO, RADIO, TOKENS } from '@camorra/shared';
 import { TRAZO } from './art/parts.js';
 
 /**
@@ -23,6 +23,11 @@ group('tokens', () => {
       expect(enCss, `falta --${aKebab(nombre)} en styles.css`).toBeDefined();
       expect(enCss?.toLowerCase(), `--${aKebab(nombre)} no coincide`).toBe(valor.toLowerCase());
     }
+  });
+
+  it('el verde de la vida es el mismo en el lienzo y en el marcador', () => {
+    // El marcador salio del lienzo al DOM: los dos pintan la misma barra.
+    expect(variable('vida')?.toLowerCase()).toBe(LIENZO.vida.toLowerCase());
   });
 
   it('el borde y el radio tambien coinciden', () => {

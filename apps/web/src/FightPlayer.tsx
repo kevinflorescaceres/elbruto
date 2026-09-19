@@ -11,8 +11,35 @@ import { planFight } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';
 
+/**
+ * Marcador en HTML, no dentro del lienzo. En pantalla estrecha el lienzo se
+ * recorta por los lados y se llevaba por delante las chapas de los nombres;
+ * aqui el marcador mide siempre lo que mide la ventana, y el nombre sale con
+ * la tipografia de verdad en vez de con texto rasterizado por Pixi.
+ */
+function Vida({
+  nombre,
+  lado,
+  barra,
+}: {
+  nombre: string;
+  lado: 'izq' | 'der';
+  barra: (el: HTMLDivElement | null) => void;
+}) {
+  return (
+    <div className={`vida vida-${lado}`}>
+      <div className="vida-cubeta">
+        <div className="vida-relleno" ref={barra} />
+      </div>
+      <span className="vida-nombre">{nombre}</span>
+    </div>
+  );
+}
+
 export function FightPlayer({ replay }: { replay: FightReplay }) {
   const host = useRef<HTMLDivElement>(null);
+  const barraA = useRef<HTMLDivElement>(null);
+  const barraB = useRef<HTMLDivElement>(null);
   const timeline = useRef<gsap.core.Timeline | null>(null);
   const [listo, setListo] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
@@ -50,11 +77,18 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         }
 
         app = aplicacion;
+        // El lienzo llena la ventana; `cover` recorta por los LADOS cuando la
+        // pantalla es mas estrecha que la escena. Nunca por arriba: ahi estan
+        // el marcador y las cabezas.
         aplicacion.canvas.style.width = '100%';
-        aplicacion.canvas.style.height = 'auto';
+        aplicacion.canvas.style.height = '100%';
+        aplicacion.canvas.style.objectFit = 'cover';
         contenedor.appendChild(aplicacion.canvas);
 
-        const tl = buildTimeline(aplicacion.stage, planFight(replay), setPie);
+        const tl = buildTimeline(aplicacion.stage, planFight(replay), setPie, {
+          A: barraA.current,
+          B: barraB.current,
+        });
         if (sinMovimiento) tl.pause();
         timeline.current = tl;
         setListo(true);
@@ -79,17 +113,24 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
 
   return (
     <div>
-      <div
-        ref={host}
-        style={{
-          border: '1px solid var(--linea)',
-          borderRadius: 6,
-          overflow: 'hidden',
-          lineHeight: 0,
-          background: 'var(--papel-hondo)',
-          aspectRatio: `${SIZE.width} / ${SIZE.height}`,
-        }}
-      />
+      <div className="marcador">
+        <Vida
+          nombre={replay.snapshotA.name}
+          lado="izq"
+          barra={(el) => {
+            barraA.current = el;
+          }}
+        />
+        <Vida
+          nombre={replay.snapshotB.name}
+          lado="der"
+          barra={(el) => {
+            barraB.current = el;
+          }}
+        />
+      </div>
+
+      <div ref={host} className="lienzo-combate" />
 
       {fallo !== null && (
         <p className="error">

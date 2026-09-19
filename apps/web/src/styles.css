@@ -15,6 +15,9 @@
   --acento-hondo: #5c2b2b;
   --gana: #3f5c3f;
   --pierde: #7a3a3a;
+  /* Del lienzo del combate: ahora la barra de vida del marcador va en HTML. */
+  --vida: #5f7245;
+
   --borde: 2px;
   --radio: 3px;
 
@@ -22,6 +25,17 @@
   --apagado: var(--tinta-suave);
   --fondo-suave: var(--papel-hondo);
   color-scheme: light;
+}
+
+/*
+ * El marcador y la ventana de combate miden 100vw, que INCLUYE la barra de
+ * scroll: sin esto la pagina se desplaza unos pixeles a lo ancho. `clip` en vez
+ * de `hidden` porque `hidden` convierte al elemento en contenedor de scroll y
+ * rompe cualquier `position: sticky` que venga despues.
+ */
+html,
+body {
+  overflow-x: clip;
 }
 
 body {
@@ -68,6 +82,102 @@ h3 {
   padding: 1rem;
   margin-bottom: 1rem;
   background: var(--papel-claro);
+}
+
+/* --- Marcador del combate --- */
+
+.marcador {
+  /* 100vw MAS el padding se salia 32 px por la derecha. */
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  padding: 0.6rem 1rem 0.5rem;
+  background: var(--madera);
+  border-top: var(--borde) solid var(--tinta);
+}
+
+.vida {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.vida-der {
+  align-items: flex-end;
+}
+
+.vida-cubeta {
+  width: 100%;
+  height: 1.5rem;
+  background: rgb(0 0 0 / 45%);
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+  overflow: hidden;
+  /* Los tajos parten la barra en cuartos: dan medida de cuanta vida queda. */
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(25% - 1px),
+    rgb(0 0 0 / 45%) calc(25% - 1px) 25%
+  );
+}
+
+.vida-relleno {
+  height: 100%;
+  background: var(--vida);
+  /* Brillo en el tercio de arriba: sin esto es un bloque de color plano. */
+  border-top: 0.4rem solid rgb(255 255 255 / 22%);
+  box-sizing: border-box;
+  /* Se vacia hacia AFUERA: el borde interior es el que retrocede. */
+  transform-origin: left center;
+}
+
+.vida-der .vida-relleno {
+  transform-origin: right center;
+}
+
+.vida-nombre {
+  font-family: Alegreya, Georgia, serif;
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--oro);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * La ventana del combate va de lado a lado de la pagina, fuera de la columna
+ * de contenido. `100vw` con el margen negativo es lo que la saca; el ancho
+ * incluye la barra de scroll, de ahi el `overflow-x: hidden` en el cuerpo.
+ */
+.lienzo-combate {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  aspect-ratio: 1440 / 420;
+  /* En pantallas muy anchas deja de crecer y se recorta por los lados. */
+  max-height: 34rem;
+  overflow: hidden;
+  line-height: 0;
+  background: var(--papel-hondo);
+  border-bottom: var(--borde) solid var(--tinta);
+}
+
+@media (max-width: 48rem) {
+  /*
+   * De otro modo la escena cabria en 114 px de alto y no se leeria nada. La
+   * altura decide cuanto ancho se ve: a 13rem entra la franja central de 788
+   * unidades, que es lo que ocupan los dos peleones con uno tendido en el suelo.
+   */
+  .lienzo-combate {
+    aspect-ratio: auto;
+    height: 13rem;
+  }
 }
 
 .tarjeta-boton {

@@ -235,11 +235,14 @@ const RESPIRO = 0.15 * TIME_SCALE;
 /** Coloca a cada bando: A mira a la derecha, B a la izquierda. */
 function placeActor(side: 'A' | 'B', isPet: boolean, petIndex: number): Actor['home'] {
   const facing = side === 'A' ? 1 : -1;
-  const bruteX = side === 'A' ? 0.28 : 0.72;
+  // Centrados y a 360 px uno de otro: en 1440 eso es 540 y 900. La separacion
+  // la manda el recorte de movil, que solo deja ver la franja central: un
+  // cuerpo tendido mide casi 200 px y tiene que caber entero.
+  const bruteX = side === 'A' ? 0.375 : 0.625;
   // La y es la del SUELO: el rig cuelga hacia arriba desde los pies.
   if (!isPet) return { x: bruteX, y: 0.85 };
   // Las mascotas, detras del suyo y un pelin por delante en profundidad.
-  return { x: bruteX - facing * (0.11 + petIndex * 0.06), y: 0.88 };
+  return { x: bruteX - facing * (0.069 + petIndex * 0.0375), y: 0.88 };
 }
 
 /** La categoria del arma decide el gesto. Las mascotas muerden: gesto rapido. */

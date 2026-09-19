@@ -10,26 +10,17 @@ function caja(d: string): { x1: number; x2: number; y1: number; y2: number } {
 }
 
 /**
- * Donde se plantan los peleones: 252 y 648, con medio cuerpo a cada lado. A
- * ESCALA_ACTOR 1.45 el rig mide unos 76 px de ancho y 186 de alto, con los pies
- * en 357: la cabeza llega a y = 171.
+ * Donde se plantan los peleones: 540 y 900, con medio cuerpo a cada lado. A
+ * ESCALA_ACTOR 1.75 el rig mide unos 91 px de ancho y 224 de alto, con los pies
+ * en 357: la cabeza llega a y = 133.
  */
 const COLUMNAS = [
-  { x1: 212, x2: 292 },
-  { x1: 608, x2: 688 },
+  { x1: 494, x2: 586 },
+  { x1: 854, x2: 946 },
 ];
 
 /** Arriba del todo de un peleon. Por encima de esto el decorado no le tapa. */
-const CORONILLA = 171;
-
-/**
- * Franja del marcador: las dos barras de vida y su nombre debajo. Sale de HUD
- * en pixiScene (margen 38, ancho 310, arriba 30) con aire de sobra.
- */
-const BARRAS = [
-  { x1: 38, x2: 348, y1: 24, y2: 74 },
-  { x1: 552, x2: 862, y1: 24, y2: 74 },
-];
+const CORONILLA = 133;
 
 group('escenarios', () => {
   it('todos tienen piezas y ninguna ruta sale rota', () => {
@@ -59,28 +50,6 @@ group('escenarios', () => {
           const cruza = c.x1 < col.x2 && c.x2 > col.x1;
           if (cruza) {
             throw new Error(`${esc.id}: una pieza en x ${c.x1}-${c.x2} tapa al peleon`);
-          }
-        }
-      }
-    }
-  });
-
-  it('ningun adorno cruza una barra de vida', () => {
-    // El fallo que hubo: el cordel de un candil bajaba desde el borde superior
-    // justo por encima de la barra derecha. Los fondos de banda ancha pasan:
-    // van detras y son color plano.
-    for (const esc of ESCENARIOS) {
-      for (const pieza of esc.piezas) {
-        const c = caja(pieza.d);
-        if (c.x2 - c.x1 >= 200) continue;
-
-        for (const barra of BARRAS) {
-          const cruza =
-            c.x1 < barra.x2 && c.x2 > barra.x1 && c.y1 < barra.y2 && c.y2 > barra.y1;
-          if (cruza) {
-            throw new Error(
-              `${esc.id}: una pieza en x ${c.x1}-${c.x2}, y ${c.y1}-${c.y2} tapa el marcador`,
-            );
           }
         }
       }

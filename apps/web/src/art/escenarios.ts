@@ -3,7 +3,9 @@
  * los peleones: color plano, trazo grueso y poca cosa, para que la pelea siga
  * siendo lo que se mira.
  *
- * Coordenadas del LIENZO (900 x 420), no del peleon. El suelo esta en y = 349.
+ * Coordenadas del LIENZO (1440 x 420), no del peleon. El suelo esta en y = 349.
+ * El lienzo es ancho porque la ventana de combate ocupa todo el eje X de la
+ * pagina: en pantalla estrecha se recortan los lados, nunca el alto.
  */
 
 export interface Pieza {
@@ -21,10 +23,11 @@ export interface Escenario {
 
 const SUELO = 349;
 /**
- * Los peleones se plantan en x = 252 y x = 648. Nada vertical puede caer en
- * esas columnas o el decorado les cruza por delante de la cara.
+ * Los peleones se plantan en x = 540 y x = 900, centrados en el lienzo. Nada
+ * vertical puede caer en esas columnas o el decorado les cruza por delante de
+ * la cara. El marcador ya no vive aqui: va en HTML, encima del lienzo.
  */
-const ANCHO = 900;
+const ANCHO = 1440;
 const ALTO = 420;
 
 /** Gama del decorado, de la misma familia que los tokens. */
@@ -87,21 +90,21 @@ const taberna: Escenario = {
     // Tonel a la izquierda, con los costados abombados: con lados rectos se leia
     // como el marco de un cuadro.
     {
-      d: 'M 62 236 L 138 236 Q 152 292 138 349 L 62 349 Q 48 292 62 236 Z',
+      d: 'M 92 236 L 168 236 Q 182 292 168 349 L 92 349 Q 78 292 92 236 Z',
       color: C.tablaClara,
       trazo: { color: C.oscuro, grosor: 4 },
     },
-    linea(52, 268, 148, 268, C.tablaOscura, 5),
-    linea(50, 320, 150, 320, C.tablaOscura, 5),
+    linea(82, 268, 178, 268, C.tablaOscura, 5),
+    linea(80, 320, 180, 320, C.tablaOscura, 5),
     // Candil colgando, en el hueco central: a los lados cruzaba una barra de vida.
-    linea(450, 0, 450, 62, C.oscuro, 4),
+    linea(720, 0, 720, 62, C.oscuro, 4),
     {
-      d: 'M 430 62 L 470 62 L 478 96 L 422 96 Z',
+      d: 'M 700 62 L 740 62 L 748 96 L 692 96 Z',
       color: C.brasa,
       trazo: { color: C.oscuro, grosor: 4 },
     },
     rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloTabla),
-    ...[150, 420, 700, 860].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
+    ...[180, 480, 780, 1080, 1340].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
   ],
 };
 
@@ -114,13 +117,13 @@ const callejon: Escenario = {
     rect(0, 96, ANCHO, SUELO - 96, C.yeso),
     linea(0, 96, ANCHO, 96, C.oscuro, 5),
     // Desconchones.
-    rect(120, 150, 90, 60, C.yesoSombra),
-    rect(380, 240, 120, 66, C.yesoSombra),
+    rect(160, 150, 90, 60, C.yesoSombra),
+    rect(1120, 240, 120, 66, C.yesoSombra),
     // Ventana con reja.
     rect(700, 140, 110, 90, C.noche, { color: C.oscuro, grosor: 5 }),
     ...[730, 755, 780].map((x) => linea(x, 140, x, 230, C.oscuro, 4)),
     rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloPiedra),
-    ...[120, 300, 480, 660, 840].map((x) => linea(x, SUELO, x - 20, ALTO, C.piedra, 3)),
+    ...[140, 400, 660, 920, 1180, 1400].map((x) => linea(x, SUELO, x - 20, ALTO, C.piedra, 3)),
   ],
 };
 
@@ -133,11 +136,11 @@ const corral: Escenario = {
     // Valla: travesanos y estacas.
     rect(0, 196, ANCHO, 14, C.tablaOscura),
     rect(0, 262, ANCHO, 14, C.tablaOscura),
-    ...[40, 330, 450, 770, 880].map((x) =>
+    ...[60, 300, 640, 1000, 1300].map((x) =>
       rect(x, 160, 16, 189, C.tablaClara, { color: C.oscuro, grosor: 3 }),
     ),
     rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloPaja),
-    ...[90, 250, 430, 610, 790].map((x) =>
+    ...[120, 340, 560, 780, 1000, 1220, 1400].map((x) =>
       linea(x, SUELO + 22, x + 44, SUELO + 14, C.tablaOscura, 3),
     ),
   ],
@@ -156,15 +159,15 @@ const puerto: Escenario = {
     rect(0, 288, ANCHO, SUELO - 288, C.tablaMedia),
     linea(0, 288, ANCHO, 288, C.oscuro, 4),
     // Mastil al fondo, en el hueco entre las dos barras de vida.
-    rect(400, 40, 12, 156, C.tablaOscura),
-    { d: 'M 412 56 L 508 94 L 412 126 Z', color: C.yeso, trazo: { color: C.oscuro, grosor: 4 } },
+    rect(700, 40, 12, 156, C.tablaOscura),
+    { d: 'M 712 56 L 808 94 L 712 126 Z', color: C.yeso, trazo: { color: C.oscuro, grosor: 4 } },
     // Cajones apilados.
     // Apoyados en el tablado (288), no flotando sobre el agua.
-    rect(58, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
-    rect(74, 246, 58, 46, C.tablaMedia, { color: C.oscuro, grosor: 4 }),
-    rect(792, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
+    rect(78, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
+    rect(94, 246, 58, 46, C.tablaMedia, { color: C.oscuro, grosor: 4 }),
+    rect(1240, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
     rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloTabla),
-    ...[150, 380, 610, 830].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
+    ...[180, 480, 780, 1080, 1340].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
   ],
 };
 
