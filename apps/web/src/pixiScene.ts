@@ -6,6 +6,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { getWeapon } from '@camorra/engine';
 import { aEntero, LIENZO } from '@camorra/shared';
 import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
+import { ESCENARIOS } from './art/escenarios.js';
 import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
 import type { Actor } from './fightScene.js';
 
@@ -164,6 +165,24 @@ export function drawActor(actor: Actor, hudFill?: Graphics): ActorView {
 
 export function changeWeapon(view: ActorView, weaponId: string): void {
   if (view.rig !== null) setWeapon(view.rig, weaponOf(weaponId));
+}
+
+/** El fondo, detras de todo. Una sola Graphics: es decorado, no cambia nunca. */
+export function drawEscenario(indice: number): Graphics {
+  const escenario = ESCENARIOS[indice % ESCENARIOS.length];
+  const g = new Graphics();
+  if (escenario === undefined) return g;
+
+  for (const pieza of escenario.piezas) {
+    g.svg(
+      `<svg xmlns="http://www.w3.org/2000/svg"><path d="${pieza.d}" fill="${pieza.color}"${
+        pieza.trazo === undefined
+          ? ''
+          : ` stroke="${pieza.trazo.color}" stroke-width="${pieza.trazo.grosor}" stroke-linecap="round"`
+      } /></svg>`,
+    );
+  }
+  return g;
 }
 
 export function drawGround(): Graphics {

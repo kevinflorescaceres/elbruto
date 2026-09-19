@@ -11,6 +11,7 @@
 import { getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
 import type { FightReplay } from '@camorra/shared';
 import type { AnimName } from './art/poses.js';
+import { escenarioDe } from './art/escenarios.js';
 import { describe } from './fightLines.js';
 
 export interface Actor {
@@ -77,6 +78,8 @@ export interface Scene {
   actors: Actor[];
   beats: Beat[];
   duration: number;
+  /** Indice del fondo. Sale de la semilla, asi que la repeticion no cambia. */
+  escenario: number;
 }
 
 /** Un evento ya descrito, todavia sin hora: solo sabe cuanto pesa en su turno. */
@@ -251,7 +254,7 @@ function attackAnim(weaponId: string): AnimName {
 }
 
 /** Solo se necesita la apariencia de los snapshots, no la ficha entera. */
-export type Replayable = Pick<FightReplay, 'log' | 'winner'> & {
+export type Replayable = Pick<FightReplay, 'log' | 'winner' | 'seed'> & {
   snapshotA: { appearance: Appearance; slug: string };
   snapshotB: { appearance: Appearance; slug: string };
 };
@@ -424,5 +427,5 @@ export function planFight(replay: Replayable): Scene {
   }
 
   const { beats, duration } = repartirTiempo(crudos);
-  return { actors, beats, duration };
+  return { actors, beats, duration, escenario: escenarioDe(replay.seed) };
 }

@@ -85,6 +85,7 @@ group('planFight', () => {
       if (type === 'start') continue;
       const scene = planFight({
         winner: 'A',
+        seed: 1234,
         snapshotA: { appearance: createBrute('uno de prueba').appearance, slug: 'uno-de-prueba' },
         snapshotB: { appearance: createBrute('otro de prueba').appearance, slug: 'otro-de-prueba' },
         log: [

@@ -4,6 +4,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { createBrute, WEAPONS, type Appearance } from '@camorra/engine';
+import { ESCENARIOS } from './escenarios.js';
 import {
   colorOf,
   GROSOR,
@@ -218,7 +219,34 @@ writeFileSync(
     '</svg>',
 );
 
-// 6. Imagen para compartir (Open Graph). Se rasteriza una vez y se versiona.
+// 6. Escenarios, a tamano real del lienzo y con un peleon dentro para escala.
+const peleonMuestra = figure('Chirlo de la Cava', REST, { category: 'pesada', reach: 2 });
+writeFileSync(
+  `${salida}/escenarios.svg`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="${ESCENARIOS.length * 452}" viewBox="0 0 900 ${ESCENARIOS.length * 452}">` +
+    ESCENARIOS.map((esc, i) => {
+      const y = i * 452;
+      const fondo = esc.piezas
+        .map(
+          (pz) =>
+            `<path d="${pz.d}" fill="${pz.color}"${
+              pz.trazo === undefined
+                ? ''
+                : ` stroke="${pz.trazo.color}" stroke-width="${pz.trazo.grosor}" stroke-linecap="round"`
+            }/>`,
+        )
+        .join('');
+      return (
+        `<g transform="translate(0 ${y})">${fondo}` +
+        `<g transform="translate(252 349)">${peleonMuestra}</g>` +
+        `<g transform="translate(648 349) scale(-1 1)">${peleonMuestra}</g>` +
+        `<text x="12" y="24" font-family="monospace" font-size="14" fill="#241f1c">${esc.nombre}</text></g>`
+      );
+    }).join('') +
+    '</svg>',
+);
+
+// 7. Imagen para compartir (Open Graph). Se rasteriza una vez y se versiona.
 const og = (): string => {
   const izq = figure('Chirlo de la Cava', REST, { category: 'pesada', reach: 2 });
   const der = figure('Tuerto del Arrabal', REST, { category: 'larga', reach: 3 });

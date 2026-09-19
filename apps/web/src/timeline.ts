@@ -12,6 +12,7 @@ import { TIME_SCALE, type Move, type Scene } from './fightScene.js';
 import {
   changeWeapon,
   drawActor,
+  drawEscenario,
   drawGround,
   drawHud,
   makeAnnounce,
@@ -302,6 +303,7 @@ export function buildTimeline(
   scene: Scene,
   onCaption: (text: string | null) => void,
 ): gsap.core.Timeline {
+  stage.addChild(drawEscenario(scene.escenario));
   stage.addChild(drawGround());
 
   const brutoA = scene.actors.find((a) => a.id === 'A');
