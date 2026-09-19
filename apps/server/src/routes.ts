@@ -295,18 +295,28 @@ export function registerRoutes(
 
     // ponytail: ORDER BY random() escanea los candidatos; con muchos luchadores
     // por nivel, cambiar a un salto por offset aleatorio.
+    // Primero la gente, luego bots para rellenar: el juego es pelear con otros
+    // jugadores y los bots estan para que nunca falte rival.
     const opponents = await prisma.$queryRaw<{ id: string }[]>`
       SELECT id FROM "Brute"
       WHERE level BETWEEN ${row.level - 1} AND ${row.level + 1}
         AND id <> ${row.id}
         AND ("keeperId" IS NULL OR "keeperId" <> ${row.keeperId ?? ''})
-      ORDER BY random() LIMIT 6`;
+      ORDER BY "isBot" ASC, random() LIMIT 6`;
 
     const rows = await prisma.brute.findMany({
       where: { id: { in: opponents.map((o) => o.id) } },
       include: bruteInclude,
     });
-    return { opponents: rows.map((row) => rowToProfile(row)) };
+    // findMany no conserva el orden del IN, y ese orden es el que pone delante
+    // a los jugadores.
+    const porId = new Map(rows.map((r) => [r.id, r]));
+    return {
+      opponents: opponents
+        .map((o) => porId.get(o.id))
+        .filter((r) => r !== undefined)
+        .map((row) => rowToProfile(row)),
+    };
   });
 
   app.post('/api/brutes/:slug/fights', async (request) => {

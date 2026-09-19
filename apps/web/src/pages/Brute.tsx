@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type WeaponCategory } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
+import type { BruteProfile } from '@camorra/shared';
 import { Barra, Boton, Chips, Estadistica, Pagina, Tarjeta } from '../ui.js';
-import { api } from '../api.js';
-import { useBrute, useIsMine } from '../hooks.js';
+import { api, ApiError } from '../api.js';
+import { useBrute, useIsMine, useMe } from '../hooks.js';
 
 const STATS = [
   ['Aguante', 'endurance'],
@@ -54,6 +55,76 @@ function mejorArma(ids: string[]): { category: WeaponCategory; reach: number } |
   const armas = ids.map(getWeapon).sort((a, b) => b.reach - a.reach);
   const arma = armas[0];
   return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
+}
+
+/**
+ * Desafiar a un peleon ajeno. El endpoint ya lo admitia: solo exige que el
+ * rival exista y este a un nivel de distancia. Lo que faltaba era la forma de
+ * decirlo desde la interfaz, que es lo unico que ataba a pelear contra los seis
+ * del sorteo.
+ */
+function Desafio({ rival }: { rival: BruteProfile }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const me = useMe();
+
+  // Solo valen los mios que esten a un nivel de distancia.
+  const candidatos = (me.data?.brutes ?? [])
+    .filter((b) => Math.abs(b.level - rival.level) <= 1)
+    .sort((a, b) => b.level - a.level);
+
+  const desafiar = useMutation({
+    mutationFn: (mio: string) => api.startFight(mio, rival.slug),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      await queryClient.invalidateQueries({ queryKey: ['brute', rival.slug] });
+      await navigate(`/fight/${res.fightId}`);
+    },
+  });
+
+  if (me.data === undefined || me.data.brutes.length === 0) {
+    return (
+      <Tarjeta hundida>
+        <p className="apagado">
+          Para desafiar a {rival.name} necesitas un peleón. <Link to="/">Créate uno.</Link>
+        </p>
+      </Tarjeta>
+    );
+  }
+
+  if (candidatos.length === 0) {
+    return (
+      <Tarjeta hundida>
+        <p className="apagado">
+          Ninguno de tus peleones está a su altura: solo se pelea contra gente de un nivel de
+          distancia, y {rival.name} va por el {rival.level}.
+        </p>
+      </Tarjeta>
+    );
+  }
+
+  return (
+    <Tarjeta hundida>
+      <h3>Desafiar a {rival.name}</h3>
+      {desafiar.error && (
+        <p className="error">
+          {desafiar.error instanceof ApiError ? desafiar.error.message : 'No se ha podido pelear'}
+        </p>
+      )}
+      <div className="fila">
+        {candidatos.map((mio) => (
+          <Boton
+            key={mio.slug}
+            tipo="principal"
+            disabled={desafiar.isPending}
+            onClick={() => desafiar.mutate(mio.slug)}
+          >
+            Con {mio.name}
+          </Boton>
+        ))}
+      </div>
+    </Tarjeta>
+  );
 }
 
 export function BrutePage() {
@@ -124,6 +195,8 @@ export function BrutePage() {
           </div>
         </div>
       </Tarjeta>
+
+      {!mine && <Desafio rival={b} />}
 
       {mine && (
         <Tarjeta>

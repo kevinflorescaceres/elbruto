@@ -122,6 +122,67 @@ describe('creacion de luchadores', () => {
 });
 
 describe('ciclo completo', () => {
+  it('la arena pone a los jugadores por delante de los bots', async () => {
+    // El juego es pelear con otros jugadores; los bots estan de relleno.
+    const mine = await newFighter('buscador');
+    const humanos = [await newFighter('vecino'), await newFighter('vecina')];
+
+    for (let i = 0; i < 8; i++) {
+      await prisma.brute.create({
+        data: {
+          name: `Bot Relleno ${i}`,
+          slug: `bot-relleno-${i}`,
+          isBot: true,
+          level: 1,
+          endurance: 3,
+          strength: 3,
+          agility: 3,
+          speed: 3,
+          appearance: { body: 0, head: 0, hair: 0, skinColor: 0, hairColor: 0, clothColor: 0 },
+        },
+      });
+    }
+
+    const res = await mine.browser.call('GET', `/api/brutes/${mine.slug}/opponents`);
+    expect(res.status).toBe(200);
+
+    const slugs: string[] = res.body.opponents.map((o: any) => o.slug);
+    const primerBot = res.body.opponents.findIndex((o: any) => o.isBot);
+    for (const humano of humanos) {
+      const donde = slugs.indexOf(humano.slug);
+      expect(donde, `${humano.slug} no aparece`).toBeGreaterThanOrEqual(0);
+      if (primerBot >= 0) expect(donde).toBeLessThan(primerBot);
+    }
+  });
+
+  it('se puede desafiar a alguien que no salio en la arena', async () => {
+    // Es lo que permite el boton de Desafiar en la ficha ajena.
+    const mine = await newFighter('retador');
+    const lejano = await newFighter('retado');
+    // Se rellena la arena de bots para que el rival casi seguro no salga.
+    for (let i = 0; i < 12; i++) {
+      await prisma.brute.create({
+        data: {
+          name: `Bot Estorbo ${i}`,
+          slug: `bot-estorbo-${i}`,
+          isBot: true,
+          level: 1,
+          endurance: 3,
+          strength: 3,
+          agility: 3,
+          speed: 3,
+          appearance: { body: 0, head: 0, hair: 0, skinColor: 0, hairColor: 0, clothColor: 0 },
+        },
+      });
+    }
+
+    const res = await mine.browser.call('POST', `/api/brutes/${mine.slug}/fights`, {
+      opponentSlug: lejano.slug,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.fightId).toBeTruthy();
+  });
+
   it('pelea, gana XP, sube de nivel, elige mejora y ve la repeticion', async () => {
     const mine = await newFighter('mio');
     const theirs = await newFighter('suyo');
