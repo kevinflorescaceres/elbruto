@@ -4,7 +4,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { getWeapon } from '@camorra/engine';
-import { aEntero, LIENZO } from '@camorra/shared';
+import { aEntero, BORDE, LIENZO, RADIO } from '@camorra/shared';
 import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
 import { ESCENARIOS } from './art/escenarios.js';
 import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
@@ -67,7 +67,7 @@ export function drawHud(nombreA: string, nombreB: string): Hud {
 }
 
 /** Cartel grande de apertura y de cierre. */
-export function makeAnnounce(text: string, grande: boolean): Text {
+export function makeAnnounce(text: string, grande: boolean, conPlaca = false): Container {
   const label = new Text({
     text,
     style: {
@@ -79,9 +79,24 @@ export function makeAnnounce(text: string, grande: boolean): Text {
     },
   });
   label.anchor.set(0.5);
-  label.x = SIZE.width / 2;
-  label.y = SIZE.height * 0.42;
-  return label;
+
+  const grupo = new Container();
+  // El cartel que se queda cae sobre lo que haya pintado el escenario: sin una
+  // placa detras, el texto oscuro se pierde en un fondo oscuro.
+  if (conPlaca) {
+    const ancho = label.width + 48;
+    const alto = label.height + 24;
+    grupo.addChild(
+      new Graphics()
+        .roundRect(-ancho / 2, -alto / 2, ancho, alto, RADIO)
+        .fill({ color: aEntero(LIENZO.fondo), alpha: 0.92 })
+        .stroke({ width: BORDE, color: 0x2a2a2a }),
+    );
+  }
+  grupo.addChild(label);
+  grupo.x = SIZE.width / 2;
+  grupo.y = SIZE.height * 0.42;
+  return grupo;
 }
 
 export interface ActorView {

@@ -4,7 +4,7 @@
  * sitios), pero sin arrastrar Pixi a esta pantalla.
  */
 import { Fragment } from 'react';
-import type { Appearance } from '@camorra/engine';
+import { getWeapon, type Appearance } from '@camorra/engine';
 import {
   colorOf,
   GROSOR,
@@ -52,6 +52,16 @@ interface Props {
   /** Categoria y alcance del arma en la mano. Sin arma, los punos. */
   weapon?: { category: WeaponCategory; reach: number };
   height?: number;
+}
+
+/**
+ * El arma que se lleva al retrato: la de mas alcance, que es la que mas luce.
+ * Vive aqui porque es una decision de dibujo, y la tenian copiada la arena y
+ * la ficha.
+ */
+export function armaVisible(ids: string[]): { category: WeaponCategory; reach: number } | undefined {
+  const arma = ids.map(getWeapon).sort((a, b) => b.reach - a.reach)[0];
+  return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
 }
 
 export function Fighter({ appearance, slug, weapon, height = 150 }: Props) {

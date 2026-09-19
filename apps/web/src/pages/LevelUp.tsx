@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
-import { Pagina } from '../ui.js';
+import { Pagina, TarjetaBoton } from '../ui.js';
 import { api } from '../api.js';
 
 const STAT_NAMES: Record<string, string> = {
@@ -79,16 +79,14 @@ export function LevelUpPage() {
         {pending.data.options.map((option, index) => {
           const { title, detail } = describeOption(option);
           return (
-            <button
+            <TarjetaBoton
               key={index}
-              className="tarjeta"
-              style={{ textAlign: 'left' }}
               disabled={choose.isPending}
               onClick={() => choose.mutate(index as 0 | 1)}
             >
               <strong>{title}</strong>
               <div className="apagado">{detail}</div>
-            </button>
+            </TarjetaBoton>
           );
         })}
       </div>

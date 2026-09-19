@@ -143,7 +143,7 @@ function addMove(
 ): void {
   // El cartel no es de nadie: se pinta en medio de la pantalla.
   if (move.kind === 'announce') {
-    const label = makeAnnounce(move.text, move.grande);
+    const label = makeAnnounce(move.text, move.grande, move.queda);
     label.alpha = 0;
     stage.addChild(label);
     fromTo(
@@ -154,7 +154,8 @@ function addMove(
       at,
     );
     fromTo(tl, label, { alpha: 0 }, { alpha: 1, duration: duration * 0.25 }, at);
-    tl.to(label, { alpha: 0, duration: duration * 0.3 }, at + duration * 0.7);
+    // El de cierre se queda: es quien gano, y `Ir al final` aterriza justo aqui.
+    if (!move.queda) tl.to(label, { alpha: 0, duration: duration * 0.3 }, at + duration * 0.7);
     return;
   }
 
@@ -293,7 +294,9 @@ function addMove(
       break;
 
     case 'fall':
-      tl.to(root, { alpha: 0.4, duration }, at);
+      // 0.4 lo dejaba en una mancha sobre el suelo: se ve que esta fuera de
+      // combate, pero se sigue reconociendo a quien perdio.
+      tl.to(root, { alpha: 0.75, duration }, at);
       break;
   }
 }

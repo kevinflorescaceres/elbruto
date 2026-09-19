@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { NAME_MAX, NAME_MIN } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
-import { Boton, Pagina, Tarjeta } from '../ui.js';
+import { Boton, Pagina, Tarjeta, TarjetaBoton } from '../ui.js';
+import { armaVisible, Fighter } from '../art/Fighter.js';
 import { useMe } from '../hooks.js';
 
 export function Home() {
@@ -109,18 +110,24 @@ export function Home() {
       {me.data?.brutes.length === 0 && <p className="apagado">Todavía no tienes ninguno.</p>}
       <div className="rejilla">
         {me.data?.brutes.map((brute) => (
-          <button
-            key={brute.slug}
-            className="tarjeta"
-            style={{ textAlign: 'left' }}
-            onClick={() => void navigate(`/b/${brute.slug}`)}
-          >
-            <strong>{brute.name}</strong>
-            <div className="apagado">
-              Nivel {brute.level} · {brute.wins}V {brute.losses}D
-              {brute.pendingLevelUp && ' · mejora pendiente'}
+          <TarjetaBoton key={brute.slug} onClick={() => void navigate(`/b/${brute.slug}`)}>
+            {/* Con cara: es la lista que mas se mira y era la unica sin retrato. */}
+            <div className="ficha-mini">
+              <Fighter
+                appearance={brute.appearance}
+                slug={brute.slug}
+                weapon={armaVisible(brute.weapons)}
+                height={92}
+              />
+              <div>
+                <strong>{brute.name}</strong>
+                <div className="apagado">
+                  Nivel {brute.level} · {brute.wins}V {brute.losses}D
+                </div>
+                {brute.pendingLevelUp && <div className="aviso">Mejora pendiente</div>}
+              </div>
             </div>
-          </button>
+          </TarjetaBoton>
         ))}
       </div>
 

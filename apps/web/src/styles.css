@@ -70,6 +70,23 @@ h3 {
   background: var(--papel-claro);
 }
 
+.tarjeta-boton {
+  text-align: left;
+}
+
+/* Retrato + datos, en las tarjetas de portada y arena. */
+.ficha-mini {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+/* Algo que hay que atender, no un dato mas: no va en --tinta-suave. */
+.aviso {
+  color: var(--pierde);
+  font-weight: 700;
+}
+
 .rejilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
@@ -132,7 +149,8 @@ th {
 
 .barra {
   height: 0.6rem;
-  background: var(--linea);
+  background: var(--papel-hondo);
+  border: 1px solid var(--linea);
   border-radius: 3px;
   overflow: hidden;
 }

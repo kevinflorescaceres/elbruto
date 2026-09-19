@@ -62,8 +62,12 @@ export type Move =
   | { kind: 'pulse'; id: string }
   /** Se apaga al morir. */
   | { kind: 'fall'; id: string }
-  /** Cartel grande de apertura o de cierre. */
-  | { kind: 'announce'; text: string; grande: boolean };
+  /**
+   * Cartel de apertura o de cierre. `queda` lo deja fijo en vez de
+   * desvanecerlo: el de cierre dice quien gano y es el remate de la pelea, asi
+   * que tiene que seguir ahi cuando la linea de tiempo se para.
+   */
+  | { kind: 'announce'; text: string; grande: boolean; queda: boolean };
 
 export interface Beat {
   /** Segundos desde el principio. */
@@ -407,7 +411,7 @@ export function planFight(replay: Replayable): Scene {
         const ganador = byId.get(event.winner)?.name ?? event.winner;
         push(event, [
           { kind: 'pose', id: event.winner, anim: 'victory' },
-          { kind: 'announce', text: `Gana ${ganador}`, grande: false },
+          { kind: 'announce', text: `Gana ${ganador}`, grande: false, queda: true },
         ]);
         break;
       }
@@ -422,7 +426,7 @@ export function planFight(replay: Replayable): Scene {
       type: 'start',
       weight: 1,
       caption: null,
-      moves: [{ kind: 'announce', text: '¡Camorra!', grande: true }],
+      moves: [{ kind: 'announce', text: '¡Camorra!', grande: true, queda: false }],
     });
   }
 

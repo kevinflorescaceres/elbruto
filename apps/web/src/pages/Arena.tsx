@@ -1,14 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
-import { getWeapon } from '@camorra/engine';
-import { Fighter } from '../art/Fighter.js';
-import { Pagina } from '../ui.js';
+import { armaVisible, Fighter } from '../art/Fighter.js';
+import { Pagina, TarjetaBoton } from '../ui.js';
 import { api, ApiError } from '../api.js';
-
-function armaVisible(ids: string[]) {
-  const arma = ids.map(getWeapon).sort((a, b) => b.reach - a.reach)[0];
-  return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
-}
 
 export function ArenaPage() {
   const { slug = '' } = useParams();
@@ -58,14 +52,12 @@ export function ArenaPage() {
       {opponents.isPending && <p className="apagado">Buscando...</p>}
       <div className="rejilla">
         {opponents.data?.opponents.map((rival) => (
-          <button
+          <TarjetaBoton
             key={rival.slug}
-            className="tarjeta"
-            style={{ textAlign: 'left' }}
             disabled={fight.isPending}
             onClick={() => fight.mutate(rival.slug)}
           >
-            <div className="fila" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+            <div className="ficha-mini">
               <Fighter
                 appearance={rival.appearance}
                 slug={rival.slug}
@@ -83,7 +75,7 @@ export function ArenaPage() {
                 </div>
               </div>
             </div>
-          </button>
+          </TarjetaBoton>
         ))}
       </div>
     </Pagina>

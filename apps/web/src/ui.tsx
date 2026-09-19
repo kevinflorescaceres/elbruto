@@ -103,6 +103,27 @@ export function Estadistica({ etiqueta, valor }: { etiqueta: string; valor: numb
   );
 }
 
+/**
+ * Una tarjeta entera que se pulsa: rival de la arena, peleon propio, mejora.
+ * Las tres pantallas la tenian como `<button className="tarjeta">` con el
+ * mismo estilo en linea para desalinear el texto.
+ */
+export function TarjetaBoton({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button className="tarjeta tarjeta-boton" disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
 /** Barra de progreso: experiencia o vida. */
 export function Barra({ de, entre, etiqueta }: { de: number; entre: number; etiqueta?: string }) {
   const parte = entre > 0 ? Math.max(0, Math.min(1, de / entre)) : 0;

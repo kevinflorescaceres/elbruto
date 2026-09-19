@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
-import { getPet, getSkill, getWeapon, type WeaponCategory } from '@camorra/engine';
-import { Fighter } from '../art/Fighter.js';
+import { getPet, getSkill, getWeapon } from '@camorra/engine';
+import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
 import { Barra, Boton, Chips, Estadistica, Pagina, Tarjeta } from '../ui.js';
@@ -48,13 +48,6 @@ function Denuncia({ slug }: { slug: string }) {
       </button>
     </form>
   );
-}
-
-/** El arma que se lleva a la vista: la de mas alcance, que es la que mas luce. */
-function mejorArma(ids: string[]): { category: WeaponCategory; reach: number } | undefined {
-  const armas = ids.map(getWeapon).sort((a, b) => b.reach - a.reach);
-  const arma = armas[0];
-  return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
 }
 
 /**
@@ -163,7 +156,7 @@ export function BrutePage() {
             <Fighter
               appearance={b.appearance}
               slug={b.slug}
-              weapon={mejorArma(b.weapons)}
+              weapon={armaVisible(b.weapons)}
               height={170}
             />
           </div>
