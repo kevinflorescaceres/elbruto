@@ -11,7 +11,12 @@
  * Sistema de coordenadas del personaje: origen entre los pies, la altura crece
  * hacia -y. Un peleon mide unas 96 unidades.
  */
-import { clothColor2For, type Appearance, type WeaponCategory } from '@camorra/engine';
+import {
+  campoDeApariencia,
+  clothColor2For,
+  type Appearance,
+  type WeaponCategory,
+} from '@camorra/engine';
 
 export type PartName =
   | 'hips'
@@ -41,6 +46,8 @@ export interface Shape {
   fill: Tinte;
   /** Sin trazo para los detalles finos, que si no se emborronan. */
   stroke?: false;
+  /** Solo linea, de este grosor y sin relleno: cejas, bocas y cicatrices. */
+  trazo?: number;
 }
 
 export const PALETA = {
@@ -152,13 +159,70 @@ const CABEZAS: Shape[][] = [
 ];
 
 /**
- * Ojos y boca, iguales para todos por ahora. En el paso 5 pasan a ser campos
- * propios (`brow`, `mouth`) con sus variantes.
+ * Piezas de cara (ARTE-Y-TOKENS.md §1.2). El bloque va 4 unidades mas abajo que
+ * en el encargo: con las coordenadas originales los ojos y las cejas caian en
+ * la linea del pelo y varios peinados los tapaban.
  */
-const CARA: Shape[] = [
-  { d: 'M -9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-  { d: 'M 9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-  { d: 'M -6 -8 Q 0 -4 6 -8', fill: 'oscuro', stroke: false },
+const OJOS: Shape[] = [
+  { d: 'M -9 -18 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
+  { d: 'M 9 -18 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
+];
+
+/** Cuatro cejas: recta, caida, arqueada y partida por cicatriz. */
+const CEJAS: Shape[][] = [
+  [
+    { d: 'M -12 -21 L -5 -21', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 12 -21 L 5 -21', fill: 'oscuro', trazo: 2.4 },
+  ],
+  [
+    { d: 'M -12 -23 L -5 -19', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 12 -23 L 5 -19', fill: 'oscuro', trazo: 2.4 },
+  ],
+  [
+    { d: 'M -12 -20 Q -8.5 -25 -5 -20', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 12 -20 Q 8.5 -25 5 -20', fill: 'oscuro', trazo: 2.4 },
+  ],
+  [
+    { d: 'M -12 -21 L -9 -21 M -7 -22 L -5 -22', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 12 -21 L 5 -21', fill: 'oscuro', trazo: 2.4 },
+  ],
+];
+
+/** Cuatro bocas: sonrisa, torcida, apretada y mellada. */
+const BOCAS: Shape[][] = [
+  [{ d: 'M -6 -4 Q 0 0 6 -4', fill: 'oscuro', trazo: 2.4 }],
+  [{ d: 'M -6 -4 Q 0 -1 6 -7', fill: 'oscuro', trazo: 2.4 }],
+  [{ d: 'M -7 -3 L 7 -3', fill: 'oscuro', trazo: 2.4 }],
+  [
+    { d: 'M -6 -5 L 6 -5 L 6 0 L -6 0 Z', fill: 'oscuro' },
+    { d: 'M -1 -5 L 2 -5 L 2 -2 L -1 -2 Z', fill: 'piel', stroke: false },
+  ],
+];
+
+/** Seis barbas. La primera es no llevar. */
+const BARBAS: Shape[][] = [
+  [],
+  [{ d: 'M -4 -6 L 4 -6 L 3 4 Q 0 7 -3 4 Z', fill: 'pelo' }],
+  [{ d: 'M -9 -11 Q 0 -15 9 -11 Q 5 -6 0 -7 Q -5 -6 -9 -11 Z', fill: 'pelo' }],
+  [
+    { d: 'M -18 -23 L -13 -23 L -12 -6 L -17 -9 Z', fill: 'pelo' },
+    { d: 'M 18 -23 L 13 -23 L 12 -6 L 17 -9 Z', fill: 'pelo' },
+  ],
+  [{ d: 'M -16 -15 Q -16 4 0 4 Q 16 4 16 -15 Q 12 -4 0 -4 Q -12 -4 -16 -15 Z', fill: 'pelo' }],
+  [{ d: 'M -18 -21 Q -19 10 0 12 Q 19 10 18 -21 Q 12 -8 0 -9 Q -12 -8 -18 -21 Z', fill: 'pelo' }],
+];
+
+/** Seis marcas, tres vacias: si la mitad no lleva, deja de ser una marca. */
+const MARCAS: Shape[][] = [
+  [],
+  [],
+  [],
+  [{ d: 'M 12 -30 L 7 -13', fill: 'oscuro', trazo: 2.6 }],
+  [
+    { d: 'M -21 -20 L 20 -17', fill: 'oscuro', trazo: 2.6 },
+    { d: 'M -14 -20 a 6.5 6.5 0 1 0 0.1 0 Z', fill: 'oscuro' },
+  ],
+  [{ d: 'M -21 -31 L 21 -28 L 21 -21 L -21 -24 Z', fill: 'trapo' }],
 ];
 
 /** Seis pelos: rapado, greñas, cresta, melena, entradas con coleta y calvo con corona. */
@@ -317,9 +381,19 @@ export function lookFrom(appearance: Appearance, slug: string): Look {
 
   return {
     parts: {
-      // Orden de pintado dentro de la cabeza: craneo, pelo, ojos y boca.
       torso: [...pickFrom(TORSOS, appearance.body), ...DETALLE_TORSO],
-      head: [...cabeza, ...pelo, ...CARA],
+      // Orden de §1.6: craneo, barba, pelo, cejas, ojos, boca, marca. La barba
+      // antes que el pelo para que las patillas queden bajo la melena, y la
+      // marca al final para que el parche tape el ojo y no al reves.
+      head: [
+        ...cabeza,
+        ...pickFrom(BARBAS, appearance.beard ?? campoDeApariencia(slug, 'beard')),
+        ...pelo,
+        ...pickFrom(CEJAS, appearance.brow ?? campoDeApariencia(slug, 'brow')),
+        ...OJOS,
+        ...pickFrom(BOCAS, appearance.mouth ?? campoDeApariencia(slug, 'mouth')),
+        ...pickFrom(MARCAS, appearance.mark ?? campoDeApariencia(slug, 'mark')),
+      ],
       legBack: pierna('izq'),
       legFront: pierna('der'),
       armBack: BRAZO,

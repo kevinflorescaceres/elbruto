@@ -105,10 +105,11 @@ function drawPet(petId: string): Container {
   const svg = shapes
     .map(
       (shape) =>
-        `<path d="${shape.d}" fill="${colorOf(shape.fill, colors)}"` +
+        `<path d="${shape.d}" fill="${shape.trazo === undefined ? colorOf(shape.fill, colors) : 'none'}"` +
         (shape.stroke === false
           ? ' stroke="none"'
-          : ` stroke="${TRAZO}" stroke-width="${GROSOR}" stroke-linejoin="round"`) +
+          : ` stroke="${shape.trazo === undefined ? TRAZO : colorOf(shape.fill, colors)}"` +
+            ` stroke-width="${shape.trazo ?? GROSOR}" stroke-linejoin="round" stroke-linecap="round"`) +
         ' />',
     )
     .join('');

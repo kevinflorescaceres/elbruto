@@ -67,6 +67,14 @@ export interface Appearance {
    * (ARTE-Y-TOKENS.md §1.3). No se rellena la base a posteriori.
    */
   clothColor2?: number;
+  /** Cejas, 0-3. Con la boca, es lo que mas cambia la cara. */
+  brow?: number;
+  /** Boca, 0-3. */
+  mouth?: number;
+  /** Barba, 0-5. El 0 es sin barba. */
+  beard?: number;
+  /** Marca, 0-5. Los tres primeros valores son vacios: la mitad no lleva. */
+  mark?: number;
 }
 
 export interface Brute {

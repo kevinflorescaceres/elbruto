@@ -3,7 +3,7 @@
  * Herramienta de desarrollo: `pnpm --filter @camorra/web art`.
  */
 import { writeFileSync } from 'node:fs';
-import { createBrute, WEAPONS } from '@camorra/engine';
+import { createBrute, WEAPONS, type Appearance } from '@camorra/engine';
 import {
   colorOf,
   GROSOR,
@@ -26,10 +26,11 @@ const shapesToSvg = (shapes: Shape[], colors: Look['colors']): string =>
   shapes
     .map(
       (s) =>
-        `<path d="${s.d}" fill="${colorOf(s.fill, colors)}"` +
+        `<path d="${s.d}" fill="${s.trazo === undefined ? colorOf(s.fill, colors) : 'none'}"` +
         (s.stroke === false
           ? ' stroke="none"'
-          : ` stroke="${TRAZO}" stroke-width="${GROSOR}" stroke-linejoin="round" stroke-linecap="round"`) +
+          : ` stroke="${s.trazo === undefined ? TRAZO : colorOf(s.fill, colors)}"` +
+            ` stroke-width="${s.trazo ?? GROSOR}" stroke-linejoin="round" stroke-linecap="round"`) +
         '/>',
     )
     .join('');
@@ -167,26 +168,47 @@ sheet(
   3,
 );
 
-// 5. Cabezas: las 4 calaveras por los 6 pelos, en grande, para juzgar la cara.
-const CARAS_POR_FILA = 6;
-const cabezas: { label: string; body: string }[] = [];
-for (let head = 0; head < 4; head++) {
-  for (let hair = 0; hair < 6; hair++) {
-    const look = lookFrom({ body: 0, head, hair, skinColor: 1, hairColor: 1, clothColor: 0 }, 'x');
-    const piezas = look.parts.head ?? [];
-    cabezas.push({
-      label: `cabeza ${head} · pelo ${hair}`,
-      body: `<g transform="translate(0 40) scale(1.7)">${shapesToSvg(piezas, look.colors)}</g>`,
-    });
-  }
-}
+// 5. Caras: las piezas nuevas, variando una cosa cada vez.
+const cara = (campos: Partial<Appearance>, label: string) => {
+  const look = lookFrom(
+    {
+      body: 0,
+      head: 0,
+      hair: 0,
+      skinColor: 1,
+      hairColor: 1,
+      clothColor: 0,
+      brow: 0,
+      mouth: 0,
+      beard: 0,
+      mark: 0,
+      ...campos,
+    },
+    'hoja',
+  );
+  return {
+    label,
+    body: `<g transform="translate(0 40) scale(1.7)">${shapesToSvg(look.parts.head ?? [], look.colors)}</g>`,
+  };
+};
+
+const caras = [
+  ...[0, 1, 2, 3].map((brow) => cara({ brow }, `ceja ${brow}`)),
+  ...[0, 1, 2, 3].map((mouth) => cara({ mouth }, `boca ${mouth}`)),
+  ...[0, 1, 2, 3, 4, 5].map((beard) => cara({ beard }, `barba ${beard}`)),
+  ...[0, 3, 4, 5].map((mark) => cara({ mark }, `marca ${mark}`)),
+  ...[0, 1, 2, 3].map((head) => cara({ head, beard: 5, mark: 3 }, `craneo ${head}`)),
+  ...[0, 1, 2, 3, 4, 5].map((hair) => cara({ hair, beard: 3 }, `pelo ${hair}`)),
+];
+
+const POR_FILA = 6;
 writeFileSync(
-  `${salida}/cabezas.svg`,
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${CARAS_POR_FILA * 130}" height="${4 * 150}" viewBox="0 0 ${CARAS_POR_FILA * 130} ${4 * 150}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
-    cabezas
+  `${salida}/caras.svg`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${POR_FILA * 130}" height="${Math.ceil(caras.length / POR_FILA) * 150}" viewBox="0 0 ${POR_FILA * 130} ${Math.ceil(caras.length / POR_FILA) * 150}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
+    caras
       .map((c, i) => {
-        const cx = (i % CARAS_POR_FILA) * 130 + 65;
-        const cy = Math.floor(i / CARAS_POR_FILA) * 150 + 60;
+        const cx = (i % POR_FILA) * 130 + 65;
+        const cy = Math.floor(i / POR_FILA) * 150 + 60;
         return (
           `<g transform="translate(${cx} ${cy})">${c.body}</g>` +
           `<text x="${cx}" y="${cy + 74}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`

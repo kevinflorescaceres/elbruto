@@ -25,7 +25,14 @@ const CARAS: [string, Omit<Appearance, 'clothColor2'>][] = [
 group('apariencia', () => {
   it('ningun peleon conocido cambia de cara', () => {
     for (const [nombre, esperada] of CARAS) {
-      const { clothColor2: _nuevo, ...actual } = createBrute(nombre).appearance;
+      const {
+        clothColor2: _faja,
+        brow: _ceja,
+        mouth: _boca,
+        beard: _barba,
+        mark: _marca,
+        ...actual
+      } = createBrute(nombre).appearance;
       expect(actual, `la cara de ${nombre} ha cambiado`).toEqual(esperada);
     }
   });
@@ -56,6 +63,38 @@ group('apariencia', () => {
     // Independientes: coinciden alrededor de 1 de cada 8, no siempre ni nunca.
     expect(iguales).toBeGreaterThan(40);
     expect(iguales).toBeLessThan(160);
+  });
+
+  it('los campos de cara reparten por todo su rango', () => {
+    const vistos: Record<string, Set<number>> = {
+      brow: new Set(),
+      mouth: new Set(),
+      beard: new Set(),
+      mark: new Set(),
+    };
+    for (let i = 0; i < 600; i++) {
+      const a = createBrute(`cara numero ${i}`).appearance;
+      vistos['brow']?.add(a.brow ?? -1);
+      vistos['mouth']?.add(a.mouth ?? -1);
+      vistos['beard']?.add(a.beard ?? -1);
+      vistos['mark']?.add(a.mark ?? -1);
+    }
+    expect(vistos['brow']?.size).toBe(4);
+    expect(vistos['mouth']?.size).toBe(4);
+    expect(vistos['beard']?.size).toBe(6);
+    expect(vistos['mark']?.size).toBe(6);
+  });
+
+  it('un peleon sin los campos guardados los obtiene de su slug, no un valor por defecto', () => {
+    // Los ya creados no cambian todos a la misma cara: cada uno saca la suya.
+    const caras = new Set<string>();
+    for (const [nombre] of CARAS) {
+      const b = createBrute(nombre);
+      caras.add(
+        `${b.appearance.brow}-${b.appearance.mouth}-${b.appearance.beard}-${b.appearance.mark}`,
+      );
+    }
+    expect(caras.size).toBeGreaterThan(CARAS.length / 2);
   });
 
   it('semillas distintas para campos distintos del mismo peleon', () => {

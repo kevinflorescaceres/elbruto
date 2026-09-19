@@ -58,6 +58,13 @@ export const appearanceSchema = z.object({
   skinColor: z.number().int().nonnegative(),
   hairColor: z.number().int().nonnegative(),
   clothColor: z.number().int().nonnegative(),
+  // Opcionales: los peleones creados antes no los tienen guardados y el arte
+  // los deriva del slug (ARTE-Y-TOKENS.md §1.3).
+  clothColor2: z.number().int().nonnegative().optional(),
+  brow: z.number().int().nonnegative().optional(),
+  mouth: z.number().int().nonnegative().optional(),
+  beard: z.number().int().nonnegative().optional(),
+  mark: z.number().int().nonnegative().optional(),
 });
 
 export const bruteSchema = z.object({

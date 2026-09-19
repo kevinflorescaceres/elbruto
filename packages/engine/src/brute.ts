@@ -34,8 +34,27 @@ export const fieldSeed = (slug: string, campo: string): number => hashString(`${
 export const appearanceField = (slug: string, campo: string, max: number): number =>
   randInt(mulberry32(fieldSeed(slug, campo)), 0, max);
 
-/** Color de la faja. Lo usan por igual el motor al crear y el arte al pintar. */
-export const clothColor2For = (slug: string): number => appearanceField(slug, 'clothColor2', 7);
+/**
+ * Campos de apariencia que no salen del PRNG secuencial. Cada uno con su
+ * semilla, asi que anadir el siguiente no toca a ninguno de estos.
+ *
+ * Los usan por igual el motor al crear y el arte al pintar: un peleon creado
+ * antes de que existiera un campo lo obtiene calculado desde su propio slug.
+ */
+export const RANGOS_POR_SEMILLA = {
+  clothColor2: 7,
+  brow: 3,
+  mouth: 3,
+  beard: 5,
+  mark: 5,
+} as const;
+
+export type CampoPorSemilla = keyof typeof RANGOS_POR_SEMILLA;
+
+export const campoDeApariencia = (slug: string, campo: CampoPorSemilla): number =>
+  appearanceField(slug, campo, RANGOS_POR_SEMILLA[campo]);
+
+export const clothColor2For = (slug: string): number => campoDeApariencia(slug, 'clothColor2');
 
 /**
  * Vida maxima (COMBATE.md §4.1). El termino por nivel sube la vida en paralelo
@@ -72,7 +91,11 @@ function rollAppearance(rng: Rng, slug: string): Appearance {
     skinColor: randInt(rng, 0, 4),
     hairColor: randInt(rng, 0, 5),
     clothColor: randInt(rng, 0, 7),
-    clothColor2: clothColor2For(slug),
+    clothColor2: campoDeApariencia(slug, 'clothColor2'),
+    brow: campoDeApariencia(slug, 'brow'),
+    mouth: campoDeApariencia(slug, 'mouth'),
+    beard: campoDeApariencia(slug, 'beard'),
+    mark: campoDeApariencia(slug, 'mark'),
   };
 }
 

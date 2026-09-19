@@ -28,9 +28,15 @@ function Piezas({ shapes, colors }: { shapes: Shape[]; colors: Look['colors'] })
         <path
           key={i}
           d={shape.d}
-          fill={colorOf(shape.fill, colors)}
-          stroke={shape.stroke === false ? 'none' : TRAZO}
-          strokeWidth={shape.stroke === false ? 0 : GROSOR}
+          fill={shape.trazo === undefined ? colorOf(shape.fill, colors) : 'none'}
+          stroke={
+            shape.stroke === false
+              ? 'none'
+              : shape.trazo === undefined
+                ? TRAZO
+                : colorOf(shape.fill, colors)
+          }
+          strokeWidth={shape.stroke === false ? 0 : (shape.trazo ?? GROSOR)}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
