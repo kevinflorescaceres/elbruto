@@ -130,7 +130,7 @@ function Desafio({ rival }: { rival: BruteProfile }) {
 export function BrutePage() {
   const { slug = '' } = useParams();
   const brute = useBrute(slug);
-  const mine = useIsMine(slug);
+  const { mio: mine, sabido: saberDeQuienEs } = useIsMine(slug);
   const history = useQuery({ queryKey: ['fights', slug], queryFn: () => api.fights(slug) });
 
   if (brute.isPending)
@@ -196,7 +196,7 @@ export function BrutePage() {
         </div>
       </Tarjeta>
 
-      {!mine && <Desafio rival={b} />}
+      {saberDeQuienEs && !mine && <Desafio rival={b} />}
 
       {mine && (
         <Tarjeta>
