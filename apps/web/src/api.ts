@@ -53,7 +53,8 @@ const post = (body: unknown) => ({ method: 'POST', body }) as const;
 export const api = {
   me: () => call(meSchema, '/me'),
   ranking: () => call(rankingSchema, '/ranking'),
-  createBrute: (name: string) => call(createBruteResponse, '/brutes', post({ name })),
+  createBrute: (name: string, masterSlug?: string) =>
+    call(createBruteResponse, '/brutes', post({ name, masterSlug })),
   claim: (token: string) => call(claimResponse, '/claim', post({ token })),
 
   brute: (slug: string) => call(bruteProfileSchema, `/brutes/${slug}`),

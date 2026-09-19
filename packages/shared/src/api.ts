@@ -48,6 +48,10 @@ export const bruteProfileSchema = statsSchema.extend({
   nextResetAt: z.string(),
   /** Puesto en el ranking. Nulo si no se ha calculado para esta respuesta. */
   rank: z.number().int().positive().nullable(),
+  /** Cuantos ha reclutado. Cada uno le da una pelea diaria mas. */
+  pupils: z.number().int().nonnegative(),
+  /** Quien lo recluto a el, si alguien lo hizo. */
+  master: z.object({ name: z.string(), slug: z.string() }).nullable(),
 });
 
 export const levelUpOptionSchema = z.discriminatedUnion('type', [
@@ -68,7 +72,11 @@ void _optionsMatch;
 export const meSchema = z.object({ brutes: z.array(bruteProfileSchema) });
 
 // --- POST /api/brutes ---
-export const createBruteBody = z.object({ name: nameSchema });
+export const createBruteBody = z.object({
+  name: nameSchema,
+  /** Quien lo recluta, si viene de un enlace de invitacion. */
+  masterSlug: z.string().min(1).optional(),
+});
 export const createBruteResponse = z.object({
   brute: bruteProfileSchema,
   /** Se muestra una sola vez: no se puede volver a consultar. */

@@ -20,6 +20,7 @@ const RUTAS = [
   /^\/b\/[\w-]+(\/(arena|level-up))?$/,
   /^\/fight\/[\w-]+$/,
   /^\/claim\/[\w-]+$/,
+  /^\/reclutar\/[\w-]+$/,
 ];
 const DESCRIPTION_POR_DEFECTO =
   'Pon un nombre y tendrás un peleón. Lo demás lo deciden él y la mala suerte.';

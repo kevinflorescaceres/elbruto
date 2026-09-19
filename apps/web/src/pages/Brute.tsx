@@ -172,6 +172,33 @@ export function BrutePage() {
         </div>
       )}
 
+      {mine && (
+        <div className="tarjeta">
+          <h3>Recluta gente</h3>
+          <p className="apagado">
+            Cada peleón que entre con tu enlace te da <strong>una pelea diaria más</strong>, hasta
+            seis. A quien recluta no le cuesta nada.
+          </p>
+          <code style={{ wordBreak: 'break-all' }}>
+            {`${window.location.origin}/reclutar/${slug}`}
+          </code>
+          <div className="fila" style={{ marginTop: '0.5rem' }}>
+            <button
+              onClick={() =>
+                void navigator.clipboard.writeText(`${window.location.origin}/reclutar/${slug}`)
+              }
+            >
+              Copiar enlace
+            </button>
+            <span className="apagado">
+              {b.pupils === 0
+                ? 'Todavía no has reclutado a nadie.'
+                : `${b.pupils} reclutado${b.pupils === 1 ? '' : 's'}.`}
+            </span>
+          </div>
+        </div>
+      )}
+
       <h2>Peleas</h2>
       {history.data?.fights.length === 0 && <p className="apagado">Todavía no ha peleado.</p>}
       {history.data?.fights.map((fight) => (

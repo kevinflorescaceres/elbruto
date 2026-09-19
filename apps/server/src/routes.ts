@@ -38,7 +38,12 @@ import { checkName } from './names.js';
 const slugParams = z.object({ slug: z.string().min(1) });
 const idParams = z.object({ id: z.string().min(1) });
 
-const bruteInclude = { levelUpChoice: true } as const;
+const bruteInclude = {
+  levelUpChoice: true,
+  // El recuento de pupilos decide cuantas peleas diarias tiene.
+  _count: { select: { pupils: true } },
+  master: { select: { name: true, slug: true } },
+} as const;
 
 /** Primero el nivel, luego las victorias, y a igualdad el mas veterano. */
 const ORDEN_RANKING = [
@@ -122,7 +127,7 @@ export function registerRoutes(
   const strictLimit = { config: { rateLimit: { max: createLimit, timeWindow: '1 hour' } } };
 
   app.post('/api/brutes', strictLimit, async (request, reply) => {
-    const { name } = createBruteBody.parse(request.body);
+    const { name, masterSlug } = createBruteBody.parse(request.body);
     const check = checkName(name);
     if (!check.ok) throw new HttpError(400, check.reason);
 
@@ -133,11 +138,20 @@ export function registerRoutes(
     const brute = createBrute(name.trim());
     const claimToken = newToken();
 
+    // Reclutarte a ti mismo no cuenta: el maestro tiene que ser de otro.
+    const maestro =
+      masterSlug === undefined
+        ? null
+        : await prisma.brute.findUnique({ where: { slug: masterSlug } });
+    const masterId =
+      maestro !== null && maestro.keeperId !== keeperId && !maestro.isBot ? maestro.id : null;
+
     const row = await prisma.brute.create({
       data: {
         name: brute.name,
         slug: brute.slug,
         keeperId,
+        masterId,
         claimTokenHash: hashToken(claimToken),
         level: brute.level,
         xp: brute.xp,
@@ -295,7 +309,9 @@ export function registerRoutes(
       const me = await tx.brute.findUnique({ where: { slug }, include: bruteInclude });
       if (me === null) throw new HttpError(404, 'Luchador no encontrado');
       if (me.levelUpChoice !== null) throw new HttpError(409, 'Tienes una mejora pendiente');
-      if (fightsLeftToday(me) <= 0) throw new HttpError(429, 'No te quedan peleas hoy');
+      if (fightsLeftToday(me, me._count.pupils) <= 0) {
+        throw new HttpError(429, 'No te quedan peleas hoy');
+      }
 
       const rival = await tx.brute.findUnique({ where: { slug: opponentSlug } });
       if (rival === null) throw new HttpError(404, 'Ese oponente no existe');

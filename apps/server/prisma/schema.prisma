@@ -54,6 +54,11 @@ model Brute {
   isBot     Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  /// Quien lo recluto. Se fija al crearlo y no cambia.
+  masterId String?
+  master   Brute?  @relation("pupilos", fields: [masterId], references: [id], onDelete: SetNull)
+  pupils   Brute[] @relation("pupilos")
+
   levelUpChoice LevelUpChoice?
   fightsAsA     Fight[]        @relation("fightA")
   fightsAsB     Fight[]        @relation("fightB")
@@ -62,6 +67,7 @@ model Brute {
 
   @@index([level])
   @@index([isBot, level])
+  @@index([masterId])
 }
 
 /// Las 2 opciones pendientes. Mientras exista, el luchador no puede pelear.

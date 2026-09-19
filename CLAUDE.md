@@ -161,5 +161,4 @@ mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
 
 Fases 0 a 6 completas, salvo el despliegue en si, que necesita cuenta y dominio.
 El combate sigue `combate.md`, implementado entero incluida la sección 5 del ritmo.
-Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **pupilos**,
-**torneos diarios** y **sonido**.
+Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **torneos diarios** y **sonido**.

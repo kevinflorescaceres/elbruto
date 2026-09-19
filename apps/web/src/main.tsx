@@ -39,6 +39,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/b/:slug/level-up" element={<LevelUpPage />} />
             <Route path="/fight/:id" element={<FightPage />} />
             <Route path="/claim/:token" element={<ClaimPage />} />
+            <Route path="/reclutar/:slug" element={<Home />} />
             <Route path="/ranking" element={<RankingPage />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="*" element={<NotFound />} />

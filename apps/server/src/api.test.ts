@@ -388,6 +388,108 @@ describe('razones para volver', () => {
   });
 });
 
+describe('pupilos', () => {
+  it('reclutar da al maestro una pelea diaria mas', async () => {
+    const maestro = await newFighter('maestro');
+    const antes = (await new Browser().call('GET', `/api/brutes/${maestro.slug}`)).body;
+    expect(antes.pupils).toBe(0);
+    expect(antes.fightsLeftToday).toBe(6);
+
+    // Otro navegador: otro duenio.
+    const recluta = new Browser();
+    const creado = await recluta.call('POST', '/api/brutes', {
+      name: unique('recluta'),
+      masterSlug: maestro.slug,
+    });
+    expect(creado.status).toBe(201);
+    expect(creado.body.brute.master.slug).toBe(maestro.slug);
+
+    const despues = (await new Browser().call('GET', `/api/brutes/${maestro.slug}`)).body;
+    expect(despues.pupils).toBe(1);
+    expect(despues.fightsLeftToday).toBe(7);
+  });
+
+  it('reclutarse a uno mismo no cuenta', async () => {
+    // Mismo navegador, mismo duenio: el enlace no da nada.
+    const { browser, slug } = await newFighter('tramposo');
+    const otro = await browser.call('POST', '/api/brutes', {
+      name: unique('clon'),
+      masterSlug: slug,
+    });
+
+    expect(otro.status).toBe(201);
+    expect(otro.body.brute.master).toBeNull();
+
+    const perfil = (await new Browser().call('GET', `/api/brutes/${slug}`)).body;
+    expect(perfil.pupils).toBe(0);
+    expect(perfil.fightsLeftToday).toBe(6);
+  });
+
+  it('el premio tiene tope y un bot no puede ser maestro', async () => {
+    const maestro = await newFighter('popular');
+    // Ocho reclutas, pero el tope son seis peleas extra.
+    for (let i = 0; i < 8; i++) {
+      await new Browser().call('POST', '/api/brutes', {
+        name: unique(`seguidor${i}`),
+        masterSlug: maestro.slug,
+      });
+    }
+    const perfil = (await new Browser().call('GET', `/api/brutes/${maestro.slug}`)).body;
+    expect(perfil.pupils).toBe(8);
+    expect(perfil.fightsLeftToday).toBe(12);
+
+    await prisma.brute.create({
+      data: {
+        name: 'Bot Reclutador',
+        slug: 'bot-reclutador',
+        isBot: true,
+        level: 2,
+        endurance: 3,
+        strength: 3,
+        agility: 3,
+        speed: 3,
+        appearance: { body: 0, head: 0, hair: 0, skinColor: 0, hairColor: 0, clothColor: 0 },
+      },
+    });
+    const conBot = await new Browser().call('POST', '/api/brutes', {
+      name: unique('inocente'),
+      masterSlug: 'bot-reclutador',
+    });
+    expect(conBot.body.brute.master).toBeNull();
+  });
+
+  it('las peleas extra se pueden usar de verdad', async () => {
+    const maestro = await newFighter('currante');
+    const rival = await newFighter('sufrido');
+    await new Browser().call('POST', '/api/brutes', {
+      name: unique('apoyo'),
+      masterSlug: maestro.slug,
+    });
+
+    const pelear = () =>
+      maestro.browser.call('POST', `/api/brutes/${maestro.slug}/fights`, {
+        opponentSlug: rival.slug,
+      });
+
+    let hechas = 0;
+    for (let i = 0; i < 7; i++) {
+      const res = await pelear();
+      if (res.status === 409) {
+        await maestro.browser.call('POST', `/api/brutes/${maestro.slug}/level-up`, {
+          choiceIndex: 0,
+        });
+        expect((await pelear()).status).toBe(200);
+      } else {
+        expect(res.status).toBe(200);
+      }
+      hechas += 1;
+    }
+    // Siete peleas: seis de base mas la del pupilo. La octava ya no.
+    expect(hechas).toBe(7);
+    expect((await pelear()).status).toBe(429);
+  });
+});
+
 describe('moderacion', () => {
   it('acepta denuncias sobre un luchador existente', async () => {
     const { slug } = await newFighter('denunciado');

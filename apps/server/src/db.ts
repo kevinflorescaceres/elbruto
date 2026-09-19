@@ -19,6 +19,15 @@ export function gameDay(now: Date = new Date()): string {
 export const FIGHTS_PER_DAY = 6;
 
 /**
+ * Cada pupilo reclutado da al maestro una pelea diaria mas, hasta este tope
+ * (PLAN.md, fases futuras). Es la recompensa por traer gente.
+ */
+export const MAX_PUPIL_BONUS = 6;
+
+export const fightsPerDay = (pupils: number): number =>
+  FIGHTS_PER_DAY + Math.min(pupils, MAX_PUPIL_BONUS);
+
+/**
  * Cuando vuelven las peleas: la medianoche siguiente en GAME_TIMEZONE.
  *
  * ponytail: se calcula restando la hora local de 24 h. En el dia del cambio de
@@ -38,8 +47,13 @@ export function nextReset(now: Date = new Date()): Date {
   return new Date(now.getTime() + faltan * 1000);
 }
 
-export const fightsLeftToday = (row: Pick<BruteRow, 'fightsToday' | 'lastFightDay'>): number =>
-  row.lastFightDay === gameDay() ? Math.max(0, FIGHTS_PER_DAY - row.fightsToday) : FIGHTS_PER_DAY;
+export const fightsLeftToday = (
+  row: Pick<BruteRow, 'fightsToday' | 'lastFightDay'>,
+  pupils = 0,
+): number => {
+  const tope = fightsPerDay(pupils);
+  return row.lastFightDay === gameDay() ? Math.max(0, tope - row.fightsToday) : tope;
+};
 
 /** Fila de BD -> luchador del motor. Es lo unico que `simulate()` necesita. */
 export function toEngineBrute(row: BruteRow): Brute {
@@ -69,6 +83,8 @@ export function toProfile(
     fightsLeftToday: number;
     pendingLevelUp: boolean;
     rank?: number | null;
+    pupils: number;
+    master: { name: string; slug: string } | null;
   },
 ): BruteProfile {
   return {
@@ -93,21 +109,31 @@ export function toProfile(
 }
 
 /** Ficha a partir de una fila, con los contadores ya resueltos. */
+/** Lo que la ficha necesita saber y no vive en la fila del luchador. */
+export type BruteRowConExtras = BruteRow & {
+  levelUpChoice?: unknown | null;
+  _count?: { pupils: number };
+  master?: { name: string; slug: string } | null;
+};
+
 export function rowToProfile(
-  row: BruteRow & { levelUpChoice?: unknown | null },
+  row: BruteRowConExtras,
   /**
    * Objeto y no un numero suelto a proposito: `brutes.map(rowToProfile)` pasaba
    * el indice del array aqui y el primer peleon salia con el puesto 0.
    */
   opciones: { rank?: number } = {},
 ): BruteProfile {
+  const pupils = row._count?.pupils ?? 0;
   return toProfile(toEngineBrute(row), {
     wins: row.wins,
     losses: row.losses,
     isBot: row.isBot,
-    fightsLeftToday: fightsLeftToday(row),
+    fightsLeftToday: fightsLeftToday(row, pupils),
     pendingLevelUp: row.levelUpChoice != null,
     rank: opciones.rank ?? null,
+    pupils,
+    master: row.master ?? null,
   });
 }
 
@@ -120,6 +146,8 @@ export const snapshotToProfile = (brute: Brute): BruteProfile =>
     fightsLeftToday: 0,
     pendingLevelUp: false,
     rank: null,
+    pupils: 0,
+    master: null,
   });
 
 export { maxHpFor };

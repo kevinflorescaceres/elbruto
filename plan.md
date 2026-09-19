@@ -296,7 +296,7 @@ Cada fase termina con tests pasando, lint limpio y un commit.
 ### Fases futuras
 
 - ~~Ranking.~~ **Hecho:** `GET /api/ranking` y la página `/ranking`, ordenando por nivel y victorias, con los bots fuera. La ficha trae el puesto y una cuenta atrás hasta la próxima tanda de peleas.
-- Pupilos: enlace de invitación, bonificaciones para el maestro.
+- ~~Pupilos.~~ **Hecho:** enlace `/reclutar/:slug`. Cada recluta da al maestro **+1 pelea diaria**, con tope de +6. Reclutarse a uno mismo no cuenta (se comprueba el guardián), y un bot no puede ser maestro.
 - Torneos diarios por nivel.
 - Sonido.
 
