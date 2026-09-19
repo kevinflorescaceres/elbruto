@@ -55,8 +55,8 @@ export const PALETA = {
   trapo: '#d8c9a8',
 } as const;
 
-export const TRAZO = '#241f1c';
-export const GROSOR = 3;
+// Viven en los tokens compartidos; se reexportan para no romper imports.
+export { GROSOR, TRAZO } from '@camorra/shared';
 
 /** Articulaciones: donde cuelga cada parte de su padre. */
 export const RIG: { name: PartName; parent: PartName | null; at: [number, number] }[] = [

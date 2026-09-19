@@ -25,9 +25,19 @@ licencia de negocio, o sustituir GSAP.
 
 ## Tipografías
 
-Ninguna. La interfaz usa la tipografía del sistema (`system-ui`), que no requiere
-licencia. **Si se añade una fuente web, hay que anotarla aquí con su licencia
-verificada** (por ejemplo SIL Open Font License) antes de publicarla.
+| Fuente                                                           | Licencia                  | Uso                                                 | Pesos cargados |
+| ---------------------------------------------------------------- | ------------------------- | --------------------------------------------------- | -------------- |
+| [Alegreya](https://fonts.google.com/specimen/Alegreya)           | SIL Open Font License 1.1 | Títulos, cifras, botones y los carteles del combate | 700, 800       |
+| [Alegreya Sans](https://fonts.google.com/specimen/Alegreya+Sans) | SIL Open Font License 1.1 | Texto corrido                                       | 400, 500, 700  |
+
+Ambas son de Juan Pablo del Peral (Huerta Tipográfica). La OFL permite uso web,
+comercial incluido, sin coste ni atribución obligatoria en la propia página; esta
+tabla la documenta igualmente. Se sirven desde Google Fonts y **solo se cargan
+esos cinco pesos**: añadir más engorda la descarga de una pantalla que ya carga
+360 kB de PixiJS.
+
+**Si se añade otra fuente, se anota aquí con su licencia verificada antes de
+publicarla.**
 
 ## Arte
 

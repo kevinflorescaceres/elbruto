@@ -4,6 +4,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { getWeapon } from '@camorra/engine';
+import { aEntero, LIENZO } from '@camorra/shared';
 import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
 import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
 import type { Actor } from './fightScene.js';
@@ -40,7 +41,7 @@ export function drawHud(nombreA: string, nombreB: string): Hud {
     root.addChild(marco);
 
     // La barra se vacia hacia AFUERA: el borde interior es el que retrocede.
-    const fill = new Graphics().roundRect(0, 0, HUD.ancho, HUD.alto, 4).fill(0x8fbf5a);
+    const fill = new Graphics().roundRect(0, 0, HUD.ancho, HUD.alto, 4).fill(aEntero(LIENZO.vida));
     fill.x = izquierda ? x : x - HUD.ancho;
     fill.y = HUD.arriba;
     fill.pivot.x = izquierda ? 0 : HUD.ancho;
@@ -69,7 +70,7 @@ export function makeAnnounce(text: string, grande: boolean): Text {
   const label = new Text({
     text,
     style: {
-      fontFamily: 'Georgia, serif',
+      fontFamily: 'Alegreya, Georgia, serif',
       fontSize: grande ? 54 : 40,
       fontWeight: 'bold',
       fill: 0x2a2a2a,
@@ -145,7 +146,7 @@ export function drawActor(actor: Actor, hudFill?: Graphics): ActorView {
   hpFondo.x = -hpWidth / 2;
   hpFondo.y = -alto - 14;
 
-  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 5, 3).fill(0x8fbf5a);
+  const hpFill = new Graphics().roundRect(0, 0, hpWidth, 5, 3).fill(aEntero(LIENZO.vida));
   hpFill.x = -hpWidth / 2;
   hpFill.y = -alto - 14;
 
@@ -168,7 +169,7 @@ export function drawGround(): Graphics {
   return new Graphics()
     .moveTo(0, SIZE.height * 0.83)
     .lineTo(SIZE.width, SIZE.height * 0.83)
-    .stroke({ width: 3, color: 0xd8d4cc });
+    .stroke({ width: 3, color: aEntero(LIENZO.suelo) });
 }
 
 export function makeFloater(text: string, color: number): Text {

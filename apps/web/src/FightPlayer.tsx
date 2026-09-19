@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Application } from 'pixi.js';
-import type { FightReplay } from '@camorra/shared';
+import { aEntero, LIENZO, type FightReplay } from '@camorra/shared';
 import { planFight } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';
@@ -38,7 +38,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         await aplicacion.init({
           width: SIZE.width,
           height: SIZE.height,
-          background: 0xf6f6f4,
+          background: aEntero(LIENZO.fondo),
           antialias: true,
           autoDensity: true,
           resolution: window.devicePixelRatio,
@@ -86,7 +86,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
           borderRadius: 6,
           overflow: 'hidden',
           lineHeight: 0,
-          background: '#f6f6f4',
+          background: 'var(--papel)',
           aspectRatio: `${SIZE.width} / ${SIZE.height}`,
         }}
       />
