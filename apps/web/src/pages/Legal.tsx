@@ -1,9 +1,10 @@
 import { Link } from 'react-router';
+import { Pagina } from '../ui.js';
 
 /** Textos exigidos por plan.md §11 antes de publicar. */
 export function LegalPage() {
   return (
-    <main>
+    <Pagina>
       <p className="apagado">
         <Link to="/">← Volver</Link>
       </p>
@@ -65,6 +66,6 @@ export function LegalPage() {
         Las mecánicas se inspiran en los juegos de combate automático por turnos. Todo el contenido
         —nombres, textos y dibujos— es original de este proyecto y no procede de ningún otro juego.
       </p>
-    </main>
+    </Pagina>
   );
 }

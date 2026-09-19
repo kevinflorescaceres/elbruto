@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getWeapon } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
+import { Pagina } from '../ui.js';
 import { api, ApiError } from '../api.js';
 
 function armaVisible(ids: string[]) {
@@ -33,15 +34,15 @@ export function ArenaPage() {
 
   if (opponents.error)
     return (
-      <main>
+      <Pagina>
         <h1>Aquí no pintas nada</h1>
         <p className="apagado">Solo el dueño de un peleón puede buscarle pelea.</p>
         <Link to={`/b/${slug}`}>Volver a la ficha</Link>
-      </main>
+      </Pagina>
     );
 
   return (
-    <main>
+    <Pagina>
       <p className="apagado">
         <Link to={`/b/${slug}`}>← Volver a la ficha</Link>
       </p>
@@ -85,6 +86,6 @@ export function ArenaPage() {
           </button>
         ))}
       </div>
-    </main>
+    </Pagina>
   );
 }

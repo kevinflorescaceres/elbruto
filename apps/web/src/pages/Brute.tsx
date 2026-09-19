@@ -62,13 +62,18 @@ export function BrutePage() {
   const mine = useIsMine(slug);
   const history = useQuery({ queryKey: ['fights', slug], queryFn: () => api.fights(slug) });
 
-  if (brute.isPending) return <main className="apagado">Cargando...</main>;
+  if (brute.isPending)
+    return (
+      <Pagina>
+        <p className="apagado">Cargando...</p>
+      </Pagina>
+    );
   if (brute.error)
     return (
-      <main>
+      <Pagina>
         <h1>No hay nadie con ese nombre</h1>
         <Link to="/">Volver</Link>
-      </main>
+      </Pagina>
     );
 
   const b = brute.data;
@@ -93,7 +98,7 @@ export function BrutePage() {
           </div>
 
           <div className="ficha-datos">
-            <div className="fila estadisticas">
+            <div className="estadisticas">
               <Estadistica etiqueta="Vida" valor={b.maxHp} />
               {STATS.map(([etiqueta, campo]) => (
                 <Estadistica key={campo} etiqueta={etiqueta} valor={b[campo]} />

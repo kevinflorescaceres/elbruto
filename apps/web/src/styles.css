@@ -239,7 +239,8 @@ th {
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
   background: var(--papel-hondo);
-  min-width: 4.2rem;
+  min-width: 0;
+  text-align: center;
 }
 
 .estadistica strong {
@@ -275,6 +276,9 @@ th {
 }
 
 .estadisticas {
+  /* Cinco columnas fijas: en flex envolvian 3+2 y quedaba desequilibrado. */
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.4rem;
 }
 
@@ -301,4 +305,125 @@ th {
 
 .enlace-recluta {
   margin-top: 0.5rem;
+}
+
+/* --- Ranking (ARTE-Y-TOKENS.md §2.5) --- */
+
+.rk-panel {
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+  background: var(--papel-claro);
+  overflow: hidden;
+}
+
+.rk-cabecera,
+.rk-fila {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.rk-cabecera {
+  background: var(--papel-hondo);
+  border-bottom: var(--borde) solid var(--tinta);
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+/* La fila entera es el enlace: a 390 px el objetivo tactil es la fila. */
+.rk-fila {
+  color: inherit;
+  text-decoration: none;
+  border-top: var(--borde) solid var(--papel-hondo);
+}
+
+.rk-fila:first-of-type {
+  border-top: 0;
+}
+
+.rk-fila:hover {
+  background: var(--papel-hondo);
+}
+
+.rk-fila.mia {
+  background: var(--papel-hondo);
+  font-weight: 700;
+}
+
+.rk-puesto {
+  text-align: right;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sin esto, un nombre de 20 caracteres empuja el nivel fuera de la pantalla. */
+.rk-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rk-marcador {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+  font-size: 15px;
+}
+
+.rk-nivel {
+  font-family: Alegreya, Georgia, serif;
+  font-weight: 700;
+}
+
+/* Barra fija con el puesto propio, fuera del area que hace scroll. */
+.rk-propia {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--papel-hondo);
+  border-top: var(--borde) solid var(--tinta);
+}
+
+.rk-propia .rk-fila {
+  max-width: 52rem;
+  margin: 0 auto;
+  border: 0;
+}
+
+/* Hueco para que la barra fija no tape la ultima fila. */
+.rk-panel {
+  margin-bottom: 4rem;
+}
+
+@media (min-width: 48rem) {
+  /* Cuatro columnas de siempre: nivel y record dejan de ir apilados. */
+  .rk-cabecera,
+  .rk-fila {
+    grid-template-columns: 44px 1fr 6rem 6rem;
+  }
+
+  .rk-marcador {
+    display: contents;
+  }
+
+  .rk-nivel,
+  .rk-marcador .apagado {
+    text-align: right;
+  }
+
+  /* Al pie del contenido, no pegada a la ventana. */
+  .rk-propia {
+    position: static;
+    margin-bottom: 2rem;
+    border: var(--borde) solid var(--tinta);
+    border-radius: var(--radio);
+  }
+
+  .rk-panel {
+    margin-bottom: 1.5rem;
+  }
 }

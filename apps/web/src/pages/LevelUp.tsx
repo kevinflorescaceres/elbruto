@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
+import { Pagina } from '../ui.js';
 import { api } from '../api.js';
 
 const STAT_NAMES: Record<string, string> = {
@@ -57,15 +58,20 @@ export function LevelUpPage() {
 
   if (pending.error)
     return (
-      <main>
+      <Pagina>
         <h1>Nada que elegir</h1>
         <Link to={`/b/${slug}`}>Volver a la ficha</Link>
-      </main>
+      </Pagina>
     );
-  if (pending.isPending) return <main className="apagado">Cargando...</main>;
+  if (pending.isPending)
+    return (
+      <Pagina>
+        <p className="apagado">Cargando...</p>
+      </Pagina>
+    );
 
   return (
-    <main>
+    <Pagina>
       <h1>Nivel {pending.data.level}</h1>
       <p className="apagado">Dos caminos. Uno se queda por el camino.</p>
 
@@ -86,6 +92,6 @@ export function LevelUpPage() {
           );
         })}
       </div>
-    </main>
+    </Pagina>
   );
 }

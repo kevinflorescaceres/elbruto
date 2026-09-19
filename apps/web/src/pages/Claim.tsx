@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
+import { Pagina } from '../ui.js';
 import { api } from '../api.js';
 
 export function ClaimPage() {
@@ -21,12 +22,16 @@ export function ClaimPage() {
 
   if (claim.error)
     return (
-      <main>
+      <Pagina>
         <h1>Ese enlace no vale</h1>
         <p className="apagado">O está mal copiado, o el peleón ya no existe.</p>
         <Link to="/">Volver</Link>
-      </main>
+      </Pagina>
     );
 
-  return <main className="apagado">Recuperando tu peleón...</main>;
+  return (
+    <Pagina>
+      <p className="apagado">Recuperando tu peleón...</p>
+    </Pagina>
+  );
 }

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { NAME_MAX, NAME_MIN } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
+import { Boton, Pagina, Tarjeta } from '../ui.js';
 import { useMe } from '../hooks.js';
 
 export function Home() {
@@ -31,7 +32,7 @@ export function Home() {
   });
 
   return (
-    <main>
+    <Pagina>
       <h1>Camorra</h1>
 
       {masterSlug !== undefined && (
@@ -55,7 +56,7 @@ export function Home() {
         Pon un nombre y tendrás un peleón. Lo demás lo deciden él y la mala suerte.
       </p>
 
-      <div className="tarjeta">
+      <Tarjeta>
         <h2>Nuevo peleón</h2>
         <form
           className="fila"
@@ -71,29 +72,33 @@ export function Home() {
             maxLength={NAME_MAX}
             aria-label="Nombre del peleón"
           />
-          <button type="submit" disabled={name.trim().length < NAME_MIN || create.isPending}>
+          <Boton
+            type="submit"
+            tipo="principal"
+            disabled={name.trim().length < NAME_MIN || create.isPending}
+          >
             {create.isPending ? 'Creando...' : 'Crear'}
-          </button>
+          </Boton>
         </form>
         {create.error && (
           <p className="error">
             {create.error instanceof ApiError ? create.error.message : 'Algo ha fallado'}
           </p>
         )}
-      </div>
+      </Tarjeta>
 
       {claimUrl !== null && (
-        <div className="tarjeta">
+        <Tarjeta hundida>
           <h3>Guarda este enlace</h3>
           <p className="apagado">
             Es la única forma de recuperar tu peleón en otro navegador. No se vuelve a enseñar.
           </p>
           <code style={{ wordBreak: 'break-all' }}>{claimUrl}</code>
           <div className="fila" style={{ marginTop: '0.5rem' }}>
-            <button onClick={() => void navigator.clipboard.writeText(claimUrl)}>Copiar</button>
-            <button onClick={() => setClaimUrl(null)}>Ya lo tengo</button>
+            <Boton onClick={() => void navigator.clipboard.writeText(claimUrl)}>Copiar</Boton>
+            <Boton onClick={() => setClaimUrl(null)}>Ya lo tengo</Boton>
           </div>
-        </div>
+        </Tarjeta>
       )}
 
       <h2>Mis peleones</h2>
@@ -123,6 +128,6 @@ export function Home() {
         Juego inspirado en los combates automáticos por turnos. Todo el contenido es original. ·{' '}
         <Link to="/ranking">Ranking</Link> · <Link to="/legal">Condiciones y privacidad</Link>
       </footer>
-    </main>
+    </Pagina>
   );
 }
