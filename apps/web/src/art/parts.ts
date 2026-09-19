@@ -226,7 +226,12 @@ const ARMAS: Record<WeaponCategory, Shape[]> = {
   arrojadiza: [{ d: 'M 4 -8 L 15 -9 L 19 0 L 14 8 L 4 7 L 1 -1 Z', fill: 'madera' }],
 };
 
-export const PUNO: Shape[] = [{ d: 'M 0 0 a 5 5 0 1 0 0.1 0 Z', fill: 'piel' }];
+/**
+ * El puno monta sobre el extremo del antebrazo, no cuelga de el. El arco
+ * original arrancaba en (0,0), asi que el circulo quedaba entero por debajo de
+ * la punta y con la rotacion de la mano se leia como una bola suelta.
+ */
+export const PUNO: Shape[] = [{ d: 'M -5 -1 a 5 5 0 1 0 10 0 a 5 5 0 1 0 -10 0 Z', fill: 'piel' }];
 
 /**
  * Mascotas de perfil, mirando a la derecha. Pies en y=0, el cuerpo crece hacia
