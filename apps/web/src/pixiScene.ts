@@ -98,7 +98,8 @@ function drawPet(petId: string): Container {
   const colors = {
     piel: PALETA.piel[2] ?? '#c68a5e',
     pelo: PALETA.pelo[1] ?? '#5b3a22',
-    ropa: '#000',
+    ropa: '#000000',
+    ropa2: '#000000',
   };
   const svg = shapes
     .map(
@@ -124,7 +125,7 @@ export function drawActor(actor: Actor, hudFill?: Graphics): ActorView {
 
   let rig: Rig | null = null;
   if (actor.appearance !== null) {
-    rig = buildRig(actor.appearance, weaponOf(actor.weapon));
+    rig = buildRig(actor.appearance, actor.slug, weaponOf(actor.weapon));
     body.addChild(rig.root);
   } else {
     body.addChild(drawPet(actor.petId ?? 'chucho'));

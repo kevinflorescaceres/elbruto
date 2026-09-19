@@ -41,13 +41,15 @@ function Piezas({ shapes, colors }: { shapes: Shape[]; colors: Look['colors'] })
 
 interface Props {
   appearance: Appearance;
+  /** Necesario para derivar los campos que no esten guardados (§1.3). */
+  slug: string;
   /** Categoria y alcance del arma en la mano. Sin arma, los punos. */
   weapon?: { category: WeaponCategory; reach: number };
   height?: number;
 }
 
-export function Fighter({ appearance, weapon, height = 150 }: Props) {
-  const look = lookFrom(appearance);
+export function Fighter({ appearance, slug, weapon, height = 150 }: Props) {
+  const look = lookFrom(appearance, slug);
   const hijos = new Map<PartName | null, typeof RIG>();
   for (const part of RIG) {
     const lista = hijos.get(part.parent) ?? [];
@@ -87,7 +89,7 @@ export function Fighter({ appearance, weapon, height = 150 }: Props) {
 
   return (
     <svg
-      viewBox="-58 -116 116 124"
+      viewBox="-58 -128 116 136"
       height={height}
       role="img"
       aria-label="Retrato del peleón"

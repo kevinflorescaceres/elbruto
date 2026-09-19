@@ -11,7 +11,7 @@
  * Sistema de coordenadas del personaje: origen entre los pies, la altura crece
  * hacia -y. Un peleon mide unas 96 unidades.
  */
-import type { Appearance, WeaponCategory } from '@camorra/engine';
+import { clothColor2For, type Appearance, type WeaponCategory } from '@camorra/engine';
 
 export type PartName =
   | 'hips'
@@ -24,7 +24,17 @@ export type PartName =
   | 'legBack'
   | 'legFront';
 
-export type Tinte = 'piel' | 'pelo' | 'ropa' | 'metal' | 'madera' | 'oscuro' | 'pantalon';
+export type Tinte =
+  | 'piel'
+  | 'pelo'
+  | 'ropa'
+  | 'ropa2'
+  | 'metal'
+  | 'madera'
+  | 'oscuro'
+  | 'pantalon'
+  | 'cuero'
+  | 'trapo';
 
 export interface Shape {
   d: string;
@@ -41,6 +51,8 @@ export const PALETA = {
   madera: '#8a6a44',
   oscuro: '#241f1c',
   pantalon: '#3f3833',
+  cuero: '#5b3a22',
+  trapo: '#d8c9a8',
 } as const;
 
 export const TRAZO = '#241f1c';
@@ -66,7 +78,9 @@ export const Z_ORDER: PartName[] = ['legBack', 'armBack', 'legFront', 'torso', '
 
 const PIERNA: Shape[] = [
   { d: 'M -5 -2 L -5 30 L 5 30 L 5 -2 Z', fill: 'pantalon' },
-  { d: 'M -5 29 L 11 29 Q 14 29 14 34 L -5 34 Q -8 34 -8 31 Q -8 29 -5 29 Z', fill: 'oscuro' },
+  // Bota con vuelta. El encargo da un par frontal, una bota por pie apuntando
+  // hacia fuera; el rig va de perfil, asi que las dos llevan la que mira al frente.
+  { d: 'M -5 28 L 7 28 Q 12 28 12 34 Q 12 37 10 37 L -5 37 Z', fill: 'cuero' },
 ];
 
 const ANTEBRAZO: Shape[] = [{ d: 'M -4 0 L -4 13 Q -4 16 0 16 Q 4 16 4 13 L 4 0 Z', fill: 'piel' }];
@@ -78,56 +92,103 @@ const BRAZO: Shape[] = [
   },
 ];
 
-/** Dos complexiones: enjuto y recio. */
+/** Tres complexiones: enjuto, recio y medio. */
 const TORSOS: Shape[][] = [
-  [{ d: 'M -11 0 L -12 -24 Q -12 -30 -6 -30 L 6 -30 Q 12 -30 12 -24 L 11 0 Z', fill: 'ropa' }],
   [
     {
-      d: 'M -14 0 Q -17 -14 -15 -24 Q -15 -31 -8 -31 L 8 -31 Q 15 -31 15 -24 Q 17 -14 14 0 Z',
+      d: 'M -13 2 Q -16 -13 -14 -24 Q -14 -30 -8 -30 L 8 -30 Q 14 -30 14 -24 Q 16 -13 13 2 Z',
+      fill: 'ropa',
+    },
+  ],
+  [
+    {
+      d: 'M -16 2 Q -19 -14 -17 -25 Q -17 -31 -9 -31 L 9 -31 Q 17 -31 17 -25 Q 19 -14 16 2 Z',
+      fill: 'ropa',
+    },
+  ],
+  [
+    {
+      d: 'M -14 2 Q -18 -12 -15 -24 Q -15 -30 -8 -30 L 8 -30 Q 15 -30 15 -24 Q 18 -12 14 2 Z',
       fill: 'ropa',
     },
   ],
 ];
 
-/** Dos cabezas: redonda y de mandibula cuadrada. Grandes, que es cartoon. */
+/**
+ * Detalle que llevan todos, no es variante. La faja va en `ropa2` para que no
+ * desaparezca dentro del jubon, y el escote evita que la cabeza flote sobre un
+ * rectangulo.
+ */
+const DETALLE_TORSO: Shape[] = [
+  { d: 'M -14 -5 L 14 -5 L 13 3 L -13 3 Z', fill: 'ropa2' },
+  { d: 'M -5 -30 L 0 -20 L 5 -30', fill: 'piel' },
+];
+
+/** Cuatro craneos: redonda, cuadrada, alargada y ancha de pomulos. */
 const CABEZAS: Shape[][] = [
-  [
-    { d: 'M 0 -38 Q 20 -38 20 -19 Q 20 0 0 0 Q -20 0 -20 -19 Q -20 -38 0 -38 Z', fill: 'piel' },
-    { d: 'M -9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-    { d: 'M 9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-    { d: 'M -6 -9 Q 0 -5 6 -9', fill: 'oscuro', stroke: false },
-  ],
+  [{ d: 'M -20 -18 Q -20 -40 0 -40 Q 20 -40 20 -18 Q 20 0 0 0 Q -20 0 -20 -18 Z', fill: 'piel' }],
   [
     {
-      d: 'M -19 -34 L 19 -34 Q 21 -34 21 -30 L 21 -10 Q 21 -1 12 -1 L -12 -1 Q -21 -1 -21 -10 L -21 -30 Q -21 -34 -19 -34 Z',
+      d: 'M -19 -38 L 19 -38 Q 21 -38 21 -34 L 21 -10 Q 21 0 11 0 L -11 0 Q -21 0 -21 -10 L -21 -34 Q -21 -38 -19 -38 Z',
       fill: 'piel',
     },
-    { d: 'M -9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-    { d: 'M 9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-    { d: 'M -7 -9 L 7 -9', fill: 'oscuro', stroke: false },
+  ],
+  [{ d: 'M -17 -20 Q -17 -42 0 -42 Q 17 -42 17 -20 Q 17 2 0 2 Q -17 2 -17 -20 Z', fill: 'piel' }],
+  [
+    {
+      d: 'M -22 -26 Q -22 -40 0 -40 Q 22 -40 22 -26 Q 22 -16 14 -8 Q 7 0 0 0 Q -7 0 -14 -8 Q -22 -16 -22 -26 Z',
+      fill: 'piel',
+    },
   ],
 ];
 
-/** Cuatro pelos: rapado, greñas, cresta y melena. */
+/**
+ * Ojos y boca, iguales para todos por ahora. En el paso 5 pasan a ser campos
+ * propios (`brow`, `mouth`) con sus variantes.
+ */
+const CARA: Shape[] = [
+  { d: 'M -9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
+  { d: 'M 9 -22 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
+  { d: 'M -6 -8 Q 0 -4 6 -8', fill: 'oscuro', stroke: false },
+];
+
+/** Seis pelos: rapado, greñas, cresta, melena, entradas con coleta y calvo con corona. */
 const PELOS: Shape[][] = [
   [
     {
-      d: 'M -19 -26 Q -17 -40 0 -40 Q 17 -40 19 -26 Q 10 -33 0 -33 Q -10 -33 -19 -26 Z',
+      d: 'M -20 -24 Q -18 -42 0 -42 Q 18 -42 20 -24 Q 10 -34 0 -33 Q -10 -34 -20 -24 Z',
       fill: 'pelo',
     },
   ],
   [
     {
-      d: 'M -21 -22 Q -22 -42 0 -42 Q 22 -42 21 -22 Q 16 -30 12 -24 Q 8 -32 3 -25 Q -2 -33 -7 -25 Q -12 -32 -16 -24 Q -19 -29 -21 -22 Z',
+      d: 'M -21 -18 Q -22 -43 0 -43 Q 22 -43 21 -18 Q 17 -27 13 -20 Q 9 -29 4 -21 Q -1 -30 -6 -21 Q -11 -29 -15 -20 Q -18 -26 -21 -18 Z',
       fill: 'pelo',
     },
   ],
-  [{ d: 'M -4 -37 Q -8 -52 0 -54 Q 8 -52 4 -37 Q 0 -40 -4 -37 Z', fill: 'pelo' }],
   [
     {
-      d: 'M -20 -24 Q -22 -41 0 -41 Q 22 -41 20 -24 L 22 4 Q 16 6 15 -2 Q 14 -26 0 -26 Q -14 -26 -15 -2 Q -16 6 -22 4 Z',
+      d: 'M -16 -30 Q -14 -38 0 -38 Q 14 -38 16 -30 Q 8 -34 0 -34 Q -8 -34 -16 -30 Z',
       fill: 'pelo',
     },
+    { d: 'M -5 -36 Q -9 -52 0 -55 Q 9 -52 5 -36 Q 0 -39 -5 -36 Z', fill: 'pelo' },
+  ],
+  [
+    {
+      d: 'M -20 -22 Q -22 -42 0 -42 Q 22 -42 20 -22 L 22 4 Q 16 6 15 -2 Q 14 -28 0 -28 Q -14 -28 -15 -2 Q -16 6 -22 4 Z',
+      fill: 'pelo',
+    },
+  ],
+  [
+    {
+      d: 'M -18 -28 Q -14 -40 0 -40 Q 14 -40 18 -28 Q 12 -34 6 -33 Q 8 -38 0 -38 Q -8 -38 -6 -33 Q -12 -34 -18 -28 Z',
+      fill: 'pelo',
+    },
+    { d: 'M 17 -31 Q 29 -29 27 -15 Q 24 -22 16 -25 Z', fill: 'pelo' },
+  ],
+  [
+    { d: 'M -20 -20 Q -21 -29 -17 -32 Q -16 -23 -12 -20 Z', fill: 'pelo' },
+    { d: 'M 20 -20 Q 21 -29 17 -32 Q 16 -23 12 -20 Z', fill: 'pelo' },
   ],
 ];
 
@@ -213,7 +274,7 @@ export const MASCOTAS: Record<string, Shape[]> = {
 
 export interface Look {
   parts: Partial<Record<PartName, Shape[]>>;
-  colors: { piel: string; pelo: string; ropa: string };
+  colors: { piel: string; pelo: string; ropa: string; ropa2: string };
 }
 
 const pickFrom = <T>(list: readonly T[], index: number): T => {
@@ -227,14 +288,24 @@ const pickFrom = <T>(list: readonly T[], index: number): T => {
  * piezas y colores. `Appearance` genera rangos mas amplios de los que hay
  * dibujados: el modulo reparte y sigue siendo determinista.
  */
-export function lookFrom(appearance: Appearance): Look {
+export function lookFrom(appearance: Appearance, slug: string): Look {
   const cabeza = pickFrom(CABEZAS, appearance.head);
   const pelo = pickFrom(PELOS, appearance.hair);
 
+  const ropa = pickFrom(PALETA.ropa, appearance.clothColor);
+  // Si la faja sale del mismo color que el jubon, desaparece dentro: se coge la
+  // siguiente de la lista (ARTE-Y-TOKENS.md §1.6).
+  const iFaja = appearance.clothColor2 ?? clothColor2For(slug);
+  const faja =
+    pickFrom(PALETA.ropa, iFaja) === ropa
+      ? pickFrom(PALETA.ropa, iFaja + 1)
+      : pickFrom(PALETA.ropa, iFaja);
+
   return {
     parts: {
-      torso: pickFrom(TORSOS, appearance.body),
-      head: [...cabeza, ...pelo],
+      // Orden de pintado dentro de la cabeza: craneo, pelo, ojos y boca.
+      torso: [...pickFrom(TORSOS, appearance.body), ...DETALLE_TORSO],
+      head: [...cabeza, ...pelo, ...CARA],
       legBack: PIERNA,
       legFront: PIERNA,
       armBack: BRAZO,
@@ -245,14 +316,17 @@ export function lookFrom(appearance: Appearance): Look {
     colors: {
       piel: pickFrom(PALETA.piel, appearance.skinColor),
       pelo: pickFrom(PALETA.pelo, appearance.hairColor),
-      ropa: pickFrom(PALETA.ropa, appearance.clothColor),
+      ropa,
+      ropa2: faja,
     },
   };
 }
 
 /** Color final de una forma, ya resuelto con la paleta del personaje. */
 export const colorOf = (fill: Tinte, colors: Look['colors']): string =>
-  fill === 'piel' || fill === 'pelo' || fill === 'ropa' ? colors[fill] : PALETA[fill];
+  fill === 'piel' || fill === 'pelo' || fill === 'ropa' || fill === 'ropa2'
+    ? colors[fill]
+    : PALETA[fill];
 
 /** El arma en la mano. Las 10 comparten silueta por categoria y varian de largo. */
 export function weaponShapes(category: WeaponCategory, reach: number): Shape[] {

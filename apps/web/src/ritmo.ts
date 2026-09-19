@@ -27,8 +27,8 @@ for (let seed = 0; seed < COMBATES; seed++) {
   const result = simulate(a, b, seed * 13 + 1);
   const scene = planFight({
     ...result,
-    snapshotA: { appearance: a.appearance },
-    snapshotB: { appearance: b.appearance },
+    snapshotA: { appearance: a.appearance, slug: a.slug },
+    snapshotB: { appearance: b.appearance, slug: b.slug },
   });
 
   duracion += scene.duration;

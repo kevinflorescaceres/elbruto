@@ -22,6 +22,22 @@ export function slugify(name: string): string {
 export const bruteSeed = (slug: string): number => hashString(slug);
 
 /**
+ * Semilla propia de un campo de apariencia (ARTE-Y-TOKENS.md §1.3).
+ *
+ * El PRNG secuencial es fragil: meter una tirada antes de otra le cambia la cara
+ * a todos los peleones existentes. Con una semilla por campo, anadir un campo
+ * manana no toca ninguno de los que ya hay. Nunca mas.
+ */
+export const fieldSeed = (slug: string, campo: string): number => hashString(`${slug}:${campo}`);
+
+/** Valor de un campo de apariencia en [0, max], derivado solo de su semilla. */
+export const appearanceField = (slug: string, campo: string, max: number): number =>
+  randInt(mulberry32(fieldSeed(slug, campo)), 0, max);
+
+/** Color de la faja. Lo usan por igual el motor al crear y el arte al pintar. */
+export const clothColor2For = (slug: string): number => appearanceField(slug, 'clothColor2', 7);
+
+/**
  * Vida maxima (COMBATE.md §4.1). El termino por nivel sube la vida en paralelo
  * al dano, para que los combates no se acorten al subir de nivel.
  */
@@ -43,7 +59,12 @@ function rollStats(rng: Rng): Record<Stat, number> {
   return stats;
 }
 
-function rollAppearance(rng: Rng): Appearance {
+/**
+ * Los seis primeros campos salen del PRNG secuencial, en este orden exacto: son
+ * los que ya tienen peleones creados y no se pueden mover. Lo nuevo entra por
+ * semilla de campo, que no consume del secuencial y por tanto no desplaza nada.
+ */
+function rollAppearance(rng: Rng, slug: string): Appearance {
   return {
     body: randInt(rng, 0, 2),
     head: randInt(rng, 0, 3),
@@ -51,6 +72,7 @@ function rollAppearance(rng: Rng): Appearance {
     skinColor: randInt(rng, 0, 4),
     hairColor: randInt(rng, 0, 5),
     clothColor: randInt(rng, 0, 7),
+    clothColor2: clothColor2For(slug),
   };
 }
 
@@ -71,7 +93,7 @@ export function createBrute(name: string): Brute {
     weapons: [],
     skills: [],
     pets: [],
-    appearance: rollAppearance(rng),
+    appearance: rollAppearance(rng, slug),
   };
 
   // Una mejora inicial. Sin mascota: a nivel 1 desequilibra el combate.

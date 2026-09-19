@@ -97,7 +97,12 @@ export function BrutePage() {
       </p>
 
       <div className="tarjeta fila" style={{ alignItems: 'flex-start', gap: '1.5rem' }}>
-        <Fighter appearance={b.appearance} weapon={mejorArma(b.weapons)} height={170} />
+        <Fighter
+          appearance={b.appearance}
+          slug={b.slug}
+          weapon={mejorArma(b.weapons)}
+          height={170}
+        />
         <table style={{ flex: '1 1 16rem' }}>
           <tbody>
             <tr>

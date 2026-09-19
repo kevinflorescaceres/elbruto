@@ -40,7 +40,8 @@ function figure(
   frame: Frame,
   weapon?: { category: WeaponCategory; reach: number },
 ): string {
-  const look = lookFrom(createBrute(name).appearance);
+  const peleon = createBrute(name);
+  const look = lookFrom(peleon.appearance, peleon.slug);
   const arma = weapon === undefined ? [] : weaponShapes(weapon.category, weapon.reach);
 
   const render = (part: PartName): string => {
@@ -159,13 +160,43 @@ sheet(
     body: `<g transform="translate(0 0)">${shapesToSvg(shapes, {
       piel: PALETA.piel[2] ?? '#c68a5e',
       pelo: PALETA.pelo[1] ?? '#5b3a22',
+      ropa2: '#000000',
       ropa: '#000000',
     })}</g>`,
   })),
   3,
 );
 
-// 5. Imagen para compartir (Open Graph). Se rasteriza una vez y se versiona.
+// 5. Cabezas: las 4 calaveras por los 6 pelos, en grande, para juzgar la cara.
+const CARAS_POR_FILA = 6;
+const cabezas: { label: string; body: string }[] = [];
+for (let head = 0; head < 4; head++) {
+  for (let hair = 0; hair < 6; hair++) {
+    const look = lookFrom({ body: 0, head, hair, skinColor: 1, hairColor: 1, clothColor: 0 }, 'x');
+    const piezas = look.parts.head ?? [];
+    cabezas.push({
+      label: `cabeza ${head} · pelo ${hair}`,
+      body: `<g transform="translate(0 40) scale(1.7)">${shapesToSvg(piezas, look.colors)}</g>`,
+    });
+  }
+}
+writeFileSync(
+  `${salida}/cabezas.svg`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${CARAS_POR_FILA * 130}" height="${4 * 150}" viewBox="0 0 ${CARAS_POR_FILA * 130} ${4 * 150}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
+    cabezas
+      .map((c, i) => {
+        const cx = (i % CARAS_POR_FILA) * 130 + 65;
+        const cy = Math.floor(i / CARAS_POR_FILA) * 150 + 60;
+        return (
+          `<g transform="translate(${cx} ${cy})">${c.body}</g>` +
+          `<text x="${cx}" y="${cy + 74}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`
+        );
+      })
+      .join('') +
+    '</svg>',
+);
+
+// 6. Imagen para compartir (Open Graph). Se rasteriza una vez y se versiona.
 const og = (): string => {
   const izq = figure('Chirlo de la Cava', REST, { category: 'pesada', reach: 2 });
   const der = figure('Tuerto del Arrabal', REST, { category: 'larga', reach: 3 });

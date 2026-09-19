@@ -46,9 +46,10 @@ export interface Rig {
 
 export function buildRig(
   appearance: Appearance,
+  slug: string,
   weapon?: { category: WeaponCategory; reach: number },
 ): Rig {
-  const look = lookFrom(appearance);
+  const look = lookFrom(appearance, slug);
   const parts = new Map<PartName, Container>();
   const root = new Container();
 

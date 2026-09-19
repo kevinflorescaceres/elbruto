@@ -2,6 +2,7 @@ import { describe as group, expect, it } from 'vitest';
 import { createBrute } from '@camorra/engine';
 import {
   lookFrom,
+  PALETA,
   RIG,
   scaleForTest,
   weaponShapes,
@@ -104,21 +105,24 @@ group('apariencia', () => {
       'Mellado de Poniente',
     ];
     const firmas = nombres.map((n) => {
-      const look = lookFrom(createBrute(n).appearance);
+      const b = createBrute(n);
+      const look = lookFrom(b.appearance, b.slug);
       return JSON.stringify([look.parts.torso, look.parts.head, look.colors]);
     });
     expect(new Set(firmas).size).toBe(nombres.length);
   });
 
   it('el mismo nombre da siempre el mismo peleon', () => {
-    const a = lookFrom(createBrute('Chirlo de la Cava').appearance);
-    const b = lookFrom(createBrute('Chirlo de la Cava').appearance);
+    const uno = createBrute('Chirlo de la Cava');
+    const a = lookFrom(uno.appearance, uno.slug);
+    const b = lookFrom(createBrute('Chirlo de la Cava').appearance, uno.slug);
     expect(a).toEqual(b);
   });
 
   it('toda apariencia posible resuelve piezas y colores validos', () => {
     for (let i = 0; i < 500; i++) {
-      const look = lookFrom(createBrute(`peleon numero ${i}`).appearance);
+      const peleon = createBrute(`peleon numero ${i}`);
+      const look = lookFrom(peleon.appearance, peleon.slug);
       for (const name of Z_ORDER) {
         if (name === 'legBack' || name === 'legFront') continue;
         expect(look.parts[name]?.length ?? 0).toBeGreaterThan(0);
@@ -127,6 +131,51 @@ group('apariencia', () => {
         expect(color).toMatch(/^#[0-9a-f]{6}$/i);
       }
     }
+  });
+});
+
+group('cobertura de apariencia', () => {
+  it('cada valor de cada campo tiene pieza propia: ni un clon', () => {
+    // El objetivo medido de ARTE-Y-TOKENS.md §1.1. Si alguien amplia un rango
+    // en el motor sin dibujar la pieza, este test lo caza.
+    const rangos = { body: 3, head: 4, hair: 6, skinColor: 5, hairColor: 6, clothColor: 8 };
+    const vistos = new Set<string>();
+
+    for (let body = 0; body < rangos.body; body++) {
+      for (let head = 0; head < rangos.head; head++) {
+        for (let hair = 0; hair < rangos.hair; hair++) {
+          const look = lookFrom(
+            { body, head, hair, skinColor: 0, hairColor: 0, clothColor: 0 },
+            'semilla-fija',
+          );
+          vistos.add(JSON.stringify([look.parts.torso, look.parts.head]));
+        }
+      }
+    }
+    // 3 x 4 x 6 = 72 siluetas distintas. Antes eran 2 x 2 x 4 = 16.
+    expect(vistos.size).toBe(rangos.body * rangos.head * rangos.hair);
+  });
+
+  it('las paletas cubren exactamente su rango', () => {
+    expect(PALETA.piel).toHaveLength(5);
+    expect(PALETA.pelo).toHaveLength(6);
+    expect(PALETA.ropa).toHaveLength(8);
+  });
+
+  it('la faja nunca sale del mismo color que el jubon', () => {
+    for (let i = 0; i < 400; i++) {
+      const b = createBrute(`faja numero ${i}`);
+      const look = lookFrom(b.appearance, b.slug);
+      expect(look.colors.ropa2).not.toBe(look.colors.ropa);
+    }
+  });
+
+  it('un peleon sin clothColor2 guardado sigue teniendo faja', () => {
+    // Los creados antes de que el campo existiera: se deriva del slug, no se
+    // rellena la base (ARTE-Y-TOKENS.md §1.3).
+    const b = createBrute('Chirlo de la Cava');
+    const { clothColor2: _sin, ...viejo } = b.appearance;
+    expect(lookFrom(viejo, b.slug).colors.ropa2).toBe(lookFrom(b.appearance, b.slug).colors.ropa2);
   });
 });
 

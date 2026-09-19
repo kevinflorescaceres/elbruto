@@ -61,6 +61,12 @@ export interface Appearance {
   skinColor: number;
   hairColor: number;
   clothColor: number;
+  /**
+   * Color de la faja. Opcional a proposito: los peleones creados antes de que
+   * existiera no lo tienen guardado, y el arte lo deriva del slug al pintarlos
+   * (ARTE-Y-TOKENS.md §1.3). No se rellena la base a posteriori.
+   */
+  clothColor2?: number;
 }
 
 export interface Brute {

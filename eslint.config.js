@@ -23,6 +23,16 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
   {
+    // `const { campo: _fuera, ...resto } = obj` es la forma de quitar un campo.
+    // Sin esto, ESLint marca la variable que existe justo para no usarse.
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
+    },
+  },
+  {
     files: ['packages/engine/**/*.ts'],
     ignores: ['packages/engine/**/*.test.ts'],
     rules: {

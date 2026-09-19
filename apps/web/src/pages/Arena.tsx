@@ -67,6 +67,7 @@ export function ArenaPage() {
             <div className="fila" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
               <Fighter
                 appearance={rival.appearance}
+                slug={rival.slug}
                 weapon={armaVisible(rival.weapons)}
                 height={92}
               />

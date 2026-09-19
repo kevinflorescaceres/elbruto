@@ -22,6 +22,8 @@ export interface Actor {
   weapon: string;
   /** Solo los luchadores tienen rig; las mascotas se dibujan de una pieza. */
   appearance: Appearance | null;
+  /** Del snapshot. Deriva los campos de apariencia que no esten guardados. */
+  slug: string;
   /** Id de catalogo de la mascota, para elegir su silueta. */
   petId: string | null;
   /** Sitio en el suelo al que vuelve siempre. */
@@ -250,8 +252,8 @@ function attackAnim(weaponId: string): AnimName {
 
 /** Solo se necesita la apariencia de los snapshots, no la ficha entera. */
 export type Replayable = Pick<FightReplay, 'log' | 'winner'> & {
-  snapshotA: { appearance: Appearance };
-  snapshotB: { appearance: Appearance };
+  snapshotA: { appearance: Appearance; slug: string };
+  snapshotB: { appearance: Appearance; slug: string };
 };
 
 export function planFight(replay: Replayable): Scene {
@@ -284,6 +286,7 @@ export function planFight(replay: Replayable): Scene {
           appearance: event.isPet
             ? null
             : (event.side === 'A' ? replay.snapshotA : replay.snapshotB).appearance,
+          slug: (event.side === 'A' ? replay.snapshotA : replay.snapshotB).slug,
           petId: event.isPet ? event.weapon.replace('pet:', '') : null,
           home: placeActor(event.side, event.isPet, petIndex),
           facing: event.side === 'A' ? 1 : -1,
