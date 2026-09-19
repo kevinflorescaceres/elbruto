@@ -119,10 +119,10 @@ export function Home() {
         ))}
       </div>
 
-      <p className="apagado" style={{ marginTop: '2rem' }}>
-        <Link to="/">Inicio</Link> · Juego inspirado en los combates automaticos por turnos. Todo el
-        contenido es original.
-      </p>
+      <footer className="apagado" style={{ marginTop: '3rem' }}>
+        Juego inspirado en los combates automáticos por turnos. Todo el contenido es original. ·{' '}
+        <Link to="/ranking">Ranking</Link> · <Link to="/legal">Condiciones y privacidad</Link>
+      </footer>
     </main>
   );
 }

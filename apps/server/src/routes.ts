@@ -114,8 +114,18 @@ export function registerRoutes(
 
   // --- Identidad ---
 
-  app.get('/api/me', async (request, reply) => {
-    const keeperId = await requireKeeperId(request, reply);
+  /**
+   * NO crea guardian. PLAN.md §8 decia que lo creara, pero crear identidad como
+   * efecto de una lectura es una carrera: React monta dos veces, salen dos GET
+   * sin cookie a la vez, se crean dos guardianes y el navegador se queda con una
+   * sola cookie. El peleon acaba colgando del guardian que no es.
+   *
+   * La identidad se crea en la primera ESCRITURA, que es cuando hace falta.
+   */
+  app.get('/api/me', async (request) => {
+    const keeperId = await currentKeeperId(request);
+    if (keeperId === null) return { brutes: [] };
+
     const brutes = await prisma.brute.findMany({
       where: { keeperId },
       include: bruteInclude,
