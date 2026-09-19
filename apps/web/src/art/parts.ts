@@ -76,11 +76,20 @@ export const Z_ORDER: PartName[] = ['legBack', 'armBack', 'legFront', 'torso', '
 
 // --- Piezas ---
 
-const PIERNA: Shape[] = [
+/**
+ * El peleon es FRONTAL: dos ojos, torso simetrico, escote centrado y faja de
+ * lado a lado. Por eso cada bota apunta hacia su lado, como en el encargo. Con
+ * las dos mirando al mismo sitio el cuerpo se lee girado.
+ */
+const pierna = (lado: 'izq' | 'der'): Shape[] => [
   { d: 'M -5 -2 L -5 30 L 5 30 L 5 -2 Z', fill: 'pantalon' },
-  // Bota con vuelta. El encargo da un par frontal, una bota por pie apuntando
-  // hacia fuera; el rig va de perfil, asi que las dos llevan la que mira al frente.
-  { d: 'M -5 28 L 7 28 Q 12 28 12 34 Q 12 37 10 37 L -5 37 Z', fill: 'cuero' },
+  {
+    d:
+      lado === 'izq'
+        ? 'M -7 28 L 5 28 L 5 37 L -10 37 Q -12 37 -12 34 Q -12 28 -7 28 Z'
+        : 'M -5 28 L 7 28 Q 12 28 12 34 Q 12 37 10 37 L -5 37 Z',
+    fill: 'cuero',
+  },
 ];
 
 const ANTEBRAZO: Shape[] = [{ d: 'M -4 0 L -4 13 Q -4 16 0 16 Q 4 16 4 13 L 4 0 Z', fill: 'piel' }];
@@ -306,8 +315,8 @@ export function lookFrom(appearance: Appearance, slug: string): Look {
       // Orden de pintado dentro de la cabeza: craneo, pelo, ojos y boca.
       torso: [...pickFrom(TORSOS, appearance.body), ...DETALLE_TORSO],
       head: [...cabeza, ...pelo, ...CARA],
-      legBack: PIERNA,
-      legFront: PIERNA,
+      legBack: pierna('izq'),
+      legFront: pierna('der'),
       armBack: BRAZO,
       armFront: BRAZO,
       forearmBack: ANTEBRAZO,
