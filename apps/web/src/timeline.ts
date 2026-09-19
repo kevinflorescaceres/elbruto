@@ -13,8 +13,10 @@ import {
   changeWeapon,
   drawActor,
   drawEscenario,
+  drawFrame,
   drawGround,
   drawHud,
+  ESCALA_ACTOR,
   makeAnnounce,
   makeFloater,
   makeProjectile,
@@ -26,8 +28,15 @@ import {
 
 const BLANCO = 0xffffff;
 
-/** Medio cuerpo de cada uno. El rig mide unos 50 px de ancho. */
-const MEDIO_CUERPO = 26;
+/** Medio cuerpo de cada uno. El rig mide unos 50 px de ancho, ya escalado. */
+const MEDIO_CUERPO = 26 * ESCALA_ACTOR;
+
+/**
+ * Los actores se dibujan a ESCALA_ACTOR, asi que todo lo que se cuelga de ellos
+ * (numeros, anillos, proyectiles) sube en la misma proporcion o se les queda por
+ * la cintura. `y` va en negativo: hacia arriba.
+ */
+const arriba = (px: number): number => px * ESCALA_ACTOR;
 
 /** Lo que tarda un numero de dano en subir y apagarse (COMBATE.md §5). */
 const FLOTA = 0.6 * TIME_SCALE;
@@ -39,7 +48,7 @@ const FLOTA = 0.6 * TIME_SCALE;
  */
 function hueco(weaponId: string): number {
   const alcance = weaponOf(weaponId)?.reach ?? 1;
-  return MEDIO_CUERPO * 2 + alcance * 12;
+  return MEDIO_CUERPO * 2 + alcance * 12 * ESCALA_ACTOR;
 }
 
 /**
@@ -128,8 +137,8 @@ function playFallback(
     tl.to(body, { x: actor.facing * 12, duration: mitad, ease: 'power2.in' }, at);
     tl.to(body, { x: 0, duration: mitad, ease: 'power1.out' }, at + mitad);
   } else {
-    tl.to(body.scale, { y: 1.06, duration: mitad }, at);
-    tl.to(body.scale, { y: 1, duration: mitad }, at + mitad);
+    tl.to(body.scale, { y: ESCALA_ACTOR * 1.06, duration: mitad }, at);
+    tl.to(body.scale, { y: ESCALA_ACTOR, duration: mitad }, at + mitad);
   }
 }
 
@@ -143,7 +152,7 @@ function addMove(
 ): void {
   // El cartel no es de nadie: se pinta en medio de la pantalla.
   if (move.kind === 'announce') {
-    const label = makeAnnounce(move.text, move.grande, move.queda);
+    const label = makeAnnounce(move.text, move.grande);
     label.alpha = 0;
     stage.addChild(label);
     fromTo(
@@ -168,7 +177,7 @@ function addMove(
 
   switch (move.kind) {
     case 'appear':
-      fromTo(tl, root, { alpha: 0, y: homeY - 40 }, { alpha: 1, y: homeY, duration }, at);
+      fromTo(tl, root, { alpha: 0, y: homeY - arriba(40) }, { alpha: 1, y: homeY, duration }, at);
       break;
 
     case 'approach':
@@ -198,8 +207,8 @@ function addMove(
       break;
 
     case 'pulse':
-      tl.to(body.scale, { y: 1.05, duration: mitad }, at);
-      tl.to(body.scale, { y: 1, duration: mitad }, at + mitad);
+      tl.to(body.scale, { y: ESCALA_ACTOR * 1.05, duration: mitad }, at);
+      tl.to(body.scale, { y: ESCALA_ACTOR, duration: mitad }, at + mitad);
       break;
 
     case 'hp':
@@ -213,7 +222,7 @@ function addMove(
     case 'float': {
       const label = makeFloater(move.text, move.color);
       label.x = homeX;
-      label.y = homeY - 130;
+      label.y = homeY - arriba(130);
       label.alpha = 0;
       stage.addChild(label);
       // Los numeros viven 600 ms propios (COMBATE.md §5), no lo que dure su
@@ -221,8 +230,8 @@ function addMove(
       fromTo(
         tl,
         label,
-        { alpha: 1, y: homeY - 130 },
-        { alpha: 0, y: homeY - 180, duration: FLOTA },
+        { alpha: 1, y: homeY - arriba(130) },
+        { alpha: 0, y: homeY - arriba(180), duration: FLOTA },
         at,
       );
       break;
@@ -231,7 +240,13 @@ function addMove(
     case 'weapon':
       // Cambiar la forma no se puede interpolar: se hace de golpe y se marca con un salto.
       tl.call(() => changeWeapon(view, move.weapon), undefined, at);
-      fromTo(tl, body.scale, { y: 0.94 }, { y: 1, duration, ease: 'back.out(2)' }, at);
+      fromTo(
+        tl,
+        body.scale,
+        { y: ESCALA_ACTOR * 0.94 },
+        { y: ESCALA_ACTOR, duration, ease: 'back.out(2)' },
+        at,
+      );
       break;
 
     case 'projectile': {
@@ -243,10 +258,10 @@ function addMove(
       fromTo(
         tl,
         bala,
-        { alpha: 1, x: homeX, y: homeY - 70 },
+        { alpha: 1, x: homeX, y: homeY - arriba(70) },
         {
           x: target.actor.home.x * SIZE.width,
-          y: target.actor.home.y * SIZE.height - 70,
+          y: target.actor.home.y * SIZE.height - arriba(70),
           rotation: 8,
           duration,
           ease: 'none',
@@ -265,7 +280,7 @@ function addMove(
       fromTo(
         tl,
         perdida,
-        { alpha: 1, x: homeX, y: homeY - 70 },
+        { alpha: 1, x: homeX, y: homeY - arriba(70) },
         {
           x: homeX - view.actor.facing * 80,
           y: homeY - 5,
@@ -281,7 +296,7 @@ function addMove(
     case 'ring': {
       const anillo = makeRing(move.color);
       anillo.x = homeX;
-      anillo.y = homeY - 60;
+      anillo.y = homeY - arriba(60);
       anillo.alpha = 0;
       stage.addChild(anillo);
       fromTo(tl, anillo, { alpha: 0.9 }, { alpha: 0, duration, ease: 'power1.out' }, at);
@@ -321,7 +336,9 @@ export function buildTimeline(
     stage.addChild(view.root);
     views.set(actor.id, view);
   }
-  // El marcador, por encima de todo lo demas.
+  // El marco va sobre los actores, para que recorte a quien se asome al borde.
+  // El marcador, encima de todo: es lo que siempre tiene que leerse.
+  stage.addChild(drawFrame());
   stage.addChild(hud.root);
 
   const timeline = gsap.timeline();

@@ -34,6 +34,12 @@ const C = {
   tablaOscura: '#8a6a44',
   sueloClaro: '#a98a62',
   sueloOscuro: '#6f5638',
+  // El suelo va SIEMPRE mas oscuro que lo que tiene detras. Antes compartian
+  // valor y la taberna salia de un solo tono, sin horizonte.
+  sueloTabla: '#6b5236',
+  sueloPiedra: '#7f7260',
+  sueloPaja: '#a98a45',
+  vetaClara: '#9c7d52',
   yeso: '#d9c9a6',
   yesoSombra: '#c2ae86',
   piedra: '#9a8b73',
@@ -87,15 +93,15 @@ const taberna: Escenario = {
     },
     linea(52, 268, 148, 268, C.tablaOscura, 5),
     linea(50, 320, 150, 320, C.tablaOscura, 5),
-    // Candil colgando.
-    linea(720, 0, 720, 62, C.oscuro, 4),
+    // Candil colgando, en el hueco central: a los lados cruzaba una barra de vida.
+    linea(450, 0, 450, 62, C.oscuro, 4),
     {
-      d: 'M 700 62 L 740 62 L 748 96 L 692 96 Z',
+      d: 'M 430 62 L 470 62 L 478 96 L 422 96 Z',
       color: C.brasa,
       trazo: { color: C.oscuro, grosor: 4 },
     },
-    rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloClaro),
-    ...[150, 420, 700, 860].map((x) => linea(x, SUELO, x, ALTO, C.sueloOscuro, 3)),
+    rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloTabla),
+    ...[150, 420, 700, 860].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
   ],
 };
 
@@ -113,8 +119,8 @@ const callejon: Escenario = {
     // Ventana con reja.
     rect(700, 140, 110, 90, C.noche, { color: C.oscuro, grosor: 5 }),
     ...[730, 755, 780].map((x) => linea(x, 140, x, 230, C.oscuro, 4)),
-    rect(0, SUELO, ANCHO, ALTO - SUELO, C.piedra),
-    ...[120, 300, 480, 660, 840].map((x) => linea(x, SUELO, x - 20, ALTO, C.sueloOscuro, 3)),
+    rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloPiedra),
+    ...[120, 300, 480, 660, 840].map((x) => linea(x, SUELO, x - 20, ALTO, C.piedra, 3)),
   ],
 };
 
@@ -130,7 +136,7 @@ const corral: Escenario = {
     ...[40, 330, 450, 770, 880].map((x) =>
       rect(x, 160, 16, 189, C.tablaClara, { color: C.oscuro, grosor: 3 }),
     ),
-    rect(0, SUELO, ANCHO, ALTO - SUELO, C.paja),
+    rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloPaja),
     ...[90, 250, 430, 610, 790].map((x) =>
       linea(x, SUELO + 22, x + 44, SUELO + 14, C.tablaOscura, 3),
     ),
@@ -149,16 +155,16 @@ const puerto: Escenario = {
     // Tablado del muelle: sin esto parecen plantados dentro del agua.
     rect(0, 288, ANCHO, SUELO - 288, C.tablaMedia),
     linea(0, 288, ANCHO, 288, C.oscuro, 4),
-    // Mastil al fondo.
-    rect(452, 40, 12, 156, C.tablaOscura),
-    { d: 'M 464 56 L 560 94 L 464 126 Z', color: C.yeso, trazo: { color: C.oscuro, grosor: 4 } },
+    // Mastil al fondo, en el hueco entre las dos barras de vida.
+    rect(400, 40, 12, 156, C.tablaOscura),
+    { d: 'M 412 56 L 508 94 L 412 126 Z', color: C.yeso, trazo: { color: C.oscuro, grosor: 4 } },
     // Cajones apilados.
     // Apoyados en el tablado (288), no flotando sobre el agua.
     rect(58, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
     rect(74, 246, 58, 46, C.tablaMedia, { color: C.oscuro, grosor: 4 }),
     rect(792, 292, 80, 57, C.tablaClara, { color: C.oscuro, grosor: 4 }),
-    rect(0, SUELO, ANCHO, ALTO - SUELO, C.tablaOscura),
-    ...[150, 380, 610, 830].map((x) => linea(x, SUELO, x, ALTO, C.sueloOscuro, 3)),
+    rect(0, SUELO, ANCHO, ALTO - SUELO, C.sueloTabla),
+    ...[150, 380, 610, 830].map((x) => linea(x, SUELO, x, ALTO, C.vetaClara, 3)),
   ],
 };
 

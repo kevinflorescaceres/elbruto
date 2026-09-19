@@ -5,6 +5,14 @@
  *
  * Rotaciones en radianes. Una parte cuelga hacia abajo en reposo (rot 0), asi
  * que girar a negativo la lleva hacia delante y a positivo hacia atras.
+ *
+ * OJO: eso vale para lo que cuelga (brazos, piernas). El TORSO apunta hacia
+ * ARRIBA, asi que en el se invierte: negativo lo lleva hacia delante y positivo
+ * hacia atras. Seguir la regla de arriba al pie de la letra es lo que tumbaba
+ * al muerto sobre sus propias piernas en vez de de espaldas.
+ *
+ * "Delante" es siempre hacia el rival: el cuerpo se voltea con `facing`, asi
+ * que el +x local apunta al contrario en los dos bandos.
  */
 import type { PartName } from './parts.js';
 
@@ -335,20 +343,39 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
     ],
   },
 
+  /**
+   * Cae de espaldas. El torso en reposo apunta ARRIBA, asi que girarlo en
+   * negativo lo tumba hacia atras (lejos del rival) y en positivo lo doblaba
+   * hacia delante sobre si mismo, que era lo que se veia.
+   *
+   * Tumbado, cada miembro busca su angulo en el MUNDO, no en su padre:
+   * - piernas (cuelgan de la cadera, sin girar): -1.5 las deja apuntando al frente.
+   * - brazos (cuelgan del torso, ya girado -1.5): +1.5 los devuelve al suelo.
+   */
   death: {
     frames: [
-      { t: 0, parts: { torso: { rot: 0 }, hips: { y: 0 } } },
-      { t: 0.35, parts: { torso: { rot: -0.3 }, head: { rot: -0.15 }, hips: { y: -6 } } },
+      { t: 0, parts: { torso: { rot: 0 }, hips: { y: 0, x: 0 } } },
+      // Acusa el golpe y trastabilla hacia atras antes de irse al suelo.
+      {
+        t: 0.3,
+        parts: {
+          torso: { rot: -0.35 },
+          head: { rot: 0.2 },
+          hips: { y: -4, x: -8 },
+          armFront: { rot: 0.5 },
+          armBack: { rot: 0.4 },
+        },
+      },
       {
         t: 1,
         parts: {
-          torso: { rot: 1.5 },
-          head: { rot: 0.2 },
-          hips: { y: 28, x: -14 },
-          legBack: { rot: -0.9 },
-          legFront: { rot: -0.6 },
-          armFront: { rot: -1.2 },
-          armBack: { rot: -1 },
+          torso: { rot: -1.5 },
+          head: { rot: 0.35 },
+          hips: { y: 30, x: -24 },
+          legBack: { rot: -1.2 },
+          legFront: { rot: -1.45 },
+          armFront: { rot: 1.3 },
+          armBack: { rot: 1.6 },
         },
       },
     ],

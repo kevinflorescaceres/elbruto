@@ -12,6 +12,19 @@ import type { Actor } from './fightScene.js';
 
 export const SIZE = { width: 900, height: 420 };
 
+/**
+ * Cuanto se agranda al peleon dentro del lienzo. El rig mide ~128 px: a escala
+ * 1 ocupaba el 30% del alto y dejaba medio cuadro de color plano encima. A 1.45
+ * llena cerca del 45%, que es lo que hace un juego de pelea.
+ *
+ * Solo escala a los actores. El decorado sigue en coordenadas del lienzo, asi
+ * que los escenarios no se tocan.
+ */
+export const ESCALA_ACTOR = 1.45;
+
+/** El horizonte, en coordenadas del lienzo. Los escenarios lo dan por sabido. */
+export const SUELO = Math.round(SIZE.height * 0.83);
+
 /** Categoria y alcance del arma. Los punos y los bichos no llevan nada. */
 export function weaponOf(id: string): { category: WeaponCategory; reach: number } | undefined {
   if (id === 'punos' || id.startsWith('pet:')) return undefined;
@@ -26,7 +39,8 @@ export interface Hud {
   fillB: Graphics;
 }
 
-const HUD = { margen: 24, ancho: 330, alto: 18, arriba: 22 } as const;
+// El margen deja libre el marco (14 px) y algo de aire por dentro.
+const HUD = { margen: 38, ancho: 310, alto: 18, arriba: 30 } as const;
 
 export function drawHud(nombreA: string, nombreB: string): Hud {
   const root = new Container();
@@ -67,7 +81,7 @@ export function drawHud(nombreA: string, nombreB: string): Hud {
 }
 
 /** Cartel grande de apertura y de cierre. */
-export function makeAnnounce(text: string, grande: boolean, conPlaca = false): Container {
+export function makeAnnounce(text: string, grande: boolean): Container {
   const label = new Text({
     text,
     style: {
@@ -80,20 +94,23 @@ export function makeAnnounce(text: string, grande: boolean, conPlaca = false): C
   });
   label.anchor.set(0.5);
 
+  // Los dos carteles caen sobre lo que haya pintado el escenario: sin placa
+  // detras, el texto oscuro se pierde en un fondo oscuro.
   const grupo = new Container();
-  // El cartel que se queda cae sobre lo que haya pintado el escenario: sin una
-  // placa detras, el texto oscuro se pierde en un fondo oscuro.
-  if (conPlaca) {
-    const ancho = label.width + 48;
-    const alto = label.height + 24;
-    grupo.addChild(
-      new Graphics()
-        .roundRect(-ancho / 2, -alto / 2, ancho, alto, RADIO)
-        .fill({ color: aEntero(LIENZO.fondo), alpha: 0.92 })
-        .stroke({ width: BORDE, color: 0x2a2a2a }),
-    );
+  const ancho = label.width + 56;
+  const alto = label.height + 28;
+  const placa = new Graphics()
+    .roundRect(-ancho / 2, -alto / 2, ancho, alto, RADIO)
+    .fill({ color: aEntero(LIENZO.fondo), alpha: 0.94 })
+    .stroke({ width: BORDE * 2, color: TRAZO });
+
+  // Dos clavos a los lados, para que no sea una caja sin mas.
+  for (const lado of [-1, 1]) {
+    placa
+      .circle((lado * ancho) / 2 - lado * 13, 0, 3)
+      .fill({ color: TRAZO, alpha: 0.75 });
   }
-  grupo.addChild(label);
+  grupo.addChild(placa, label);
   grupo.x = SIZE.width / 2;
   grupo.y = SIZE.height * 0.42;
   return grupo;
@@ -139,7 +156,7 @@ export function drawActor(actor: Actor, hudFill?: Graphics): ActorView {
   root.y = actor.home.y * SIZE.height;
 
   const body = new Container();
-  body.scale.x = actor.facing;
+  body.scale.set(actor.facing * ESCALA_ACTOR, ESCALA_ACTOR);
 
   let rig: Rig | null = null;
   if (actor.appearance !== null) {
@@ -200,11 +217,61 @@ export function drawEscenario(indice: number): Graphics {
   return g;
 }
 
+/** La linea del horizonte, en trazo oscuro: separa el fondo del suelo. */
 export function drawGround(): Graphics {
   return new Graphics()
-    .moveTo(0, SIZE.height * 0.83)
-    .lineTo(SIZE.width, SIZE.height * 0.83)
-    .stroke({ width: 3, color: aEntero(LIENZO.suelo) });
+    .moveTo(0, SUELO)
+    .lineTo(SIZE.width, SUELO)
+    .stroke({ width: 3, color: TRAZO, alpha: 0.55 });
+}
+
+/** Grosor del marco. Lo que quede dentro de esta franja lo tapa el marco. */
+export const MARCO = 14;
+
+/**
+ * Marco de cartel, no un rectangulo: doble filete, esquinas en escuadra y un
+ * rombo en cada una. Va dentro del lienzo y por encima de todo, asi que
+ * tambien recorta el decorado que se acerque demasiado al borde.
+ */
+export function drawFrame(): Graphics {
+  const { width: w, height: h } = SIZE;
+  const g = new Graphics();
+
+  // Banda de madera pegada al borde, con el filete grueso por fuera.
+  g.rect(0, 0, w, h).stroke({ width: MARCO, color: aEntero(LIENZO.suelo) });
+  g.rect(0, 0, w, h).stroke({ width: 4, color: TRAZO });
+  // Filete fino por dentro, que es lo que le da el aire de cartel.
+  g.rect(MARCO, MARCO, w - MARCO * 2, h - MARCO * 2).stroke({ width: 2, color: TRAZO });
+
+  const brazo = 26;
+  for (const [ex, ey] of [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+  ] as const) {
+    const x = ex === 0 ? MARCO : w - MARCO;
+    const y = ey === 0 ? MARCO : h - MARCO;
+    const sx = ex === 0 ? 1 : -1;
+    const sy = ey === 0 ? 1 : -1;
+
+    // Escuadra: dos trazos cortos siguiendo el filete interior.
+    g.moveTo(x + sx * brazo, y)
+      .lineTo(x, y)
+      .lineTo(x, y + sy * brazo)
+      .stroke({ width: 5, color: TRAZO });
+
+    // Rombo en el vertice.
+    const r = 7;
+    g.moveTo(x, y - r)
+      .lineTo(x + r, y)
+      .lineTo(x, y + r)
+      .lineTo(x - r, y)
+      .closePath()
+      .fill(aEntero(LIENZO.fondo))
+      .stroke({ width: 3, color: TRAZO });
+  }
+  return g;
 }
 
 export function makeFloater(text: string, color: number): Text {
