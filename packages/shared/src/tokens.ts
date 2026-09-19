@@ -54,7 +54,10 @@ export const ESCALA = [14, 15, 17, 19, 21, 25, 34, 56] as const;
  * la ropa: el verde saturado de antes era el unico color chillon del juego.
  */
 export const LIENZO = {
-  fondo: '#ede3d0',
+  // El encargo (§2.3) decia `papel`, pero entonces el lienzo y la pagina quedan
+  // del mismo color y el combate no se lee como superficie propia. Se usa la
+  // superficie hundida, que es justo para lo que esta definida.
+  fondo: '#e2d3b6',
   suelo: '#c9b894',
   vida: '#5f7245',
 } as const;

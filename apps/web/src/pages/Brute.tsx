@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type WeaponCategory } from '@camorra/engine';
 import { Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
+import { Barra, Boton, Chips, Estadistica, Pagina, Tarjeta } from '../ui.js';
 import { api } from '../api.js';
 import { useBrute, useIsMine } from '../hooks.js';
 
@@ -13,19 +14,6 @@ const STATS = [
   ['Maña', 'agility'],
   ['Brío', 'speed'],
 ] as const;
-
-function Equipo({
-  ids,
-  resolve,
-  vacio,
-}: {
-  ids: string[];
-  resolve: (id: string) => string;
-  vacio: string;
-}) {
-  if (ids.length === 0) return <span className="apagado">{vacio}</span>;
-  return <span>{ids.map(resolve).join(', ')}</span>;
-}
 
 function Denuncia({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
@@ -86,63 +74,54 @@ export function BrutePage() {
   const b = brute.data;
 
   return (
-    <main>
-      <p className="apagado">
-        <Link to="/">← Mis peleones</Link>
-      </p>
+    <Pagina volver={{ a: '/', texto: 'Mis peleones' }}>
       <h1>{b.name}</h1>
       <p className="apagado">
         Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {b.wins} victorias, {b.losses}{' '}
         derrotas{b.isBot && ' · peleón de la casa'}
       </p>
 
-      <div className="tarjeta fila" style={{ alignItems: 'flex-start', gap: '1.5rem' }}>
-        <Fighter
-          appearance={b.appearance}
-          slug={b.slug}
-          weapon={mejorArma(b.weapons)}
-          height={170}
-        />
-        <table style={{ flex: '1 1 16rem' }}>
-          <tbody>
-            <tr>
-              <th>Vida</th>
-              <td>{b.maxHp}</td>
-            </tr>
-            {STATS.map(([label, key]) => (
-              <tr key={key}>
-                <th>{label}</th>
-                <td>{b[key]}</td>
-              </tr>
-            ))}
-            <tr>
-              <th>Armas</th>
-              <td>
-                <Equipo
-                  ids={b.weapons}
-                  resolve={(id) => getWeapon(id).name}
-                  vacio="Solo los puños"
-                />
-              </td>
-            </tr>
-            <tr>
-              <th>Mañas</th>
-              <td>
-                <Equipo ids={b.skills} resolve={(id) => getSkill(id).name} vacio="Ninguna" />
-              </td>
-            </tr>
-            <tr>
-              <th>Bichos</th>
-              <td>
-                <Equipo ids={b.pets} resolve={(id) => getPet(id).name} vacio="Ninguno" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <Tarjeta>
+        <div className="ficha-cuerpo">
+          <div className="retrato">
+            <Fighter
+              appearance={b.appearance}
+              slug={b.slug}
+              weapon={mejorArma(b.weapons)}
+              height={170}
+            />
+          </div>
+
+          <div className="ficha-datos">
+            <div className="fila estadisticas">
+              <Estadistica etiqueta="Vida" valor={b.maxHp} />
+              {STATS.map(([etiqueta, campo]) => (
+                <Estadistica key={campo} etiqueta={etiqueta} valor={b[campo]} />
+              ))}
+            </div>
+
+            <Barra de={b.xp} entre={b.xpToNextLevel} etiqueta="Experiencia" />
+
+            <dl className="equipo">
+              <dt>Armas</dt>
+              <dd>
+                <Chips nombres={b.weapons.map((id) => getWeapon(id).name)} vacio="Solo los puños" />
+              </dd>
+              <dt>Mañas</dt>
+              <dd>
+                <Chips nombres={b.skills.map((id) => getSkill(id).name)} vacio="Ninguna" />
+              </dd>
+              <dt>Bichos</dt>
+              <dd>
+                <Chips nombres={b.pets.map((id) => getPet(id).name)} vacio="Ninguno" />
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </Tarjeta>
 
       {mine && (
-        <div className="tarjeta">
+        <Tarjeta>
           {/* Mientras se refresca, lo cacheado puede estar viejo: ensenar el boton
               de pelear cuando ya hay mejora pendiente lleva a un 409 sin sentido. */}
           {brute.isFetching ? (
@@ -151,7 +130,7 @@ export function BrutePage() {
             <>
               <p>Tienes una mejora sin elegir. Hasta que la elijas no puedes pelear.</p>
               <Link to={`/b/${slug}/level-up`}>
-                <button>Elegir mejora</button>
+                <Boton tipo="principal">Elegir mejora</Boton>
               </Link>
             </>
           ) : (
@@ -170,15 +149,17 @@ export function BrutePage() {
                 </p>
               )}
               <Link to={`/b/${slug}/arena`}>
-                <button disabled={b.fightsLeftToday === 0}>Buscar pelea</button>
+                <Boton tipo="principal" disabled={b.fightsLeftToday === 0}>
+                  Buscar pelea
+                </Boton>
               </Link>
             </>
           )}
-        </div>
+        </Tarjeta>
       )}
 
       {mine && (
-        <div className="tarjeta">
+        <Tarjeta hundida>
           <h3>Recluta gente</h3>
           <p className="apagado">
             Cada peleón que entre con tu enlace te da <strong>una pelea diaria más</strong>, hasta
@@ -187,21 +168,21 @@ export function BrutePage() {
           <code style={{ wordBreak: 'break-all' }}>
             {`${window.location.origin}/reclutar/${slug}`}
           </code>
-          <div className="fila" style={{ marginTop: '0.5rem' }}>
-            <button
+          <div className="fila enlace-recluta">
+            <Boton
               onClick={() =>
                 void navigator.clipboard.writeText(`${window.location.origin}/reclutar/${slug}`)
               }
             >
               Copiar enlace
-            </button>
+            </Boton>
             <span className="apagado">
               {b.pupils === 0
                 ? 'Todavía no has reclutado a nadie.'
                 : `${b.pupils} reclutado${b.pupils === 1 ? '' : 's'}.`}
             </span>
           </div>
-        </div>
+        </Tarjeta>
       )}
 
       <h2>Peleas</h2>
@@ -216,9 +197,9 @@ export function BrutePage() {
         </p>
       ))}
 
-      <div style={{ marginTop: '2rem' }}>
+      <div className="denuncia">
         <Denuncia slug={slug} />
       </div>
-    </main>
+    </Pagina>
   );
 }

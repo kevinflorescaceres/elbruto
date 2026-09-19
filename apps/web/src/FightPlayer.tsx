@@ -86,7 +86,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
           borderRadius: 6,
           overflow: 'hidden',
           lineHeight: 0,
-          background: 'var(--papel)',
+          background: 'var(--papel-hondo)',
           aspectRatio: `${SIZE.width} / ${SIZE.height}`,
         }}
       />
