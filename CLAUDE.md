@@ -162,3 +162,22 @@ mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
 Fases 0 a 6 completas, salvo el despliegue en si, que necesita cuenta y dominio.
 El combate sigue `combate.md`, implementado entero incluida la sección 5 del ritmo.
 Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **torneos diarios** y **sonido**.
+
+<!-- PANTHEON:INICIO -->
+## Ficha de despliegue (Pantheon)
+
+Este proyecto está registrado en mi centro de proyectos (repo `app-pantheon`).
+Mantén al día `docs/ficha.md`; su estructura es la plantilla y no debe cambiar.
+
+Reglas:
+- Rellena la ficha leyendo el repo: `Gemfile`, `Gemfile.lock`, `.ruby-version`,
+  `config/database.yml`, `config/application.rb`, `config/environments/production.rb`,
+  `Procfile`, `Dockerfile`, `config/deploy.yml`, `.env.example`,
+  `config/recurring.yml` o `config/schedule.rb`, `config/storage.yml`, `config/cable.yml`.
+- Nunca escribas valores de secretos, solo los nombres de las variables.
+- Si no puedes determinar un dato desde el código, deja "?" y no lo inventes.
+- El campo `slug` es el nombre de la carpeta del repo, en minúsculas y con guiones.
+- Actualiza `actualizado` con la fecha de hoy cada vez que cambies la ficha.
+- Si en una sesión cambia el stack, los servicios externos, las variables de entorno
+  o el método de despliegue, actualiza la ficha antes de terminar.
+<!-- PANTHEON:FIN -->
