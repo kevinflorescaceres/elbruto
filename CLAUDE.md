@@ -166,18 +166,7 @@ Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **torneos diari
 <!-- PANTHEON:INICIO -->
 ## Ficha de despliegue (Pantheon)
 
-Este proyecto está registrado en mi centro de proyectos (repo `app-pantheon`).
-Mantén al día `docs/ficha.md`; su estructura es la plantilla y no debe cambiar.
-
-Reglas:
-- Rellena la ficha leyendo el repo: `Gemfile`, `Gemfile.lock`, `.ruby-version`,
-  `config/database.yml`, `config/application.rb`, `config/environments/production.rb`,
-  `Procfile`, `Dockerfile`, `config/deploy.yml`, `.env.example`,
-  `config/recurring.yml` o `config/schedule.rb`, `config/storage.yml`, `config/cable.yml`.
-- Nunca escribas valores de secretos, solo los nombres de las variables.
-- Si no puedes determinar un dato desde el código, deja "?" y no lo inventes.
-- El campo `slug` es el nombre de la carpeta del repo, en minúsculas y con guiones.
-- Actualiza `actualizado` con la fecha de hoy cada vez que cambies la ficha.
-- Si en una sesión cambia el stack, los servicios externos, las variables de entorno
-  o el método de despliegue, actualiza la ficha antes de terminar.
+Este proyecto está registrado en Pantheon. Su ficha vive en `~/code/app-pantheon/fichas/<slug>.md`
+(no en este repo): créala o actualízala con la skill `pantheon-app-sheet`. Si en una sesión cambia el
+stack, los servicios externos, las variables de entorno o el método de despliegue, actualízala antes de terminar.
 <!-- PANTHEON:FIN -->
