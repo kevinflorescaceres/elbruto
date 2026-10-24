@@ -157,6 +157,37 @@ almacen compartido.
 juega el ciclo completo en Chromium. Es lo mismo que se despliega, no una version de
 mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
 
+## Capturas base
+
+`e2e/visual.spec.ts` compara la portada y la página legal contra PNG versionados. Detecta
+cambios visuales que nadie pidió. **Solo una tarea de diseño las actualiza**
+(`pnpm e2e --update-snapshots`); si una tarea que no es de diseño las rompe, lo que está mal
+es el cambio, no la captura. Se tomaron en esta máquina y CI no las compara.
+
+## Modo autónomo
+
+`.claude/autonomo.sh [n]` trabaja las primeras `n` tareas de `docs/backlog.md`, una por
+sesión de `claude -p`, en la rama `auto/AAAA-MM-DD`. Si el prompt empieza con «Modo
+autónomo», esto manda sobre la regla global de no commitear sin que te lo pidan:
+
+1. Haz **solo** la tarea indicada. Lo que veas de paso va a una tarea nueva al final del
+   backlog, no al commit.
+2. Si falta una decisión que la tarea no tomó, no la inventes: marca la tarea `[!]` con el
+   motivo en una línea al final, commitea solo el backlog y termina.
+3. Verifica con `pnpm lint`, `pnpm typecheck` y `pnpm test`; si tocaste `apps/web` o
+   `apps/server`, también `pnpm e2e`. El hook de parada no te deja terminar con rojo.
+4. Marca la tarea `[x]` y haz **un** commit con el código y la marca:
+   `tipo(ámbito): resumen`, en español. Nunca en `main`, nunca push.
+
+**Tareas `[diseño]`:** `web-designer` hace el cambio y `ux-reviewer` lo revisa, con un máximo
+de dos rondas. Pídeles que guarden las capturas en `.autonomo/capturas/<id>/`. Si queda NOT
+APPROVED, la tarea va `[!]`. Si queda APPROVED, actualiza las capturas base, márcala `[?]`
+(no `[x]`: el visto bueno visual es del dueño) y escribe en la línea la ruta de las capturas.
+
+El script es la puerta final: corre lint, tipos, tests, `balance` y e2e. Si algo falla, si
+queda algo sin commitear, o si una tarea que no es de diseño tocó las capturas base, guarda
+el intento en `auto-fallida/<id>-<fecha>`, lo saca de `auto/` y marca la tarea `[!]`.
+
 ## Estado
 
 Fases 0 a 6 completas, salvo el despliegue en si, que necesita cuenta y dominio.
