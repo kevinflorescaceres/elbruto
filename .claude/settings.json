@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm lint *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm e2e *)",
+      "Bash(pnpm balance *)",
+      "Bash(pnpm format *)",
+      "Bash(pnpm --filter @camorra/web art *)",
+      "Bash(pnpm exec playwright screenshot *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Bash(fly *)",
+      "Bash(flyctl *)",
+      "Bash(git push *)",
+      "Bash(* migrate reset*)",
+      "Bash(psql *)",
+      "Bash(dropdb *)",
+      "Bash(sudo *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/bloquear-secretos.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/verificar-al-parar.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
