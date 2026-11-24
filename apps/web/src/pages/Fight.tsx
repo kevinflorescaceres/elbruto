@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { api } from '../api.js';
@@ -6,13 +6,18 @@ import { Boton, Pagina } from '../ui.js';
 import { FightLog } from '../FightLog.js';
 
 // Pixi y GSAP son la mitad del peso del bundle y solo se usan en esta pantalla.
-const FightPlayer = lazy(() =>
-  import('../FightPlayer.js').then((m) => ({ default: m.FightPlayer })),
-);
+const cargarPlayer = () => import('../FightPlayer.js');
+const FightPlayer = lazy(() => cargarPlayer().then((m) => ({ default: m.FightPlayer })));
 
 export function FightPage() {
   const { id = '' } = useParams();
   const fight = useQuery({ queryKey: ['fight', id], queryFn: () => api.fight(id) });
+  // El reproductor se pide a la vez que el combate, no despues: `lazy` no lo
+  // pediria hasta pintarlo, y eso es cuando ya han llegado los datos. En un
+  // movil son dos viajes seguidos en vez de dos a la vez.
+  useEffect(() => {
+    void cargarPlayer();
+  }, []);
 
   if (fight.isPending)
     return (

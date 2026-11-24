@@ -6,10 +6,26 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Application } from 'pixi.js';
+// Las extensiones del navegador van en este mismo trozo. Sin esto, Pixi las pide
+// por su cuenta al arrancar, otro viaje de red despues de bajar este fichero.
+import 'pixi.js/browser';
 import { aEntero, LIENZO, type FightReplay } from '@camorra/shared';
 import { planFight } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';
+
+/**
+ * Pixeles de verdad por pixel de escena. El lienzo se dibuja a SIZE y `cover` lo
+ * escala para llenar su hueco: en un movil lo encoge a la mitad, y dibujarlo a
+ * la densidad entera de la pantalla era pintar cuatro veces los pixeles que se
+ * ven, en cada fotograma. Nunca pasa de la densidad de la pantalla.
+ */
+function resolucion(contenedor: HTMLElement): number {
+  const { width, height } = contenedor.getBoundingClientRect();
+  const escala = Math.max(width / SIZE.width, height / SIZE.height);
+  const densidad = window.devicePixelRatio || 1;
+  return escala > 0 ? densidad * Math.min(1, escala) : densidad;
+}
 
 /**
  * Marcador en HTML, no dentro del lienzo. En pantalla estrecha el lienzo se
@@ -58,6 +74,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
     // despues de desmontar, hay que tirar la aplicacion en vez de pintarla.
     let cancelado = false;
     let app: Application | null = null;
+    let vigia: ResizeObserver | null = null;
 
     void (async () => {
       try {
@@ -67,8 +84,10 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
           height: SIZE.height,
           background: aEntero(LIENZO.fondo),
           antialias: true,
-          autoDensity: true,
-          resolution: window.devicePixelRatio,
+          skipExtensionImports: true,
+          // Sin autoDensity: el tamano en CSS lo pone este componente (100%), y
+          // autoDensity lo pisaria en pixeles a cada cambio de resolucion.
+          resolution: resolucion(contenedor),
         });
 
         if (cancelado) {
@@ -84,6 +103,14 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         aplicacion.canvas.style.height = '100%';
         aplicacion.canvas.style.objectFit = 'cover';
         contenedor.appendChild(aplicacion.canvas);
+        // Girar el movil o cambiar la ventana cambia lo que ocupa el lienzo.
+        vigia = new ResizeObserver(() => {
+          const nueva = resolucion(contenedor);
+          if (Math.abs(nueva - aplicacion.renderer.resolution) > 0.05) {
+            aplicacion.renderer.resize(SIZE.width, SIZE.height, nueva);
+          }
+        });
+        vigia.observe(contenedor);
 
         const tl = buildTimeline(
           aplicacion.stage,
@@ -105,6 +132,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
 
     return () => {
       cancelado = true;
+      vigia?.disconnect();
       timeline.current?.kill();
       timeline.current = null;
       app?.destroy(true, { children: true });

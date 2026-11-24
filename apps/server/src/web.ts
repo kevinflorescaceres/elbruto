@@ -101,13 +101,29 @@ function inject(template: string, meta: Meta, url: string, base: string): string
  * Solo hace algo si existe el build del frontend. En desarrollo no existe y de
  * servir la web se encarga Vite con su proxy.
  */
-export async function registerWeb(app: FastifyInstance): Promise<boolean> {
-  const dist = resolve(import.meta.dirname, '../../web/dist');
+export async function registerWeb(
+  app: FastifyInstance,
+  dist = resolve(import.meta.dirname, '../../web/dist'),
+): Promise<boolean> {
   if (!existsSync(join(dist, 'index.html'))) return false;
 
   // index: false a proposito. Si @fastify/static sirviera index.html en "/", la
   // portada se saltaria la inyeccion de metadatos y llegaria sin og: a nadie.
-  await app.register(fastifyStatic, { root: dist, wildcard: false, index: false });
+  await app.register(fastifyStatic, {
+    root: dist,
+    wildcard: false,
+    index: false,
+    // El build deja .br y .gz al lado de cada fichero (vite.config.ts).
+    preCompressed: true,
+    setHeaders(reply, ruta) {
+      // Lo de /assets lleva el hash del contenido en el nombre: si cambia, cambia
+      // el nombre. Sin esto, cada visita pregunta por cada fichero aunque no
+      // haya cambiado nada, y en un movil cada pregunta es un viaje de ida y vuelta.
+      if (/[\\/]assets[\\/]/.test(ruta)) {
+        reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  });
   const template = readFileSync(join(dist, 'index.html'), 'utf8');
 
   app.setNotFoundHandler(async (request, reply) => {
@@ -120,13 +136,15 @@ export async function registerWeb(app: FastifyInstance): Promise<boolean> {
     // debe mentir: una ruta inventada es un 404 para buscadores y monitores.
     const conocida = RUTAS.some((r) => r.test(pathname));
     const meta = await metaFor(pathname);
-    return reply
-      .code(conocida && meta.found ? 200 : 404)
-      .type('text/html')
-      // El HTML cambia por ruta (titulo y descripcion del peleon) y acompana a
-      // la cookie del guardian: se revalida siempre.
-      .header('Cache-Control', 'no-cache, private')
-      .send(inject(template, meta, `${base}${pathname}`, base));
+    return (
+      reply
+        .code(conocida && meta.found ? 200 : 404)
+        .type('text/html')
+        // El HTML cambia por ruta (titulo y descripcion del peleon) y acompana a
+        // la cookie del guardian: se revalida siempre.
+        .header('Cache-Control', 'no-cache, private')
+        .send(inject(template, meta, `${base}${pathname}`, base))
+    );
   });
 
   return true;
