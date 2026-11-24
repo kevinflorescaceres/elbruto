@@ -3,8 +3,8 @@
  * dejen de resolver cada hueco con un `style={{}}` suelto: todo lo visual sale
  * de los tokens y de aqui.
  */
-import type { ReactNode } from 'react';
-import { Link } from 'react-router';
+import { useEffect, type ReactNode } from 'react';
+import { Link, NavLink } from 'react-router';
 import { usePendientes } from './hooks.js';
 import { sinGuardar } from './enlacesPendientes.js';
 
@@ -35,6 +35,12 @@ export function Pagina({
   /** Sin aire entre el cartel y lo primero: el marcador del combate se le une. */
   pegada?: boolean;
 }) {
+  // La pestana dice donde estas: con todas en "Camorra", el historial no
+  // distinguia un combate de otro.
+  const titulo = typeof cabecera?.titulo === 'string' ? cabecera.titulo : null;
+  useEffect(() => {
+    document.title = titulo === null ? 'Camorra' : `${titulo} · Camorra`;
+  }, [titulo]);
   const enlaceVolver = volver !== undefined && (
     <p className="volver">
       <Link to={volver.a}>← {volver.texto}</Link>
@@ -47,7 +53,8 @@ export function Pagina({
           Camorra
         </Link>
         <nav className="fila">
-          <Link to="/ranking">Ranking</Link>
+          {/* NavLink marca la pagina actual con aria-current="page". */}
+          <NavLink to="/ranking">Ranking</NavLink>
         </nav>
       </header>
       {cabecera !== undefined && (
@@ -296,4 +303,21 @@ export function Confirmar({
       </Boton>
     </div>
   );
+}
+
+/**
+ * "hoy", "ayer" o la fecha corta: en un juego de cada dia, "24/11/2026" pesaba
+ * mas que lo que contaba. El ano solo si no es este.
+ */
+export function cuando(iso: string, ahora = new Date()): string {
+  const fecha = new Date(iso);
+  const dia = (d: Date): number => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dias = Math.round((dia(ahora) - dia(fecha)) / 86_400_000);
+  if (dias === 0) return 'hoy';
+  if (dias === 1) return 'ayer';
+  return fecha.toLocaleDateString('es', {
+    day: 'numeric',
+    month: 'short',
+    ...(fecha.getFullYear() === ahora.getFullYear() ? {} : { year: 'numeric' }),
+  });
 }

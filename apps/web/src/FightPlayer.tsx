@@ -119,7 +119,10 @@ export function FightPlayer({
         timeline.current = tl;
         setListo(true);
       } catch (error) {
-        if (!cancelado) setFallo(error instanceof Error ? error.message : 'Error de dibujo');
+        // El detalle va a la consola: en pantalla, un mensaje en ingles de WebGL no
+        // le dice nada al jugador.
+        console.error(error);
+        if (!cancelado) setFallo('sin lienzo');
       }
     })();
 
@@ -148,7 +151,7 @@ export function FightPlayer({
       aviso={
         fallo !== null && (
           <p className="error">
-            No se ha podido dibujar el combate: {fallo}. Lo tienes entero en texto más abajo.
+            Este navegador no ha podido dibujar el combate. Lo tienes entero en texto más abajo.
           </p>
         )
       }

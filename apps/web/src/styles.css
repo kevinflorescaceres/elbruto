@@ -158,6 +158,12 @@ p {
   text-wrap: pretty;
 }
 
+/* Texto corrido suelto en la pagina (legal, avisos): a 130 caracteres por linea
+   se perdia el renglon. Dentro de tarjetas y paneles manda su ancho. */
+main > p {
+  max-width: 68ch;
+}
+
 /* Cifras que se comparan en columna: todas del mismo ancho. */
 .estadistica strong,
 .rk-puesto,
@@ -739,6 +745,13 @@ th {
 }
 
 /* Sobre la madera el foco va en oro: el acento no se distingue del fondo. */
+/* La pagina en la que estas, subrayada: sin esto el menu no decia nada. */
+.barra-superior a[aria-current='page'] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
 .barra-superior a:focus-visible {
   outline-color: var(--oro);
 }

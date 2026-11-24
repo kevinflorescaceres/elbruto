@@ -8,6 +8,7 @@ import type { BruteProfile } from '@camorra/shared';
 import {
   Barra,
   Boton,
+  cuando,
   BuscarPelea,
   Chips,
   ESTADISTICAS,
@@ -286,18 +287,19 @@ export function BrutePage() {
                   contra {fight.opponent.name}{' '}
                   <span className="apagado">(nivel {fight.opponent.level})</span>
                 </span>
-                <time dateTime={fight.createdAt}>
-                  {new Date(fight.createdAt).toLocaleDateString('es')}
-                </time>
+                <time dateTime={fight.createdAt}>{cuando(fight.createdAt)}</time>
               </Link>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="denuncia">
-        <Denuncia slug={slug} />
-      </div>
+      {/* Denunciar el nombre de tu propio peleon no tiene sentido. */}
+      {!mine && (
+        <div className="denuncia">
+          <Denuncia slug={slug} />
+        </div>
+      )}
     </Pagina>
   );
 }
