@@ -167,10 +167,13 @@ export function TarjetaBoton({
   disabled,
   onClick,
   alPasar,
+  seleccionada,
 }: {
   children: ReactNode;
   disabled?: boolean;
   onClick: () => void;
+  /** Elegida pero sin confirmar (arena, subida de nivel). */
+  seleccionada?: boolean;
   /** Avisa cuando el puntero o el foco entran (true) y salen (false). */
   alPasar?: (dentro: boolean) => void;
 }) {
@@ -178,6 +181,7 @@ export function TarjetaBoton({
     <button
       className="tarjeta tarjeta-boton"
       disabled={disabled}
+      aria-pressed={seleccionada}
       onClick={onClick}
       onPointerEnter={() => alPasar?.(true)}
       onPointerLeave={() => alPasar?.(false)}
@@ -237,5 +241,50 @@ export function BuscarPelea({ slug, quedan }: { slug: string; quedan: number }) 
     <Link to={`/b/${slug}/arena`} className="boton principal">
       Buscar pelea
     </Link>
+  );
+}
+
+/**
+ * Tus cifras, en una linea, donde se decide algo que depende de ellas: la arena y
+ * la subida de nivel. Antes habia que acordarse de la ficha.
+ */
+export function TusCifras({
+  brute,
+}: {
+  brute: { name: string; maxHp: number } & Record<(typeof ESTADISTICAS)[number][1], number>;
+}) {
+  return (
+    <p className="tus-cifras">
+      <strong>{brute.name}</strong>
+      <span>Vida {brute.maxHp}</span>
+      {ESTADISTICAS.map(([etiqueta, campo]) => (
+        <span key={campo}>
+          {etiqueta} {brute[campo]}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * Elegir y confirmar son dos gestos: en el movil, tocar una tarjeta al hacer
+ * scroll ya lanzaba una pelea sin vuelta atras. Va pegado al pie mientras hay algo
+ * elegido.
+ */
+export function Confirmar({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="confirmar">
+      <Boton tipo="principal" onClick={onClick} disabled={disabled}>
+        {children}
+      </Boton>
+    </div>
   );
 }

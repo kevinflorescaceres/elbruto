@@ -52,7 +52,10 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
 
     const rivales = paginaMia.locator('.rejilla button');
     await expect(rivales.first()).toBeVisible();
+    // Tocar elige; pelear es otro gesto, para que un scroll no lance una pelea.
     await rivales.first().click();
+    await expect(paginaMia).toHaveURL(/\/arena$/);
+    await paginaMia.getByRole('button', { name: /^Pelear contra / }).click();
 
     await expect(paginaMia).toHaveURL(/\/fight\//);
     await expect(paginaMia.locator('canvas')).toBeVisible();
@@ -77,6 +80,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   const opciones = paginaMia.locator('.rejilla button');
   await expect(opciones).toHaveCount(2);
   await opciones.first().click();
+  await paginaMia.getByRole('button', { name: /^Quedarme con / }).click();
 
   await expect(paginaMia.getByRole('heading', { name: propio })).toBeVisible();
   await expect(paginaMia.getByText(/Nivel 2 ·/)).toBeVisible();

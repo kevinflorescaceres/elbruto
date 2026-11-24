@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
-import { ESTADISTICAS, Pagina, TarjetaBoton } from '../ui.js';
+import { Confirmar, ESTADISTICAS, Pagina, TarjetaBoton, TusCifras } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Escenario } from '../Escenario.js';
 import { useBrute } from '../hooks.js';
@@ -22,13 +22,26 @@ interface Opcion {
   arma?: { category: WeaponCategory; reach: number };
 }
 
-function describeOption(option: LevelUpOption): Opcion {
+/** Cada cuanto golpea, en palabras: "intervalo 132" no le decia nada a nadie. */
+function ritmo(intervalo: number): string {
+  // Mas bajo es mas rapido. Los punos van a 66; la mas pesada, a 150.
+  if (intervalo <= 60) return 'muy rápida';
+  if (intervalo <= 80) return 'rápida';
+  if (intervalo <= 105) return 'ritmo normal';
+  if (intervalo <= 135) return 'lenta';
+  return 'muy lenta';
+}
+
+/** Las cifras de ahora, para ensenar cuanto cambia cada camino. */
+type Cifras = Record<string, number>;
+
+function describeOption(option: LevelUpOption, ahora: Cifras | undefined): Opcion {
   switch (option.type) {
     case 'weapon': {
       const weapon = getWeapon(option.id);
       return {
         title: weapon.name,
-        detail: `Arma ${weapon.category} · ${weapon.damage} de daño · intervalo ${weapon.interval}`,
+        detail: `Arma ${weapon.category} · ${weapon.damage} de daño · ${ritmo(weapon.interval)}`,
         arma: { category: weapon.category, reach: weapon.reach },
       };
     }
@@ -43,16 +56,28 @@ function describeOption(option: LevelUpOption): Opcion {
       const pet = getPet(option.id);
       // Lo que cuesta es lo que decide: sin esto se elegia a ciegas (COMBATE.md §4.8).
       const aguante = STAT_NAMES.endurance ?? 'Aguante';
+      const antes = ahora?.endurance;
+      const coste =
+        antes === undefined
+          ? `te quita ${pet.enduranceCost} de ${aguante}`
+          : `${aguante} ${antes} → ${Math.max(0, antes - pet.enduranceCost)}`;
       return {
         title: pet.name,
-        detail: `Bicho · ${pet.hp} de vida · ${pet.damage} de daño · te quita ${pet.enduranceCost} de ${aguante}`,
+        detail: `Bicho · ${pet.hp} de vida · ${pet.damage} de daño · ${coste}`,
       };
     }
     case 'stat': {
       const parts = Object.entries(option.gains).map(
         ([stat, amount]) => `+${amount} de ${STAT_NAMES[stat] ?? stat}`,
       );
-      return { title: parts.join(' y '), detail: 'Mejora de aptitudes' };
+      // "Reflejos 3 → 6": lo que se gana, contado contra lo que ya se tiene.
+      const cambios = Object.entries(option.gains).map(([stat, amount]) => {
+        const antes = ahora?.[stat];
+        return antes === undefined
+          ? `+${amount} de ${STAT_NAMES[stat] ?? stat}`
+          : `${STAT_NAMES[stat] ?? stat} ${antes} → ${antes + amount}`;
+      });
+      return { title: parts.join(' y '), detail: cambios.join(' · ') };
     }
   }
 }
@@ -65,6 +90,8 @@ export function LevelUpPage() {
   const brute = useBrute(slug);
   // La opcion bajo el puntero o el foco: si es un arma, el peleon se la prueba.
   const [probando, setProbando] = useState<number | null>(null);
+  // Tocar una opcion la elige; quedarsela es otro gesto (Confirmar).
+  const [elegida, setElegida] = useState<0 | 1 | null>(null);
 
   const choose = useMutation({
     mutationFn: (index: 0 | 1) => api.chooseLevelUp(slug, index),
@@ -90,10 +117,16 @@ export function LevelUpPage() {
       </Pagina>
     );
 
-  const opciones = pending.data.options.map(describeOption);
   const b = brute.data;
+  const ahora: Cifras | undefined =
+    b === undefined
+      ? undefined
+      : Object.fromEntries(ESTADISTICAS.map(([, campo]) => [campo, b[campo]]));
+  const opciones = pending.data.options.map((o) => describeOption(o, ahora));
   const enLaMano =
-    (probando === null ? undefined : opciones[probando]?.arma) ?? (b && armaVisible(b.weapons));
+    (probando === null ? undefined : opciones[probando]?.arma) ??
+    (elegida === null ? undefined : opciones[elegida]?.arma) ??
+    (b && armaVisible(b.weapons));
 
   return (
     <Pagina volver={b === undefined ? undefined : { a: `/b/${slug}`, texto: b.name }}>
@@ -111,22 +144,29 @@ export function LevelUpPage() {
         </div>
         <div className="subida-opciones">
           <p className="subida-voz">Dos caminos. Uno se queda por el camino.</p>
+          {b !== undefined && <TusCifras brute={b} />}
           <div className="rejilla">
             {opciones.map(({ title, detail, arma }, index) => (
               <TarjetaBoton
                 key={index}
                 disabled={choose.isPending}
-                onClick={() => choose.mutate(index as 0 | 1)}
+                seleccionada={elegida === index}
+                onClick={() => setElegida(index as 0 | 1)}
                 alPasar={(dentro) =>
                   setProbando((actual) => (dentro ? index : actual === index ? null : actual))
                 }
               >
                 <span className="opcion">
-                  {/* Un arma se ensena ya en la mano de tu peleon: en el movil no hay
-                      puntero que pasar por encima, y tocar la tarjeta ya la elige. */}
-                  {arma !== undefined && b !== undefined && (
+                  {/* Tu peleon en todas: con el arma nueva en la mano, o como esta. Si
+                      solo la tuviera el arma, tiraria de la vista mas que la otra. */}
+                  {b !== undefined && (
                     <span className="opcion-figura" aria-hidden>
-                      <Fighter appearance={b.appearance} slug={b.slug} weapon={arma} height={76} />
+                      <Fighter
+                        appearance={b.appearance}
+                        slug={b.slug}
+                        weapon={arma ?? armaVisible(b.weapons)}
+                        height={76}
+                      />
                     </span>
                   )}
                   <span className="opcion-texto">
@@ -137,6 +177,11 @@ export function LevelUpPage() {
               </TarjetaBoton>
             ))}
           </div>
+          {elegida !== null && (
+            <Confirmar disabled={choose.isPending} onClick={() => choose.mutate(elegida)}>
+              {choose.isPending ? 'Guardando…' : `Quedarme con ${opciones[elegida]?.title ?? ''}`}
+            </Confirmar>
+          )}
         </div>
       </section>
     </Pagina>

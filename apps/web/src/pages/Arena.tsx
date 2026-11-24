@@ -1,13 +1,18 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { armaVisible, Fighter } from '../art/Fighter.js';
-import { cuenta, Pagina, record, TarjetaBoton } from '../ui.js';
+import { Confirmar, cuenta, Pagina, record, TarjetaBoton, TusCifras } from '../ui.js';
+import { useBrute } from '../hooks.js';
 import { api, ApiError } from '../api.js';
 
 export function ArenaPage() {
   const { slug = '' } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const yo = useBrute(slug);
+  // Tocar una tarjeta la elige; pelear es otro gesto (Confirmar).
+  const [elegido, setElegido] = useState<string | null>(null);
   const opponents = useQuery({
     queryKey: ['opponents', slug],
     queryFn: () => api.opponents(slug),
@@ -60,12 +65,14 @@ export function ArenaPage() {
       )}
 
       {opponents.isPending && <p className="apagado">Buscando…</p>}
+      {yo.data !== undefined && <TusCifras brute={yo.data} />}
       <div className="rejilla">
         {opponents.data?.opponents.map((rival) => (
           <TarjetaBoton
             key={rival.slug}
             disabled={fight.isPending}
-            onClick={() => fight.mutate(rival.slug)}
+            seleccionada={elegido === rival.slug}
+            onClick={() => setElegido(rival.slug)}
           >
             <div className="ficha-mini">
               <Fighter
@@ -90,6 +97,13 @@ export function ArenaPage() {
           </TarjetaBoton>
         ))}
       </div>
+      {elegido !== null && (
+        <Confirmar disabled={fight.isPending} onClick={() => fight.mutate(elegido)}>
+          {fight.isPending
+            ? 'Peleando…'
+            : `Pelear contra ${opponents.data?.opponents.find((r) => r.slug === elegido)?.name ?? ''}`}
+        </Confirmar>
+      )}
     </Pagina>
   );
 }
