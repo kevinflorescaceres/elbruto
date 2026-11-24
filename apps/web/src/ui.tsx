@@ -132,6 +132,18 @@ export function TarjetaBoton({
   );
 }
 
+/**
+ * La misma tarjeta, cuando lleva a otra pagina. Con `<button>` y `navigate` no
+ * se podia abrir en otra pestana ni mantener pulsado en el movil.
+ */
+export function TarjetaEnlace({ children, a }: { children: ReactNode; a: string }) {
+  return (
+    <Link to={a} className="tarjeta tarjeta-boton tarjeta-enlace">
+      {children}
+    </Link>
+  );
+}
+
 /** Barra de progreso: experiencia o vida. */
 export function Barra({ de, entre, etiqueta }: { de: number; entre: number; etiqueta?: string }) {
   const parte = entre > 0 ? Math.max(0, Math.min(1, de / entre)) : 0;

@@ -62,6 +62,27 @@ main {
 
 a {
   color: inherit;
+  text-underline-offset: 0.15em;
+}
+
+/*
+ * Lo que pinta el navegador tambien lleva la paleta. El foco por defecto era un
+ * anillo azul fino que casi no se veia sobre el papel.
+ */
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--oro);
+  color: var(--tinta);
+}
+
+/* Entre --tinta-suave y --linea: 5,4:1 sobre --papel-claro, y no se confunde con texto escrito. */
+::placeholder {
+  color: color-mix(in srgb, var(--tinta-suave) 45%, var(--linea));
+  opacity: 1;
 }
 
 h1,
@@ -189,6 +210,28 @@ h3 {
   text-align: left;
 }
 
+/* La tarjeta que lleva a otra pagina: un enlace con el mismo aspecto que la de boton. */
+.tarjeta-enlace {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  font-family: Alegreya, Georgia, serif;
+  font-weight: 700;
+}
+
+@media (hover: hover) {
+  .tarjeta-enlace:hover {
+    background: var(--acento);
+    color: var(--papel-claro);
+  }
+
+  /* El texto apagado se perdia sobre el acento. */
+  .tarjeta-boton:hover:not(:disabled) .apagado,
+  .tarjeta-enlace:hover .apagado {
+    color: inherit;
+  }
+}
+
 /* Retrato + datos, en las tarjetas de portada y arena. */
 .ficha-mini {
   display: flex;
@@ -227,9 +270,12 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
-  background: var(--acento);
-  color: var(--papel-claro);
+/* Solo con raton: en tactil el hover se queda pegado despues de tocar. */
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    background: var(--acento);
+    color: var(--papel-claro);
+  }
 }
 
 button:disabled {
@@ -245,6 +291,7 @@ textarea {
   border-radius: var(--radio);
   background: var(--papel-claro);
   color: var(--tinta);
+  caret-color: var(--acento);
 }
 
 table {
@@ -309,8 +356,15 @@ th {
   font-weight: 700;
 }
 
-.barra-superior a:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .barra-superior a:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Sobre la madera el foco va en oro: el acento no se distingue del fondo. */
+.barra-superior a:focus-visible {
+  outline-color: var(--oro);
 }
 
 /*
@@ -347,6 +401,9 @@ th {
   background: var(--papel-hondo);
   color: var(--tinta);
   cursor: pointer;
+  /* 44 px de zona de toque en todos los botones, no pantalla a pantalla. */
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .boton.principal {
@@ -354,17 +411,26 @@ th {
   color: var(--papel-claro);
 }
 
-.boton:hover:not(:disabled) {
-  background: var(--acento);
-  color: var(--papel-claro);
+@media (hover: hover) {
+  .boton:hover:not(:disabled) {
+    background: var(--acento);
+    color: var(--papel-claro);
+  }
+
+  .boton.principal:hover:not(:disabled) {
+    background: var(--acento-hondo);
+  }
 }
 
-.boton.principal:hover:not(:disabled) {
-  background: var(--acento-hondo);
-}
-
-.boton:disabled {
-  opacity: 0.5;
+/*
+ * Apagado como un boton en espera, no como uno roto: con opacidad 0,5 el
+ * principal quedaba rosa palo. Va despues de .principal para ganarle.
+ */
+.boton:disabled,
+.boton.principal:disabled {
+  background: var(--papel-hondo);
+  color: var(--linea);
+  border-color: var(--linea);
   cursor: default;
 }
 
@@ -640,8 +706,7 @@ th {
   max-width: 30rem;
 }
 
-.campo-nombre input,
-.campo-nombre .boton {
+.campo-nombre input {
   min-height: 44px;
   box-sizing: border-box;
 }
@@ -675,12 +740,6 @@ a.boton {
   outline: none;
 }
 
-/* Las acciones de la ficha a 44 px, como el resto de zonas de toque. */
-.ficha-datos .fila .boton {
-  min-height: 44px;
-  box-sizing: border-box;
-}
-
 .recien-inicial {
   margin: 0;
 }
@@ -705,11 +764,6 @@ a.boton {
 
 .enlace-acciones {
   margin-top: 0.75rem;
-}
-
-.enlace-acciones .boton {
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .recluta-texto {

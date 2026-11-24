@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { createBrute, getSkill, getWeapon } from '@camorra/engine';
 import { NAME_MAX, type BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
-import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta, TarjetaBoton } from '../ui.js';
+import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta, TarjetaEnlace } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { useMe } from '../hooks.js';
 import { ayudaNombre } from '../nombre.js';
@@ -129,7 +129,6 @@ export function Home() {
   });
 
   const me = useMe();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   // Se leen al montar: si se fue a pelear sin guardarlo, al volver sigue ahi.
@@ -279,7 +278,7 @@ export function Home() {
           <h2>Mis peleones</h2>
           <div className="rejilla">
             {me.data?.brutes.map((brute) => (
-              <TarjetaBoton key={brute.slug} onClick={() => void navigate(`/b/${brute.slug}`)}>
+              <TarjetaEnlace key={brute.slug} a={`/b/${brute.slug}`}>
                 {/* Con cara: es la lista que mas se mira y era la unica sin retrato. */}
                 <div className="ficha-mini">
                   <Fighter
@@ -296,7 +295,7 @@ export function Home() {
                     {brute.pendingLevelUp && <div className="aviso">Mejora pendiente</div>}
                   </div>
                 </div>
-              </TarjetaBoton>
+              </TarjetaEnlace>
             ))}
           </div>
         </section>

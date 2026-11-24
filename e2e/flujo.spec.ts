@@ -9,7 +9,7 @@ async function crearPeleon(page: Page, prefijo: string): Promise<string> {
   await page.getByLabel('Nombre del peleón').fill(suyo);
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Guarda este enlace')).toBeVisible();
-  await expect(page.getByRole('button', { name: suyo })).toBeVisible();
+  await expect(page.getByRole('link', { name: suyo })).toBeVisible();
   return suyo;
 }
 
@@ -31,7 +31,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   await crearPeleon(paginaSuya, 'Rival');
   const propio = await crearPeleon(paginaMia, 'Peleon');
 
-  await paginaMia.getByRole('button', { name: propio }).click();
+  await paginaMia.getByRole('link', { name: propio }).click();
   // Primero la URL: la portada tambien tiene un titulo con el nombre ("Aqui esta
   // ..."), y sin esto el expect siguiente podia darse por bueno antes de navegar.
   await expect(paginaMia).toHaveURL(/\/b\//);
