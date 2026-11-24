@@ -2,11 +2,11 @@
  * Mide los objetivos de sensacion de COMBATE.md §3. Son objetivos propios del
  * proyecto, no datos de nadie: se ajustan las constantes hasta entrar en rango.
  */
-import { createBrute, growTo } from './brute.js';
+import { applyLevelUpOption, createBrute, growTo } from './brute.js';
 import { WEAPONS } from './catalog.js';
-import { mulberry32, randInt } from './prng.js';
+import { mulberry32, pick, randInt, type Rng } from './prng.js';
 import { simulate } from './simulate.js';
-import type { FightEvent, FightResult } from './types.js';
+import type { Brute, FightEvent, FightResult } from './types.js';
 
 export interface Medida {
   nombre: string;
@@ -168,8 +168,9 @@ export function porCategoria(combates: number): Map<string, { con: number; gana:
   const tabla = new Map<string, { con: number; gana: number }>();
 
   for (let i = 0; i < combates; i++) {
-    const a = createBrute(`cat-${i}-a`);
-    const b = createBrute(`cat-${i}-b`);
+    // El nivel 1 empieza sin arma: se le pone una a cada uno para medir esto.
+    const a = armado(createBrute(`cat-${i}-a`), rng);
+    const b = armado(createBrute(`cat-${i}-b`), rng);
     const ganaA = simulate(a, b, randInt(rng, 0, 2 ** 30)).winner === 'A';
 
     for (const [brute, gano] of [
@@ -190,6 +191,9 @@ export function porCategoria(combates: number): Map<string, { con: number; gana:
   }
   return tabla;
 }
+
+const armado = (brute: Brute, rng: Rng): Brute =>
+  applyLevelUpOption(brute, { type: 'weapon', id: pick(rng, WEAPONS).id });
 
 const categoriaDe = (id: string | undefined): string | undefined =>
   id === undefined ? undefined : WEAPONS.find((w) => w.id === id)?.category;

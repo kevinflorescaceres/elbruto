@@ -26,7 +26,9 @@ export const FISTS: Weapon = {
   id: 'punos',
   name: 'Puños',
   category: 'rapida',
-  damage: 3,
+  // 6 y no 3: desde que el nivel 1 empieza sin arma, con 3 el combate se iba a
+  // 37 impactos de 3 de dano. Con 6 vuelve a ~21 impactos, como cuando habia arma.
+  damage: 6,
   accuracyBonus: 4,
   interval: 66,
   comboRate: 12,
@@ -169,31 +171,31 @@ export const SKILLS: readonly Skill[] = [
     id: 'cuero-curtido',
     name: 'Cuero Curtido',
     type: 'pasiva',
-    effect: { kind: 'maxHp', amount: 16 },
+    effect: { kind: 'maxHp', amount: 10 },
   },
   {
     id: 'callo-viejo',
     name: 'Callo Viejo',
     type: 'pasiva',
-    effect: { kind: 'armor', amount: 2 },
+    effect: { kind: 'armor', amount: 1 },
   },
   {
     id: 'pies-ligeros',
     name: 'Pies Ligeros',
     type: 'pasiva',
-    effect: { kind: 'stat', stat: 'agility', amount: 3 },
+    effect: { kind: 'stat', stat: 'agility', amount: 2 },
   },
   {
     id: 'brazo-de-fragua',
     name: 'Brazo de Fragua',
     type: 'pasiva',
-    effect: { kind: 'stat', stat: 'strength', amount: 3 },
+    effect: { kind: 'stat', stat: 'strength', amount: 2 },
   },
   {
     id: 'resuello',
     name: 'Resuello',
     type: 'pasiva',
-    effect: { kind: 'stat', stat: 'speed', amount: 3 },
+    effect: { kind: 'stat', stat: 'speed', amount: 2 },
   },
   {
     id: 'mano-zurda',

@@ -26,14 +26,14 @@ Estos valores están documentados públicamente y conviene respetarlos tal cual.
 
 - **Vida base: 50.**
 - **Cada punto de resistencia (endurance) da +6 de vida.**
-- **Cada nivel da +1.5 de vida**, independiente de la resistencia.
-- La resistencia puede ser 0. La vida mínima posible de un luchador es 51.
-- En la práctica un luchador nivel 1 tiene alrededor de **63 de vida** (base 50 + unos 2 puntos de resistencia).
+- **Cada nivel da +3 de vida** (+1,5 hasta ENGINE_VERSION 4), independiente de la resistencia.
+- La resistencia puede ser 0. La vida mínima posible de un luchador es 33 _(51 con la base de 50 anterior)_.
+- En la práctica un luchador nivel 1 tiene alrededor de **51 de vida** (base 30 + 3 puntos de resistencia + 3 del nivel).
 
 La fórmula actual del proyecto (`50 + endurance * 6`) es correcta. **Falta agregar el término por nivel.**
 
 ```
-maxHp = floor(50 + endurance * 6 + level * 1.5)
+maxHp = floor(30 + endurance * 6 + level * 3)   # 50 y 1.5 hasta ENGINE_VERSION 4
 ```
 
 ### Estadísticas iniciales
@@ -122,14 +122,14 @@ Al comenzar el combate, el tiempo inicial de cada luchador se sortea con el PRNG
 ### 4.5 Daño
 
 ```
-base    = weapon.damage + floor(strength * weapon.strengthScale / 100)
-variado = base * rand(80, 120) / 100
-final   = max(1, variado - defender.armor)
+base    = weapon.damage + strength * weapon.strengthScale / 100     # sin floor desde ENGINE_VERSION 4
+variado = floor(base * rand(80, 120) / 100)
+final   = max(1, variado - defender.armor)   # la armadura, solo en el primer impacto
 ```
 
 Para armas arrojadizas, sustituir la fuerza por `agility * 0.7 + strength * 0.3` en el término de escalado.
 
-Daño base por categoría (valores de partida): puños 3, rápida 5, media 9, larga 10, pesada 20, arrojadiza 7.
+Daño base por categoría (valores de partida): puños 3 _(6 desde que el nivel 1 empieza sin arma)_, rápida 5, media 9, larga 10, pesada 20, arrojadiza 7.
 
 ### 4.6 Defensa
 

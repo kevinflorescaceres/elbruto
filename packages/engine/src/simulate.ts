@@ -20,7 +20,7 @@ import type {
 // nueva con azar, combos de hasta 3 impactos, defensa en orden esquiva /
 // bloqueo / contraataque, arrojadizas que no se agotan y mascotas que cuestan
 // resistencia.
-export const ENGINE_VERSION = 3;
+export const ENGINE_VERSION = 4;
 
 const MAX_TURNS = 500;
 
@@ -64,7 +64,7 @@ export interface CombatStats {
  */
 export function combatStats(brute: Brute): CombatStats {
   // Las mascotas se pagan en resistencia (COMBATE.md §4.8). El suelo es 0: la
-  // vida base de 50 no se toca.
+  // vida base de 30 no se toca.
   const coste = brute.pets.reduce((suma, id) => suma + getPet(id).enduranceCost, 0);
   const endurance = Math.max(0, brute.endurance - coste);
   let maxHp = maxHpFor(endurance, brute.level);
@@ -163,12 +163,14 @@ function buildPet(petId: string, side: Side, index: number): Combatant {
  * La base sale de ajustar hasta que los ataques fallados caen en el 20-35% que
  * pide §3: con la base 10 del documento se quedaban en el 12,6%.
  */
-const DODGE_BASE = 22;
+const DODGE_BASE = 17;
+const DODGE_PER_AGILITY = 3;
+const COMBO_PER_AGILITY = 3;
 
 export function dodgeChance(weapon: Weapon, defender: Combatant): number {
   // Techo 36 y no el 40 del documento: con 40, a nivel 10 los fallos se iban al
   // 35,6% y el objetivo de §3 es 35 como mucho.
-  return clamp(DODGE_BASE + defender.agility * 2 - weapon.accuracyBonus, 5, 36);
+  return clamp(DODGE_BASE + defender.agility * DODGE_PER_AGILITY - weapon.accuracyBonus, 5, 36);
 }
 
 /** Tiempo hasta la siguiente accion de quien empuna esta arma (COMBATE.md §4.3). */
@@ -181,7 +183,7 @@ export function delayWith(weapon: Weapon, speed: number): number {
  * decide que arma se empuna.
  */
 export function weaponScore(weapon: Weapon, attacker: Combatant, defender: Combatant): number {
-  const dano = weapon.damage + Math.floor((attacker.strength * weapon.strengthScale) / 100);
+  const dano = weapon.damage + (attacker.strength * weapon.strengthScale) / 100;
   const conecta = 100 - dodgeChance(weapon, defender);
   return (dano * conecta) / delayWith(weapon, attacker.speed);
 }
@@ -279,11 +281,14 @@ function resolveAttack(
     weapon.category === 'arrojadiza'
       ? attacker.agility * 0.7 + attacker.strength * 0.3
       : attacker.strength;
-  const base = weapon.damage + Math.floor((aporte * weapon.strengthScale) / 100);
+  // Sin redondear aqui: se redondea una vez, despues de la variacion. Con un
+  // floor en este punto, un punto de fuerza que no llegaba al siguiente entero
+  // no servia de nada (con los punos, fuerza 3 pegaba igual que fuerza 2).
+  const base = weapon.damage + (aporte * weapon.strengthScale) / 100;
 
   // Combos (COMBATE.md §4.2): hasta 3 impactos encadenados, cada uno al 70% del
   // anterior, y cada uno se tira contra la misma probabilidad.
-  const combo = clamp(weapon.comboRate + attacker.agility * 2, 0, MAX_COMBO_CHANCE);
+  const combo = clamp(weapon.comboRate + attacker.agility * COMBO_PER_AGILITY, 0, MAX_COMBO_CHANCE);
   const varied = Math.floor((base * randInt(state.rng, 80, 120)) / 100);
   // Un golpe pesado pasa por encima del acolchado: la dureza no lo amortigua.
   const armadura = weapon.category === 'pesada' ? 0 : defender.armor;
@@ -295,7 +300,9 @@ function resolveAttack(
   for (let golpe = 0; golpe < MAX_COMBO_HITS; golpe++) {
     state.log.push({ type: 'hit', id: attacker.id, target: defender.id });
 
-    const amount = Math.max(1, golpeado - armadura);
+    // La armadura solo frena el primer impacto: los del combo entran ya sin
+    // defensa, y asi un golpe de 1 de dano no se queda siempre en el minimo.
+    const amount = Math.max(1, golpeado - (golpe === 0 ? armadura : 0));
 
     defender.hp = Math.max(0, defender.hp - amount);
     state.log.push({ type: 'damage', id: defender.id, amount, hp: defender.hp });
@@ -304,8 +311,18 @@ function resolveAttack(
       state.log.push({ type: 'death', id: defender.id });
       return;
     }
-    if (!chance(state.rng, combo)) return;
+    if (!chance(state.rng, combo)) break;
     golpeado = Math.floor(golpeado * COMBO_FALLOFF);
+  }
+
+  // Revire tambien responde al encajar: quien aguanta el golpe lo devuelve. Solo
+  // la mania, no el arma larga, que necesita el hueco de la esquiva.
+  if (allowCounter && defender.counter > 0 && chance(state.rng, defender.counter)) {
+    state.log.push({ type: 'counter', id: defender.id, target: attacker.id });
+    resolveAttack(state, defender, attacker, defender.weapon, {
+      allowCounter: false,
+      multiplier: 1,
+    });
   }
 }
 

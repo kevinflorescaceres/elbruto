@@ -61,7 +61,7 @@ export const clothColor2For = (slug: string): number => campoDeApariencia(slug, 
  * al dano, para que los combates no se acorten al subir de nivel.
  */
 export const maxHpFor = (endurance: number, level: number): number =>
-  Math.floor(50 + endurance * 6 + level * 1.5);
+  Math.floor(30 + endurance * 6 + level * 3);
 
 export const xpForLevel = (level: number): number => level * 5;
 
@@ -100,6 +100,9 @@ function rollAppearance(rng: Rng, slug: string): Appearance {
 }
 
 /** Un luchador nuevo: nivel 1, una mejora al azar y los punos. */
+/** Desarmar no sirve de nada a nivel 1, donde nadie tiene arma. */
+const STARTER_SKILLS = SKILLS.filter((s) => s.effect.kind !== 'disarm');
+
 export function createBrute(name: string): Brute {
   const slug = slugify(name);
   if (slug.length === 0) throw new Error('El nombre no produce un slug valido');
@@ -119,13 +122,9 @@ export function createBrute(name: string): Brute {
     appearance: rollAppearance(rng, slug),
   };
 
-  // Una mejora inicial. Sin mascota: a nivel 1 desequilibra el combate.
-  const starter = weightedPick<LevelUpOption>(rng, [
-    { value: { type: 'weapon', id: pick(rng, WEAPONS).id }, weight: 50 },
-    { value: { type: 'skill', id: pick(rng, SKILLS).id }, weight: 50 },
-  ]);
-
-  return applyLevelUpOption(brute, starter);
+  // Una mania inicial. Ni arma ni mascota: a nivel 1 se pelea a mano limpia,
+  // y las armas llegan al subir de nivel.
+  return applyLevelUpOption(brute, { type: 'skill', id: pick(rng, STARTER_SKILLS).id });
 }
 
 /** Clave estable de una opcion: sirve para no ofrecer dos veces lo mismo. */

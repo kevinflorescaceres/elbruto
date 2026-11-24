@@ -124,8 +124,8 @@ Fight
 
 - La semilla del luchador es un hash del slug.
 - Estadísticas iniciales: `endurance`, `strength`, `agility` y `speed` repartiendo 12 puntos, con mínimo 2 en cada una, usando el PRNG.
-- Vida máxima: `floor(50 + endurance * 6 + level * 1.5)`. El término por nivel sube la vida en paralelo al daño, para que el combate no se acorte al subir de nivel.
-- Empieza con 1 mejora aleatoria: arma o habilidad. Nunca mascota: a nivel 1 desequilibra.
+- Vida máxima: `floor(30 + endurance * 6 + level * 3)`. El término por nivel sube la vida en paralelo al daño, para que el combate no se acorte al subir de nivel.
+- Empieza con 1 habilidad aleatoria. Nunca arma ni mascota: a nivel 1 se pelea a mano limpia y las armas llegan al subir de nivel.
 
 ### Progresión
 
@@ -155,10 +155,10 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 
 **Resolución, en este orden:**
 
-1. **Esquiva:** `clamp(22 + defender.agility * 2 - weapon.accuracyBonus, 5, 36)` por ciento. Si esquiva, el defensor puede **contraatacar**: su probabilidad de contra, más 25 si empuña un arma larga. El contraataque no encadena.
+1. **Esquiva:** `clamp(17 + defender.agility * 3 - weapon.accuracyBonus, 5, 36)` por ciento. Si esquiva, el defensor puede **contraatacar**: su probabilidad de contra, más 25 si empuña un arma larga. El contraataque no encadena.
 2. **Bloqueo:** solo si el defensor tiene habilidad de bloqueo.
-3. **Daño:** `weapon.damage + floor(aporte * strengthScale / 100)`, con variación ±20%. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor, salvo con arma **pesada**, que la ignora. Mínimo 1.
-4. **Combos:** tras un impacto, se tira `clamp(weapon.comboRate + agility * 2, 0, 45)`. Hasta **3 impactos** por acción, y cada uno hace el **70% del anterior** (del impacto previo, no de la base). Cada impacto emite su propio `hit` y `damage`.
+3. **Daño:** `weapon.damage + aporte * strengthScale / 100`, con variación ±20% y truncado al final. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor, solo en el primer impacto y salvo con arma **pesada**, que la ignora. Mínimo 1.
+4. **Combos:** tras un impacto, se tira `clamp(weapon.comboRate + agility * 3, 0, 45)`. Hasta **3 impactos** por acción, y cada uno hace el **70% del anterior** (del impacto previo, no de la base). Cada impacto emite su propio `hit` y `damage`.
 
 **Gestión de armas:**
 

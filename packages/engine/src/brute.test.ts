@@ -36,12 +36,15 @@ describe('createBrute', () => {
     }
   });
 
-  it('empieza a nivel 1 con exactamente una mejora y sin mascota', () => {
-    for (const name of NAMES) {
-      const brute = createBrute(name);
+  it('empieza a nivel 1 con una sola maña, sin arma ni mascota', () => {
+    for (let i = 0; i < 200; i++) {
+      const brute = createBrute(`novato numero ${i}`);
       expect(brute.level).toBe(1);
       expect(brute.pets).toEqual([]);
-      expect(brute.weapons.length + brute.skills.length).toBe(1);
+      expect(brute.weapons).toEqual([]);
+      expect(brute.skills).toHaveLength(1);
+      // Desarmar no sirve a nivel 1: nadie tiene arma.
+      expect(brute.skills).not.toContain('desjarrete');
     }
   });
 

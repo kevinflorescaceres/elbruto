@@ -290,13 +290,13 @@ velocidad → intervalo entre acciones; resistencia → solo vida.
 ### Fórmulas vigentes, copiadas del código
 
 ```
-vida      floor(50 + endurance*6 + level*1.5)
+vida      floor(30 + endurance*6 + level*3)
 intervalo max(1, round(weapon.interval * 100 / (10 + speed)))   con ±18% de azar al aplicarlo
-esquiva   clamp(22 + defender.agility*2 - weapon.accuracyBonus, 5, 36)     [%]
-combo     clamp(weapon.comboRate + attacker.agility*2, 0, 45)              [%]
-daño      weapon.damage + floor(aporte * weapon.strengthScale / 100)
+esquiva   clamp(17 + defender.agility*3 - weapon.accuracyBonus, 5, 36)     [%]
+combo     clamp(weapon.comboRate + attacker.agility*3, 0, 45)              [%]
+daño      weapon.damage + aporte * weapon.strengthScale / 100   (truncado tras el ±20%)
           aporte = strength, salvo arrojadiza: agility*0.7 + strength*0.3
-          luego ±20%, luego se resta armor (0 si el arma es pesada), mínimo 1
+          luego ±20%, luego se resta armor solo al primer impacto (0 si el arma es pesada), mínimo 1
 ```
 
 Constantes: `MAX_TURNS 500` · `MAX_COMBO_HITS 3` · `MAX_COMBO_CHANCE 45` ·
@@ -332,16 +332,16 @@ Objetivo: luchador rival peso 5, cada mascota viva peso 1.
 
 | id                | nombre visible  | tipo   | efecto                                  |
 | ----------------- | --------------- | ------ | --------------------------------------- |
-| `cuero-curtido`   | Cuero Curtido   | pasiva | +16 de vida máxima                      |
-| `callo-viejo`     | Callo Viejo     | pasiva | +2 de armadura (resta al daño recibido) |
-| `pies-ligeros`    | Pies Ligeros    | pasiva | +3 de agilidad                          |
-| `brazo-de-fragua` | Brazo de Fragua | pasiva | +3 de fuerza                            |
-| `resuello`        | Resuello        | pasiva | +3 de velocidad                         |
+| `cuero-curtido`   | Cuero Curtido   | pasiva | +10 de vida máxima                      |
+| `callo-viejo`     | Callo Viejo     | pasiva | +1 de armadura (resta al primer impacto) |
+| `pies-ligeros`    | Pies Ligeros    | pasiva | +2 de agilidad                          |
+| `brazo-de-fragua` | Brazo de Fragua | pasiva | +2 de fuerza                            |
+| `resuello`        | Resuello        | pasiva | +2 de velocidad                         |
 | `mano-zurda`      | Mano Zurda      | pasiva | 15% de bloqueo                          |
-| `revire`          | Revire          | pasiva | 20% de contraataque tras esquivar       |
+| `revire`          | Revire          | pasiva | 20% de contraataque tras esquivar o encajar |
 | `trago-largo`     | Trago Largo     | activa | cura el 40% de la vida máxima, una vez  |
 | `zurriagazo`      | Zurriagazo      | activa | un golpe con daño ×2, una vez           |
-| `desjarrete`      | Desjarrete      | activa | desarma al rival, una vez               |
+| `desjarrete`      | Desjarrete      | activa | desarma al rival, una vez (nunca de inicio) |
 
 ### Catálogo de mascotas
 

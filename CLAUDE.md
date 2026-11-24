@@ -82,7 +82,7 @@ tests, asi que nunca pisan la base de desarrollo.
 - Prisma 7 no admite `url` en el schema: la conexión va en `apps/server/prisma.config.ts`
   y el cliente usa el driver adapter de `pg`. `prisma` está fijado en 7.10.0 porque su
   tag `latest` en npm apunta a una release candidate de la 8.
-- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **3**.
+- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **4**.
   Los combates antiguos se siguen viendo: se reproducen desde su log guardado, no se
   vuelven a simular.
 - **Los textos que ve el jugador llevan tildes.** Los comentarios del código no, para
@@ -94,19 +94,26 @@ tests, asi que nunca pisan la base de desarrollo.
 
 `combate.md` manda sobre la sección 6 de `plan.md` donde haya conflicto. Lo implementado:
 
-- **Vida** `floor(50 + resistencia*6 + nivel*1.5)`. El término por nivel sube la vida en
-  paralelo al daño, para que el combate no se acorte al subir.
+- **Vida** `floor(30 + resistencia*6 + nivel*3)`. El término por nivel sube la vida en
+  paralelo al daño, para que el combate no se acorte al subir. Era 1,5; pasó a 3 al quitar
+  el redondeo de la fuerza, que subió el daño a nivel 10.
 - **Intervalo** `round(intervalo*100 / (10 + velocidad))`, con un ±18% de azar. Sin ese
   azar, dos peleones iguales alternan en lockstep y nunca encadenan dos acciones.
 - **Combos**: hasta 3 impactos, cada uno al 70% del **anterior** (no de la base), con
-  probabilidad `comboRate + agilidad*2`, tope 45%.
+  probabilidad `comboRate + agilidad*3`, tope 45%.
+- **Daño**: el aporte de la fuerza no se redondea; se trunca una sola vez, tras el ±20%.
+  La armadura solo frena el **primer** impacto de cada acción, no los del combo.
+- **Nivel 1**: sin arma, con una maña al azar que nunca es Desjarrete (no hay nada que
+  desarmar). Por eso los puños pegan 6 y no 3.
 - **Defensa** en orden: esquiva → bloqueo → contraataque. El contraataque responde a la
-  **esquiva**, y un arma larga en la mano añade 25 puntos.
+  **esquiva**, y un arma larga en la mano añade 25 puntos. Revire es la excepción: también
+  responde tras **encajar** un golpe (solo su porcentaje, sin el bonus del arma larga).
 - **Arrojadizas**: solo se lanzan, no se agotan, y el daño escala con agilidad.
 - **Mascotas**: cuestan resistencia (2/4/8), así que tener bicho te hace más frágil.
 
-**Dos desviaciones del documento, medidas:** la base de esquiva es 22 y no 10 (con 10 los
-fallos se quedaban en 12,6% y el objetivo es 20-35%), y el techo del clamp es 36 y no 40
+**Desviaciones del documento, medidas:** la esquiva es `17 + agilidad*3` y no `10 + agilidad*2`
+(con base 10 los fallos se quedaban en 12,6% y el objetivo es 20-35%; el ×3 es para que un
+punto de agilidad valga casi lo que uno de resistencia), y el techo del clamp es 36 y no 40
 (con 40, a nivel 10 los fallos se iban a 35,6%).
 
 **Cómo se mide el equilibrio entre categorías:** cara a cara, con ambos armados y armas de
@@ -173,6 +180,7 @@ El combate sigue `combate.md`, implementado entero incluida la sección 5 del ri
 Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **torneos diarios** y **sonido**.
 
 <!-- PANTHEON:INICIO -->
+
 ## Ficha de despliegue (Pantheon)
 
 Este proyecto está registrado en Pantheon. Su ficha vive en `~/code/app-pantheon/fichas/<slug>.md`
