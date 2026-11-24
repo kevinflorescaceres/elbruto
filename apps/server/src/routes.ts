@@ -142,7 +142,8 @@ export function registerRoutes(
     if (!check.ok) throw new HttpError(400, check.reason);
 
     const taken = await prisma.brute.findUnique({ where: { slug: check.slug } });
-    if (taken !== null) throw new HttpError(409, 'Ese nombre ya está cogido');
+    if (taken !== null)
+      throw new HttpError(409, 'Ese nombre ya está cogido. Prueba con otro o añádele un mote.');
 
     const keeperId = await requireKeeperId(request, reply);
     const brute = createBrute(name.trim());

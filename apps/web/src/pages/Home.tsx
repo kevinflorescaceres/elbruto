@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { createBrute } from '@camorra/engine';
-import { NAME_MAX, NAME_MIN } from '@camorra/shared';
+import { NAME_MAX } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
 import { Boton, Pagina, Tarjeta, TarjetaBoton } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { useMe } from '../hooks.js';
+import { ayudaNombre } from '../nombre.js';
 
 /*
  * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
@@ -29,6 +30,8 @@ export function Home() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [claimUrl, setClaimUrl] = useState<string | null>(null);
+
+  const ayuda = ayudaNombre(name);
 
   const create = useMutation({
     mutationFn: () => api.createBrute(name, masterSlug),
@@ -89,6 +92,9 @@ export function Home() {
 
       <Tarjeta>
         <h2>Nuevo peleón</h2>
+        <label htmlFor="nombre-peleon" className="etiqueta">
+          Nombre del peleón
+        </label>
         <form
           className="campo-nombre"
           onSubmit={(e) => {
@@ -97,23 +103,31 @@ export function Home() {
           }}
         >
           <input
+            id="nombre-peleon"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Chirlo de la Cava"
             maxLength={NAME_MAX}
-            aria-label="Nombre del peleón"
+            aria-describedby="nombre-ayuda"
+            aria-invalid={ayuda.tipo === 'error'}
           />
-          <Boton
-            type="submit"
-            tipo="principal"
-            disabled={name.trim().length < NAME_MIN || create.isPending}
-          >
-            {create.isPending ? 'Creando...' : 'Crear'}
+          <Boton type="submit" tipo="principal" disabled={!ayuda.valido || create.isPending}>
+            {create.isPending ? 'Creando…' : 'Crear'}
           </Boton>
         </form>
+        {/* Dice por que el boton no se deja pulsar, en vez de dejarlo apagado sin mas. */}
+        <p
+          id="nombre-ayuda"
+          className={ayuda.tipo === 'error' ? 'ayuda error' : 'ayuda apagado'}
+          aria-live="polite"
+        >
+          {ayuda.texto}
+        </p>
         {create.error && (
-          <p className="error">
-            {create.error instanceof ApiError ? create.error.message : 'Algo ha fallado'}
+          <p className="error" role="alert">
+            {create.error instanceof ApiError
+              ? create.error.message
+              : 'No se ha podido crear. Inténtalo otra vez.'}
           </p>
         )}
       </Tarjeta>
