@@ -72,8 +72,17 @@ export function Pagina({
   );
 }
 
-export function Tarjeta({ children, hundida }: { children: ReactNode; hundida?: boolean }) {
-  return <div className={hundida === true ? 'tarjeta hundida' : 'tarjeta'}>{children}</div>;
+export function Tarjeta({
+  children,
+  hundida,
+  className,
+}: {
+  children: ReactNode;
+  hundida?: boolean;
+  className?: string;
+}) {
+  const clases = ['tarjeta', hundida === true ? 'hundida' : '', className ?? ''].filter(Boolean);
+  return <div className={clases.join(' ')}>{children}</div>;
 }
 
 interface BotonProps {

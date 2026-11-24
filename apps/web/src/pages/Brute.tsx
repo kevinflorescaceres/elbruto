@@ -163,13 +163,14 @@ export function BrutePage() {
         titulo: b.name,
         bajada: (
           <>
-            Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {record(b.wins, b.losses)}
+            {/* La experiencia ya va en su barra: aqui sobraba repetida. */}
+            Nivel {b.level} · {record(b.wins, b.losses)}
             {b.isBot && ' · peleón de la casa'}
           </>
         ),
       }}
     >
-      <Tarjeta>
+      <Tarjeta className="ficha">
         <div className="ficha-cuerpo">
           <div className="retrato">
             <Fighter
@@ -211,7 +212,9 @@ export function BrutePage() {
       {saberDeQuienEs && !mine && <Desafio rival={b} />}
 
       {mine && (
-        <Tarjeta>
+        // En el movil va pegada al pie: lo que se viene a hacer cada dia quedaba
+        // debajo del pliegue, tras el retrato y las cifras.
+        <Tarjeta className="ficha-accion">
           {/* Mientras se refresca, lo cacheado puede estar viejo: ensenar el boton
               de pelear cuando ya hay mejora pendiente lleva a un 409 sin sentido. */}
           {brute.isFetching ? (

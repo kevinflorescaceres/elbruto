@@ -1147,6 +1147,37 @@ th {
   }
 }
 
+/* --- Ficha en el movil (ARTE-Y-TOKENS.md §2.5) --- */
+
+@media (max-width: 48rem) {
+  /* El retrato centrado: a la izquierda dejaba un hueco muerto a su lado. */
+  .ficha .ficha-cuerpo {
+    justify-content: center;
+  }
+
+  /*
+   * La accion del dia, pegada al pie mientras se baja por la ficha; al llegar a
+   * su sitio se queda en el. Compacta: la frase y el boton en una linea.
+   */
+  .ficha-accion {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-2) var(--e-3);
+    padding: var(--e-3);
+    box-shadow: 0 -6px 16px -8px rgb(36 31 28 / 35%);
+  }
+
+  .ficha-accion > p {
+    flex: 1 1 12rem;
+    margin: 0;
+  }
+}
+
 /* --- Ranking (ARTE-Y-TOKENS.md §2.5) --- */
 
 .rk-panel {
