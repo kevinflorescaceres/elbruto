@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
 import { ESTADISTICAS, Pagina, TarjetaBoton } from '../ui.js';
 import { api } from '../api.js';
+import { describeSkill } from '../skillText.js';
 
 // Los mismos nombres que la ficha: antes era una copia aparte y podian divergir.
 const STAT_NAMES: Record<string, string> = Object.fromEntries(
@@ -22,7 +23,7 @@ function describeOption(option: LevelUpOption): { title: string; detail: string 
       const skill = getSkill(option.id);
       return {
         title: skill.name,
-        detail: skill.type === 'activa' ? 'Maña de un solo uso por pelea' : 'Maña permanente',
+        detail: `Maña · ${describeSkill(skill)}`,
       };
     }
     case 'pet': {

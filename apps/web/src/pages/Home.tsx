@@ -6,7 +6,7 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
-import { createBrute, getSkill, getWeapon } from '@camorra/engine';
+import { createBrute, getSkill } from '@camorra/engine';
 import { NAME_MAX, type BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
 import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
@@ -15,6 +15,7 @@ import { Cuenta } from '../Cuenta.js';
 import { useMe } from '../hooks.js';
 import { ayudaNombre, type AyudaNombre } from '../nombre.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
+import { describeSkill } from '../skillText.js';
 import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
 
 /*
@@ -46,11 +47,8 @@ function RecienCreado({ brute, otro }: { brute: BruteProfile; otro: () => void }
     window.scrollTo({ top: 0 });
   }, [brute.slug]);
 
-  // Empieza con una mejora: un arma o una maña (createBrute en el motor).
-  const inicial = [
-    ...brute.weapons.map((id) => getWeapon(id).name),
-    ...brute.skills.map((id) => getSkill(id).name),
-  ];
+  // Empieza con una mania y sin arma (createBrute en el motor).
+  const mania = brute.skills[0] === undefined ? undefined : getSkill(brute.skills[0]);
 
   return (
     <div className="recien">
@@ -74,9 +72,10 @@ function RecienCreado({ brute, otro }: { brute: BruteProfile; otro: () => void }
                 <Estadistica key={campo} etiqueta={etiqueta} valor={brute[campo]} />
               ))}
             </div>
-            {inicial.length > 0 && (
+            {mania !== undefined && (
               <p className="recien-inicial">
-                Sale a la calle con <strong>{inicial.join(' y ')}</strong>.
+                Sale a la calle a puño limpio y con una maña: <strong>{mania.name}</strong>.{' '}
+                <span className="apagado">{describeSkill(mania)}</span>
               </p>
             )}
             <div className="fila recien-acciones">

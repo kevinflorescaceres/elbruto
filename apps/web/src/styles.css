@@ -500,6 +500,14 @@ th {
   margin: 0;
 }
 
+.manas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
 .denuncia {
   margin-top: 2rem;
 }

@@ -8,6 +8,7 @@ import type { BruteProfile } from '@camorra/shared';
 import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
 import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
+import { describeSkill } from '../skillText.js';
 
 function Denuncia({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
@@ -171,7 +172,7 @@ export function BrutePage() {
               </dd>
               <dt>Mañas</dt>
               <dd>
-                <Chips nombres={b.skills.map((id) => getSkill(id).name)} vacio="Ninguna" />
+                <Manas ids={b.skills} />
               </dd>
               <dt>Bichos</dt>
               <dd>
@@ -265,5 +266,23 @@ export function BrutePage() {
         <Denuncia slug={slug} />
       </div>
     </Pagina>
+  );
+}
+
+/** Cada mania con lo que hace: el nombre solo no dice nada a quien empieza. */
+function Manas({ ids }: { ids: string[] }) {
+  if (ids.length === 0) return <span className="apagado">Ninguna</span>;
+  return (
+    <ul className="manas">
+      {ids.map((id) => {
+        const skill = getSkill(id);
+        return (
+          <li key={id}>
+            <span className="chip">{skill.name}</span>{' '}
+            <span className="apagado">{describeSkill(skill)}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
