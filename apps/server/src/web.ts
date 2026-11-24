@@ -17,6 +17,7 @@ const SITE = 'Camorra';
 const RUTAS = [
   /^\/$/,
   /^\/legal$/,
+  /^\/ranking$/,
   /^\/b\/[\w-]+(\/(arena|level-up))?$/,
   /^\/fight\/[\w-]+$/,
   /^\/claim\/[\w-]+$/,
