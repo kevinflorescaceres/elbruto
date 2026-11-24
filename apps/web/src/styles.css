@@ -84,6 +84,11 @@ h3 {
   background: var(--papel-claro);
 }
 
+/* El margen del ultimo parrafo se sumaba al padding y dejaba la tarjeta coja por abajo. */
+.tarjeta > p:last-child {
+  margin-bottom: 0;
+}
+
 /* --- Marcador del combate --- */
 
 .marcador {
@@ -308,6 +313,20 @@ th {
   text-decoration: underline;
 }
 
+/*
+ * El texto de la barra mide 26 px de alto: el padding lleva la zona de toque a
+ * 44 px sin cambiar como se ve. La barra pierde el suyo para no crecer.
+ */
+.barra-superior {
+  padding-block: 0.1rem;
+}
+
+.barra-superior a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .marca {
   font-size: 25px;
   font-weight: 800;
@@ -520,6 +539,50 @@ th {
   max-width: 52rem;
   margin: 0 auto;
   border: 0;
+}
+
+/* --- Portada --- */
+
+.portada-cabecera {
+  margin: 0.5rem 0 1.5rem;
+}
+
+.portada-cabecera h1 {
+  font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.5rem);
+  line-height: 1.1;
+  text-wrap: balance;
+  margin-bottom: 0.4rem;
+}
+
+.portada-cabecera p {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/*
+ * Campo y boton en la misma linea tambien a 360 px: antes el campo media
+ * 221 px y "Crear" caia debajo. 44 px de alto para el dedo.
+ */
+.campo-nombre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  /* Un nombre son pocas palabras: en escritorio no hace falta un campo de 700 px. */
+  max-width: 30rem;
+}
+
+.campo-nombre input,
+.campo-nombre .boton {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.portada-seccion {
+  margin-top: 2.5rem;
+}
+
+.portada-pie {
+  margin-top: 3rem;
 }
 
 /* Hueco para que la barra fija no tape la ultima fila. */

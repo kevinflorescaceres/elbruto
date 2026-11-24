@@ -34,7 +34,11 @@ export function Home() {
 
   return (
     <Pagina>
-      <h1>Camorra</h1>
+      {/* La marca ya esta en la barra: el h1 dice lo que pasa aqui. */}
+      <header className="portada-cabecera">
+        <h1>Pon un nombre y tendrás un peleón.</h1>
+        <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+      </header>
 
       {masterSlug !== undefined && (
         <div className="tarjeta">
@@ -53,14 +57,11 @@ export function Home() {
           )}
         </div>
       )}
-      <p className="apagado">
-        Pon un nombre y tendrás un peleón. Lo demás lo deciden él y la mala suerte.
-      </p>
 
       <Tarjeta>
         <h2>Nuevo peleón</h2>
         <form
-          className="fila"
+          className="campo-nombre"
           onSubmit={(e) => {
             e.preventDefault();
             create.mutate();
@@ -102,38 +103,40 @@ export function Home() {
         </Tarjeta>
       )}
 
-      <h2>Mis peleones</h2>
-      <p className="apagado">
-        <Link to="/ranking">Ver quién manda en la calle →</Link>
-      </p>
       {me.isPending && <p className="apagado">Cargando...</p>}
-      {me.data?.brutes.length === 0 && <p className="apagado">Todavía no tienes ninguno.</p>}
-      <div className="rejilla">
-        {me.data?.brutes.map((brute) => (
-          <TarjetaBoton key={brute.slug} onClick={() => void navigate(`/b/${brute.slug}`)}>
-            {/* Con cara: es la lista que mas se mira y era la unica sin retrato. */}
-            <div className="ficha-mini">
-              <Fighter
-                appearance={brute.appearance}
-                slug={brute.slug}
-                weapon={armaVisible(brute.weapons)}
-                height={92}
-              />
-              <div>
-                <strong>{brute.name}</strong>
-                <div className="apagado">
-                  Nivel {brute.level} · {brute.wins}V {brute.losses}D
+      {/* Quien llega por primera vez no tiene peleones: no se le ensena una lista vacia. */}
+      {me.data !== undefined && me.data.brutes.length > 0 && (
+        <section className="portada-seccion">
+          <h2>Mis peleones</h2>
+          <div className="rejilla">
+            {me.data?.brutes.map((brute) => (
+              <TarjetaBoton key={brute.slug} onClick={() => void navigate(`/b/${brute.slug}`)}>
+                {/* Con cara: es la lista que mas se mira y era la unica sin retrato. */}
+                <div className="ficha-mini">
+                  <Fighter
+                    appearance={brute.appearance}
+                    slug={brute.slug}
+                    weapon={armaVisible(brute.weapons)}
+                    height={92}
+                  />
+                  <div>
+                    <strong>{brute.name}</strong>
+                    <div className="apagado">
+                      Nivel {brute.level} · {brute.wins}V {brute.losses}D
+                    </div>
+                    {brute.pendingLevelUp && <div className="aviso">Mejora pendiente</div>}
+                  </div>
                 </div>
-                {brute.pendingLevelUp && <div className="aviso">Mejora pendiente</div>}
-              </div>
-            </div>
-          </TarjetaBoton>
-        ))}
-      </div>
+              </TarjetaBoton>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <footer className="apagado" style={{ marginTop: '3rem' }}>
+      {/* El ranking ya esta en la barra superior: aqui solo lo legal. */}
+      <footer className="apagado portada-pie">
         Juego inspirado en los combates automáticos por turnos. Todo el contenido es original. ·{' '}
-        <Link to="/ranking">Ranking</Link> · <Link to="/legal">Condiciones y privacidad</Link>
+        <Link to="/legal">Condiciones y privacidad</Link>
       </footer>
     </Pagina>
   );
