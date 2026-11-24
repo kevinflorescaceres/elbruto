@@ -103,7 +103,7 @@ export function registerRoutes(
     if (error instanceof HttpError) return reply.code(error.status).send({ error: error.message });
     if (error instanceof z.ZodError) {
       // El mensaje del primer fallo, no el volcado de Zod: esto se ensena al jugador.
-      return reply.code(400).send({ error: error.issues[0]?.message ?? 'Datos no validos' });
+      return reply.code(400).send({ error: error.issues[0]?.message ?? 'Datos no válidos' });
     }
     app.log.error(error);
     const status = typeof error.statusCode === 'number' ? error.statusCode : 500;
@@ -142,7 +142,7 @@ export function registerRoutes(
     if (!check.ok) throw new HttpError(400, check.reason);
 
     const taken = await prisma.brute.findUnique({ where: { slug: check.slug } });
-    if (taken !== null) throw new HttpError(409, 'Ese nombre ya esta cogido');
+    if (taken !== null) throw new HttpError(409, 'Ese nombre ya está cogido');
 
     const keeperId = await requireKeeperId(request, reply);
     const brute = createBrute(name.trim());

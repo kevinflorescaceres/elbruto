@@ -206,7 +206,7 @@ Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los 
 
 - Validar entrada y salida con los esquemas Zod de `packages/shared`.
 - El endpoint de combate debe ser transaccional: verificar límite diario, sin elección pendiente, oponente válido; ejecutar `simulate`; guardar combate; actualizar XP, récord y peleas del día; crear `LevelUpChoice` si corresponde.
-- Validación de nombres: 5 a 20 caracteres, letras, números, guion, guion bajo y espacio; lista de palabras bloqueadas. Los límites viven en `NAME_MIN`/`NAME_MAX` de `packages/shared`. _(Ajustado en Fase 3: con 3 salían nombres como "asd".)_
+- Validación de nombres: 3 a 20 caracteres, letras, números, guion, guion bajo y espacio; lista de palabras bloqueadas. Los límites viven en `NAME_MIN`/`NAME_MAX` de `packages/shared`. _(En Fase 3 se subió a 5 porque con 3 salían nombres como "asd"; se volvió a 3 para que entren nombres cortos corrientes como "Ana" o "Leo", que se quedaban fuera sin explicación.)_
 
 ## 9. Frontend
 

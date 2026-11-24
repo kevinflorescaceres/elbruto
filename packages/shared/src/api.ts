@@ -7,13 +7,13 @@ import { appearanceSchema, fightEventSchema } from './fight.js';
  * Limites del nombre, en un unico sitio: los usan el esquema, la validacion del
  * servidor y el formulario de la web. Cambiarlos aqui los cambia en los tres.
  */
-export const NAME_MIN = 5;
+export const NAME_MIN = 3;
 export const NAME_MAX = 20;
 
 /** Letras, numeros, espacio, guion y guion bajo. */
 export const NAME_PATTERN = new RegExp(`^[\\p{L}\\p{N} _-]{${NAME_MIN},${NAME_MAX}}$`, 'u');
 
-export const NAME_HINT = `El nombre debe tener de ${NAME_MIN} a ${NAME_MAX} letras, numeros, guiones o espacios`;
+export const NAME_HINT = `El nombre debe tener de ${NAME_MIN} a ${NAME_MAX} letras, números, guiones o espacios`;
 
 export const nameSchema = z
   .string()
