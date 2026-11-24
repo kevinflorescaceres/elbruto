@@ -417,6 +417,20 @@ describe('razones para volver', () => {
     expect(vuelta).toBeLessThanOrEqual(Date.now() + 24 * 3600 * 1000 + 1000);
   });
 
+  it('a igualdad de nivel y victorias, la ficha da el mismo puesto que la lista', async () => {
+    // Tres empatados: el ranking los ordena por antiguedad, y la ficha tambien.
+    const empatados = [];
+    for (const n of ['a', 'b', 'c']) empatados.push(await newFighter(`empate-${n}`));
+    const lista = (await new Browser().call('GET', '/api/ranking?limit=100')).body.brutes as {
+      slug: string;
+      rank: number;
+    }[];
+    for (const { slug } of empatados) {
+      const ficha = (await new Browser().call('GET', `/api/brutes/${slug}`)).body;
+      expect(ficha.rank).toBe(lista.find((b) => b.slug === slug)?.rank);
+    }
+  });
+
   it('listar peleones no cuela el indice del array como puesto', async () => {
     // brutes.map(rowToProfile) pasaba el indice al segundo parametro y el
     // primero salia con puesto 0, que el esquema rechaza y tumba la portada.

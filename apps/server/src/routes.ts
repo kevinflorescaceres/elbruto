@@ -57,11 +57,17 @@ const ORDEN_RANKING = [
  * ponytail: cuenta sobre el indice (isBot, level); si algun dia hay muchos
  * jugadores, guardar el puesto y recalcularlo al terminar un combate.
  */
-async function puestoDe(row: { level: number; wins: number }): Promise<number> {
+async function puestoDe(row: { level: number; wins: number; createdAt: Date }): Promise<number> {
+  // Mismo orden que ORDEN_RANKING, desempate incluido. Sin el, la ficha daba un
+  // puesto mejor que el de la lista a quien empataba con otros mas veteranos.
   const porDelante = await prisma.brute.count({
     where: {
       isBot: false,
-      OR: [{ level: { gt: row.level } }, { level: row.level, wins: { gt: row.wins } }],
+      OR: [
+        { level: { gt: row.level } },
+        { level: row.level, wins: { gt: row.wins } },
+        { level: row.level, wins: row.wins, createdAt: { lt: row.createdAt } },
+      ],
     },
   });
   return porDelante + 1;
