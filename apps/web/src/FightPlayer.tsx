@@ -13,6 +13,7 @@ import { aEntero, LIENZO, type FightReplay } from '@camorra/shared';
 import { planFight } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';
+import { EscenaCombate } from './EscenaCombate.js';
 
 /**
  * Pixeles de verdad por pixel de escena. El lienzo se dibuja a SIZE y `cover` lo
@@ -25,31 +26,6 @@ function resolucion(contenedor: HTMLElement): number {
   const escala = Math.max(width / SIZE.width, height / SIZE.height);
   const densidad = window.devicePixelRatio || 1;
   return escala > 0 ? densidad * Math.min(1, escala) : densidad;
-}
-
-/**
- * Marcador en HTML, no dentro del lienzo. En pantalla estrecha el lienzo se
- * recorta por los lados y se llevaba por delante las chapas de los nombres;
- * aqui el marcador mide siempre lo que mide la ventana, y el nombre sale con
- * la tipografia de verdad en vez de con texto rasterizado por Pixi.
- */
-function Vida({
-  nombre,
-  lado,
-  barra,
-}: {
-  nombre: string;
-  lado: 'izq' | 'der';
-  barra: (el: HTMLDivElement | null) => void;
-}) {
-  return (
-    <div className={`vida vida-${lado}`}>
-      <div className="vida-cubeta">
-        <div className="vida-relleno" ref={barra} />
-      </div>
-      <span className="vida-nombre">{nombre}</span>
-    </div>
-  );
 }
 
 export function FightPlayer({ replay }: { replay: FightReplay }) {
@@ -123,6 +99,8 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
           { menosMovimiento: sinMovimiento },
         );
         if (sinMovimiento) tl.pause();
+        // Al acabar solo, el boton seguia diciendo "Pausa" sin nada que pausar.
+        tl.eventCallback('onComplete', () => setReproduciendo(false));
         timeline.current = tl;
         setListo(true);
       } catch (error) {
@@ -146,74 +124,41 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
   const tl = timeline.current;
 
   return (
-    <div>
-      <div className="marcador">
-        <Vida
-          nombre={replay.snapshotA.name}
-          lado="izq"
-          barra={(el) => {
-            barraA.current = el;
-          }}
-        />
-        <Vida
-          nombre={replay.snapshotB.name}
-          lado="der"
-          barra={(el) => {
-            barraB.current = el;
-          }}
-        />
-      </div>
-
-      <div ref={host} className="lienzo-combate" />
-
-      {fallo !== null && (
-        <p className="error">
-          No se ha podido dibujar el combate: {fallo}. Lo tienes entero en texto más abajo.
-        </p>
-      )}
-
-      <p className="apagado" style={{ minHeight: '1.5rem', marginTop: '0.5rem' }}>
-        {pie ?? (listo ? 'Preparados...' : 'Montando la escena...')}
-      </p>
-
-      <div className="fila">
-        <button
-          disabled={!listo}
-          onClick={() => {
-            if (tl === null) return;
-            if (reproduciendo) tl.pause();
-            else if (tl.progress() === 1) tl.restart();
-            else tl.resume();
-            setReproduciendo(!reproduciendo);
-          }}
-        >
-          {reproduciendo ? 'Pausa' : 'Seguir'}
-        </button>
-        <button
-          disabled={!listo}
-          onClick={() => setVelocidad((v) => (v === 1 ? 2 : v === 2 ? 4 : 1))}
-        >
-          x{velocidad}
-        </button>
-        <button
-          disabled={!listo}
-          onClick={() => {
-            tl?.progress(1);
-            setReproduciendo(false);
-          }}
-        >
-          Ir al final
-        </button>
-        <button
-          disabled={!listo}
-          onClick={() => {
-            tl?.restart();
-            setReproduciendo(true);
-          }}
-        >
-          Repetir
-        </button>
-      </div>
-    </div>
+    <EscenaCombate
+      nombres={[replay.snapshotA.name, replay.snapshotB.name]}
+      barras={[barraA, barraB]}
+      lienzo={host}
+      pie={pie ?? (listo ? 'Preparados…' : 'Montando la escena…')}
+      aviso={
+        fallo !== null && (
+          <p className="error">
+            No se ha podido dibujar el combate: {fallo}. Lo tienes entero en texto más abajo.
+          </p>
+        )
+      }
+      controles={
+        !listo || tl === null
+          ? undefined
+          : {
+              reproduciendo,
+              velocidad,
+              pausa: () => {
+                if (reproduciendo) tl.pause();
+                else if (tl.progress() === 1) tl.restart();
+                else tl.resume();
+                setReproduciendo(!reproduciendo);
+              },
+              acelerar: () => setVelocidad((v) => (v === 1 ? 2 : v === 2 ? 4 : 1)),
+              alFinal: () => {
+                tl.progress(1);
+                setReproduciendo(false);
+              },
+              repetir: () => {
+                tl.restart();
+                setReproduciendo(true);
+              },
+            }
+      }
+    />
   );
 }
