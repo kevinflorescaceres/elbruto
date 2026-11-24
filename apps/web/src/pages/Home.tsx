@@ -77,6 +77,48 @@ function RecienCreado({ brute, otro }: { brute: BruteProfile; otro: () => void }
   );
 }
 
+/**
+ * Que pasa con el enlace de reclutamiento. El servidor ignora sin decir nada un
+ * maestro que no existe, que es un bot o que es tuyo, asi que la promesa de "se
+ * lleva una pelea mas" solo se hace cuando de verdad se cumple.
+ */
+type Recluta =
+  | { tipo: 'ninguno' }
+  | { tipo: 'cargando' }
+  | { tipo: 'valido'; maestro: BruteProfile }
+  | { tipo: 'aviso'; texto: string };
+
+function recluta(
+  masterSlug: string | undefined,
+  maestro: { data?: BruteProfile; isPending: boolean; error: Error | null },
+  propios: string[],
+): Recluta {
+  if (masterSlug === undefined) return { tipo: 'ninguno' };
+  if (maestro.isPending) return { tipo: 'cargando' };
+  if (maestro.data === undefined) {
+    const noExiste = maestro.error instanceof ApiError && maestro.error.status === 404;
+    return {
+      tipo: 'aviso',
+      texto: noExiste
+        ? 'Ese enlace no lleva a nadie, pero puedes crear tu peleón igual.'
+        : 'No se ha podido comprobar quién te recluta. Puedes crear tu peleón igual.',
+    };
+  }
+  if (propios.includes(maestro.data.slug)) {
+    return {
+      tipo: 'aviso',
+      texto: `Este es el enlace de ${maestro.data.name}: mándaselo a otros. Con tus propios peleones no cuenta.`,
+    };
+  }
+  if (maestro.data.isBot) {
+    return {
+      tipo: 'aviso',
+      texto: `${maestro.data.name} es un peleón de la casa y no recluta, pero puedes crear el tuyo igual.`,
+    };
+  }
+  return { tipo: 'valido', maestro: maestro.data };
+}
+
 export function Home() {
   // Si se llega por un enlace de invitacion, el maestro viene en la ruta.
   const { slug: masterSlug } = useParams();
@@ -95,6 +137,13 @@ export function Home() {
   const [creado, setCreado] = useState<BruteProfile | null>(null);
 
   const ayuda = ayudaNombre(name);
+  const reclutamiento = recluta(
+    masterSlug,
+    maestro,
+    (me.data?.brutes ?? []).map((b) => b.slug),
+  );
+  // Si te recluta alguien, en el escenario esta el: dice mas que dos de muestra.
+  const escena = reclutamiento.tipo === 'valido' ? [reclutamiento.maestro] : MUESTRA;
 
   const create = useMutation({
     mutationFn: () => api.createBrute(name, masterSlug),
@@ -128,15 +177,28 @@ export function Home() {
           {/* La marca ya esta en la barra: el h1 dice lo que pasa aqui. */}
           <header className="portada-cabecera">
             <div>
-              <h1>Pon un nombre y tendrás un peleón.</h1>
-              <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+              {/* Si te recluta alguien, la cabecera habla de el: es por quien has venido. */}
+              {reclutamiento.tipo === 'valido' ? (
+                <>
+                  <h1>Te recluta {reclutamiento.maestro.name}</h1>
+                  <p className="apagado">
+                    Crea tu peleón y {reclutamiento.maestro.name} se lleva una pelea diaria más. Tú
+                    empiezas igual que todos: eso no te quita nada.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1>Pon un nombre y tendrás un peleón.</h1>
+                  <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+                </>
+              )}
               <p className="portada-vuelta">
                 Cada día, unas cuantas peleas. Cada nivel, una mejora a elegir entre dos.
               </p>
             </div>
-            {/* Decorativa: los nombres son de muestra y no llevan a ninguna parte. */}
+            {/* Decorativa: el nombre ya va en el texto, o son de muestra. */}
             <div className="portada-escena" aria-hidden="true">
-              {MUESTRA.map((brute, i) => (
+              {escena.map((brute, i) => (
                 <figure key={brute.slug} className={i === 1 ? 'rival' : undefined}>
                   <div className="portada-figura">
                     <Fighter
@@ -152,28 +214,14 @@ export function Home() {
             </div>
           </header>
 
-          {masterSlug !== undefined && (
-            <div className="tarjeta">
-              {maestro.data ? (
-                <>
-                  <h2>Te recluta {maestro.data.name}</h2>
-                  <p className="apagado">
-                    Crea tu peleón aquí y {maestro.data.name} se lleva una pelea diaria más. Tú
-                    empiezas igual que todos: eso no te quita nada.
-                  </p>
-                </>
-              ) : (
-                <p className="apagado">
-                  {maestro.isPending
-                    ? 'Buscando a quien te recluta...'
-                    : 'Ese reclutador no existe.'}
-                </p>
-              )}
-            </div>
-          )}
-
           <Tarjeta>
             <h2>Nuevo peleón</h2>
+            {reclutamiento.tipo === 'cargando' && (
+              <p className="apagado recluta-texto">Buscando a quien te recluta…</p>
+            )}
+            {reclutamiento.tipo === 'aviso' && (
+              <p className="apagado recluta-texto">{reclutamiento.texto}</p>
+            )}
             <label htmlFor="nombre-peleon" className="etiqueta">
               Nombre del peleón
             </label>

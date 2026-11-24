@@ -570,6 +570,14 @@ th {
   border-radius: var(--radio);
 }
 
+/* En el movil la escena se comia un cuarto de pantalla y empujaba el campo abajo. */
+@media (max-width: 48rem) {
+  .portada-escena svg {
+    height: 120px;
+    width: auto;
+  }
+}
+
 .portada-escena figure {
   margin: 0;
   display: flex;
@@ -702,6 +710,10 @@ a.boton {
 .enlace-acciones .boton {
   min-height: 44px;
   box-sizing: border-box;
+}
+
+.recluta-texto {
+  margin: 0 0 1rem;
 }
 
 .portada-seccion {
