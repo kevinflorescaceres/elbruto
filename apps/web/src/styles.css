@@ -677,6 +677,33 @@ a.boton {
   margin: 0;
 }
 
+/* El enlace largo parte por cualquier sitio: es un token, no hay palabras. */
+.enlace-url {
+  display: block;
+  padding: 0.5rem 0.6rem;
+  background: var(--papel-claro);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  word-break: break-all;
+  user-select: all;
+}
+
+.enlace-titulo {
+  font-size: 1.25rem;
+}
+
+.enlace-acciones {
+  margin-top: 0.75rem;
+}
+
+.enlace-acciones .boton {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
 .portada-seccion {
   margin-top: 2.5rem;
 }

@@ -8,6 +8,8 @@ import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta, TarjetaBoton } from 
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { useMe } from '../hooks.js';
 import { ayudaNombre } from '../nombre.js';
+import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
+import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
 
 /*
  * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
@@ -88,7 +90,8 @@ export function Home() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
-  const [claimUrl, setClaimUrl] = useState<string | null>(null);
+  // Se leen al montar: si se fue a pelear sin guardarlo, al volver sigue ahi.
+  const [pendientes, setPendientes] = useState(() => leerPendientes());
   const [creado, setCreado] = useState<BruteProfile | null>(null);
 
   const ayuda = ayudaNombre(name);
@@ -100,7 +103,13 @@ export function Home() {
       setName('');
       setCreado(data.brute);
       // Se ensena una sola vez: no hay endpoint para volver a pedirlo.
-      setClaimUrl(`${window.location.origin}${data.claimUrl}`);
+      setPendientes(
+        anadirPendiente({
+          slug: data.brute.slug,
+          nombre: data.brute.name,
+          url: `${window.location.origin}${data.claimUrl}`,
+        }),
+      );
     },
   });
 
@@ -207,19 +216,13 @@ export function Home() {
         </>
       )}
 
-      {claimUrl !== null && (
-        <Tarjeta hundida>
-          <h3>Guarda este enlace</h3>
-          <p className="apagado">
-            Es la única forma de recuperar tu peleón en otro navegador. No se vuelve a enseñar.
-          </p>
-          <code style={{ wordBreak: 'break-all' }}>{claimUrl}</code>
-          <div className="fila" style={{ marginTop: '0.5rem' }}>
-            <Boton onClick={() => void navigator.clipboard.writeText(claimUrl)}>Copiar</Boton>
-            <Boton onClick={() => setClaimUrl(null)}>Ya lo tengo</Boton>
-          </div>
-        </Tarjeta>
-      )}
+      {pendientes.map((enlace) => (
+        <EnlaceRecuperacion
+          key={enlace.slug}
+          enlace={enlace}
+          onGuardado={() => setPendientes(quitarPendiente(enlace.slug))}
+        />
+      ))}
 
       {me.isPending && <p className="apagado">Cargando...</p>}
       {/* Quien llega por primera vez no tiene peleones: no se le ensena una lista vacia. */}
