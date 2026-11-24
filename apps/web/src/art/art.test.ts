@@ -10,7 +10,7 @@ import {
   type PartName,
   type Shape,
 } from './parts.js';
-import { ANIMATIONS, REST, type AnimName } from './poses.js';
+import { animacion, ANIMATIONS, REST, type AnimName } from './poses.js';
 
 const PARTES = new Set<PartName>(RIG.map((p) => p.name));
 
@@ -75,6 +75,26 @@ group('animaciones', () => {
           if (pose.rot !== undefined) expect(Math.abs(pose.rot)).toBeLessThan(Math.PI);
         }
       }
+    }
+  });
+
+  it('un ataque parado apunta a la guardia y rebota, y acaba en reposo', () => {
+    for (const name of nombres) {
+      const base = ANIMATIONS[name];
+      const parado = animacion(name, true);
+      if (base.contacto === undefined) {
+        expect(parado).toBe(base);
+        continue;
+      }
+      expect(parado.contacto).toBe(base.contacto);
+      const i = base.frames.findIndex((f) => f.t === base.contacto);
+      const brazo = (a: typeof base, j: number): number =>
+        a.frames[j]?.parts.armFront?.rot ?? Number.NaN;
+      // Mas abajo que el golpe que entra (positivo = hacia abajo y atras)...
+      expect(brazo(parado, i)).toBeGreaterThan(brazo(base, i));
+      // ...y despues del contacto vuelve hacia atras en vez de congelarse.
+      expect(brazo(parado, i + 1)).toBeGreaterThan(brazo(parado, i));
+      expect(parado.frames.at(-1)).toEqual(base.frames.at(-1));
     }
   });
 

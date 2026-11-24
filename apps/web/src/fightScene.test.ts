@@ -54,6 +54,25 @@ group('planFight', () => {
     }
   }, 30_000);
 
+  it('el ataque que acaba parado usa su version parada, y el que entra no', () => {
+    let paradas = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      let ataque: Extract<Move, { kind: 'pose' }> | undefined;
+      for (const beat of planFight(fight(seed)).beats) {
+        for (const move of beat.moves) {
+          if (move.kind !== 'pose') continue;
+          if (move.anim.startsWith('attack')) ataque = move;
+          if (move.anim === 'block' && ataque !== undefined) {
+            expect(ataque.parada).toBe(true);
+            paradas++;
+          }
+          if (move.anim === 'evade' && ataque !== undefined) expect(ataque.parada).toBeFalsy();
+        }
+      }
+    }
+    expect(paradas).toBeGreaterThan(0);
+  });
+
   it('todas las posiciones caen dentro del lienzo', () => {
     for (let seed = 0; seed < 300; seed++) {
       for (const actor of planFight(fight(seed)).actors) {

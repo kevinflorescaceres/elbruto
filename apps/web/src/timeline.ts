@@ -5,9 +5,9 @@
  * la marcha, saltar al final o repetir dejaria la escena a medias.
  */
 import { gsap } from 'gsap';
-import type { Container } from 'pixi.js';
+import { Container } from 'pixi.js';
 import type { PartName } from './art/parts.js';
-import { ANIMATIONS, type AnimName } from './art/poses.js';
+import { animacion, type AnimName } from './art/poses.js';
 import { TIME_SCALE, type Move, type Scene } from './fightScene.js';
 import {
   changeWeapon,
@@ -17,14 +17,77 @@ import {
   ESCALA_ACTOR,
   makeAnnounce,
   makeFloater,
+  makeImpacto,
   makeProjectile,
   makeRing,
   SIZE,
+  SUELO,
   weaponOf,
   type ActorView,
 } from './pixiScene.js';
 
 const BLANCO = 0xffffff;
+
+/**
+ * Lo que necesita cada movimiento ademas de su actor. El mundo es lo que
+ * tiembla; los carteles van en la capa de arriba, que no se mueve.
+ */
+interface Escena {
+  mundo: Container;
+  carteles: Container;
+  menosMovimiento: boolean;
+}
+
+/**
+ * Tinte del destello. Pixi multiplica el tinte, no lo suma: con el rojo del
+ * numero (0xcc3333) el peleon entero se volvia una mancha granate y no se le
+ * reconocia. Aclarado hacia el blanco, calienta el dibujo sin borrarlo.
+ */
+function aclarar(color: number, cuanto = 0.55): number {
+  const canal = (desplazamiento: number): number => {
+    const valor = (color >> desplazamiento) & 0xff;
+    return Math.round(valor + (0xff - valor) * cuanto) << desplazamiento;
+  };
+  return canal(16) | canal(8) | canal(0);
+}
+
+/**
+ * Con menos movimiento, cruzar el escenario es el desplazamiento mas grande de
+ * la escena: se sustituye por un fundido corto que cambia de sitio a oscuras.
+ */
+function cortar(
+  tl: gsap.core.Timeline,
+  root: Container,
+  x: number,
+  at: number,
+  duration: number,
+): void {
+  const fundido = Math.min(0.08, duration / 3);
+  // Hasta 0 del todo: Pixi aplica la transparencia pieza a pieza, y a medias
+  // se ven los brazos a traves del torso.
+  tl.to(root, { alpha: 0, duration: fundido }, at);
+  tl.set(root, { x }, at + fundido);
+  tl.to(root, { alpha: 1, duration: fundido }, at + fundido);
+}
+
+/** Lo que dura el destello: un parpadeo, no un estado. */
+const DESTELLO = 0.11;
+
+/**
+ * Temblor del mundo, amortiguado. La amplitud crece con el dano y tiene techo:
+ * con un 30 en la cara, a pantalla completa, mas de 9 px marea.
+ */
+function temblor(tl: gsap.core.Timeline, mundo: Container, at: number, fuerza: number): void {
+  const amplitud = Math.min(9, 2.5 + fuerza * 0.45);
+  const pasos = [1, -0.7, 0.45, -0.2, 0];
+  pasos.forEach((k, i) => {
+    tl.to(
+      mundo,
+      { x: amplitud * k, y: amplitud * 0.35 * Math.abs(k), duration: 0.035, ease: 'none' },
+      at + i * 0.035,
+    );
+  });
+}
 
 /** Medio cuerpo de cada uno. El rig mide unos 50 px de ancho, ya escalado. */
 const MEDIO_CUERPO = 26 * ESCALA_ACTOR;
@@ -78,10 +141,17 @@ function playAnimation(
   anim: AnimName,
   at: number,
   duration: number,
+  parada = false,
 ): void {
   if (view.rig === null) return playFallback(tl, view, anim, at, duration);
 
-  const { frames } = ANIMATIONS[anim];
+  const { frames, contacto, adelanto } = animacion(anim, parada);
+  // Un gesto que tiene que estar hecho al llegar el golpe empieza antes de su turno.
+  if (adelanto !== undefined) at -= duration * adelanto;
+  // Con impacto, la animacion se estira para que el contacto caiga al final del
+  // turno de ataque: ahi empieza el del golpe, y el rival lo acusa en el acto.
+  // La recuperacion sigue sonando por encima del turno siguiente.
+  if (contacto !== undefined) duration = duration / contacto;
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i];
     if (frame === undefined) continue;
@@ -102,7 +172,7 @@ function playAnimation(
 
       // El primer frame se fija de golpe: es el punto de partida del gesto.
       if (tramo === 0) tl.set(node, destino, desde);
-      else tl.to(node, { ...destino, duration: tramo, ease: 'power1.inOut' }, desde);
+      else tl.to(node, { ...destino, duration: tramo, ease: frame.ease ?? 'power1.inOut' }, desde);
     }
   }
 }
@@ -138,7 +208,7 @@ function playFallback(
 function addMove(
   tl: gsap.core.Timeline,
   views: Map<string, ActorView>,
-  stage: Container,
+  escena: Escena,
   move: Move,
   at: number,
   duration: number,
@@ -147,14 +217,16 @@ function addMove(
   if (move.kind === 'announce') {
     const label = makeAnnounce(move.text, move.grande);
     label.alpha = 0;
-    stage.addChild(label);
-    fromTo(
-      tl,
-      label.scale,
-      { x: 0.6, y: 0.6 },
-      { x: 1, y: 1, duration: duration * 0.45, ease: 'back.out(2)' },
-      at,
-    );
+    escena.carteles.addChild(label);
+    if (!escena.menosMovimiento) {
+      fromTo(
+        tl,
+        label.scale,
+        { x: 0.6, y: 0.6 },
+        { x: 1, y: 1, duration: duration * 0.45, ease: 'back.out(2)' },
+        at,
+      );
+    }
     fromTo(tl, label, { alpha: 0 }, { alpha: 1, duration: duration * 0.25 }, at);
     // El de cierre se queda: es quien gano, y `Ir al final` aterriza justo aqui.
     if (!move.queda) tl.to(label, { alpha: 0, duration: duration * 0.3 }, at + duration * 0.7);
@@ -164,6 +236,7 @@ function addMove(
   const view = views.get(move.kind === 'projectile' ? move.from : move.id);
   if (view === undefined) return;
   const { root, body } = view;
+  const { mundo, menosMovimiento } = escena;
   const homeX = view.actor.home.x * SIZE.width;
   const homeY = view.actor.home.y * SIZE.height;
   const mitad = duration / 2;
@@ -184,20 +257,60 @@ function addMove(
       // Los dos se plantan y SE QUEDAN. La vuelta la hace el movimiento
       // `retreat`, al cerrar el turno: si volviera aqui, los impactos
       // encadenados de un combo saldrian desde lejos (COMBATE.md §5).
+      if (menosMovimiento) {
+        // La embestida sale de la distancia de golpe: apenas hay trayecto, y un
+        // segundo fundido seguido del primero solo parpadea.
+        if (move.kind === 'lunge') tl.set(root, { x: contacto }, at);
+        else cortar(tl, root, contacto, at, duration);
+        break;
+      }
       const ease = move.kind === 'approach' ? 'power2.out' : 'power2.in';
       tl.to(root, { x: contacto, duration, ease }, at);
       break;
     }
 
     case 'pose':
-      playAnimation(tl, view, move.anim, at, duration);
+      // Andar sin desplazarse (ver `cortar`) seria andar en el sitio.
+      if (menosMovimiento && move.anim === 'walk') break;
+      playAnimation(tl, view, move.anim, at, duration, move.parada);
       break;
 
     case 'flash':
       // `set` en vez de tween: interpolar un color como entero da colores falsos.
-      tl.set(body, { tint: move.color }, at);
-      tl.set(body, { tint: BLANCO }, at + duration * 0.6);
+      tl.set(body, { tint: aclarar(move.color) }, at);
+      tl.set(body, { tint: BLANCO }, at + Math.min(DESTELLO, duration * 0.6));
       break;
+
+    case 'impact': {
+      // La chispa sale del lado que mira al rival, a la altura del pecho: ahi
+      // llega el golpe, sea punetazo, estocada o proyectil.
+      const chispa = makeImpacto(move.parada);
+      // La parada choca con el antebrazo de la guardia, algo por debajo: el
+      // ataque parado apunta ahi (ver `animacion` en poses.ts).
+      const alto = view.rig === null ? arriba(22) : arriba(move.parada ? 64 : 72);
+      chispa.x = homeX + view.actor.facing * MEDIO_CUERPO * 0.7;
+      chispa.y = homeY - alto;
+      chispa.rotation = (move.fuerza % 5) * 0.3;
+      chispa.alpha = 0;
+      mundo.addChild(chispa);
+      // Aparece de golpe con el contacto y se apaga sola. El `set` es lo que la
+      // enciende: el `fromTo` del apagado no la pinta hasta que le toca.
+      tl.set(chispa, { alpha: 1 }, at);
+      // Se apaga mientras el golpe sigue congelado: si dura mas que el contacto,
+      // queda flotando en el aire cuando el puno ya se ha ido.
+      tl.to(chispa, { alpha: 0, duration: 0.11, ease: 'power1.in' }, at + 0.04);
+      if (!menosMovimiento) {
+        fromTo(
+          tl,
+          chispa.scale,
+          { x: 0.35, y: 0.35 },
+          { x: 1.15, y: 1.15, duration: 0.2, ease: 'power3.out' },
+          at,
+        );
+        if (!move.parada) temblor(tl, mundo, at, move.fuerza);
+      }
+      break;
+    }
 
     case 'pulse':
       tl.to(body.scale, { y: ESCALA_ACTOR * 1.05, duration: mitad }, at);
@@ -218,19 +331,33 @@ function addMove(
 
     case 'float': {
       const label = makeFloater(move.text, move.color);
+      const y0 = homeY - arriba(view.rig === null ? 60 : 135);
       label.x = homeX;
-      label.y = homeY - arriba(130);
+      label.y = y0;
       label.alpha = 0;
-      stage.addChild(label);
+      mundo.addChild(label);
       // Los numeros viven 600 ms propios (COMBATE.md §5), no lo que dure su
       // hueco: en un combo el hueco es corto y se irian antes de poder leerlos.
-      fromTo(
-        tl,
-        label,
-        { alpha: 1, y: homeY - arriba(130) },
-        { alpha: 0, y: homeY - arriba(180), duration: FLOTA },
-        at,
-      );
+      // Salta con el golpe y luego se va: el pico lo hace legible, la subida
+      // lo saca de en medio antes del siguiente.
+      tl.set(label, { alpha: 1 }, at);
+      tl.to(label, { alpha: 0, duration: FLOTA * 0.4, ease: 'power1.in' }, at + FLOTA * 0.6);
+      if (!menosMovimiento) {
+        fromTo(
+          tl,
+          label.scale,
+          { x: 0.4, y: 0.4 },
+          { x: 1, y: 1, duration: 0.16, ease: 'back.out(3)' },
+          at,
+        );
+        fromTo(
+          tl,
+          label,
+          { y: y0 },
+          { y: y0 - arriba(45), duration: FLOTA, ease: 'power2.out' },
+          at,
+        );
+      }
       break;
     }
 
@@ -251,7 +378,7 @@ function addMove(
       if (target === undefined) return;
       const bala = makeProjectile();
       bala.alpha = 0;
-      stage.addChild(bala);
+      mundo.addChild(bala);
       fromTo(
         tl,
         bala,
@@ -272,7 +399,7 @@ function addMove(
     case 'toss': {
       const perdida = makeProjectile();
       perdida.alpha = 0;
-      stage.addChild(perdida);
+      mundo.addChild(perdida);
       tl.call(() => changeWeapon(view, 'punos'), undefined, at);
       fromTo(
         tl,
@@ -295,20 +422,23 @@ function addMove(
       anillo.x = homeX;
       anillo.y = homeY - arriba(60);
       anillo.alpha = 0;
-      stage.addChild(anillo);
+      mundo.addChild(anillo);
       fromTo(tl, anillo, { alpha: 0.9 }, { alpha: 0, duration, ease: 'power1.out' }, at);
       fromTo(tl, anillo.scale, { x: 0.3, y: 0.3 }, { x: 1.7, y: 1.7, duration }, at);
       break;
     }
 
     case 'retreat':
-      tl.to(root, { x: homeX, duration, ease: 'power1.out' }, at);
+      if (menosMovimiento) cortar(tl, root, homeX, at, duration);
+      else tl.to(root, { x: homeX, duration, ease: 'power1.out' }, at);
       break;
 
     case 'fall':
       // 0.4 lo dejaba en una mancha sobre el suelo: se ve que esta fuera de
       // combate, pero se sigue reconociendo a quien perdio.
       tl.to(root, { alpha: 0.75, duration }, at);
+      // El cuerpo llega al suelo al 78% de la muerte (ver `poses.ts`): ahi tiembla.
+      if (!menosMovimiento && view.rig !== null) temblor(tl, mundo, at + duration * 0.78, 10);
       break;
   }
 }
@@ -324,16 +454,30 @@ export function buildTimeline(
   scene: Scene,
   onCaption: (text: string | null) => void,
   marcador: Marcador,
+  opciones: { menosMovimiento?: boolean } = {},
 ): gsap.core.Timeline {
-  stage.addChild(drawEscenario(scene.escenario));
-  stage.addChild(drawGround());
+  // El mundo tiembla con los golpes; los carteles, encima y quietos.
+  const mundo = new Container();
+  const carteles = new Container();
+  stage.addChild(mundo, carteles);
+  const escena: Escena = { mundo, carteles, menosMovimiento: opciones.menosMovimiento ?? false };
+
+  // El fondo se pasa del lienzo por todos los lados, o el temblor destapa una
+  // franja del color de la pagina. Se agranda desde la linea del suelo, que
+  // es el unico punto que no puede moverse: ahi apoyan los pies.
+  const fondo = new Container();
+  fondo.addChild(drawEscenario(scene.escenario), drawGround());
+  fondo.pivot.set(SIZE.width / 2, SUELO);
+  fondo.position.set(SIZE.width / 2, SUELO);
+  fondo.scale.set(1.03);
+  mundo.addChild(fondo);
 
   const views = new Map<string, ActorView>();
   for (const actor of scene.actors) {
     const view = drawActor(actor);
     if (actor.id === 'A' || actor.id === 'B') view.hpDom = marcador[actor.id];
     view.root.alpha = 0;
-    stage.addChild(view.root);
+    mundo.addChild(view.root);
     views.set(actor.id, view);
   }
 
@@ -342,7 +486,7 @@ export function buildTimeline(
     const caption = beat.caption;
     // Al saltar o repetir, GSAP vuelve a disparar estas llamadas: el pie sigue al dia.
     if (caption !== null) timeline.call(() => onCaption(caption), undefined, beat.at);
-    for (const move of beat.moves) addMove(timeline, views, stage, move, beat.at, beat.duration);
+    for (const move of beat.moves) addMove(timeline, views, escena, move, beat.at, beat.duration);
   }
 
   return timeline;

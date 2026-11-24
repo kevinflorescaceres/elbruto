@@ -165,6 +165,12 @@ h3 {
   box-sizing: border-box;
   /* Se vacia hacia AFUERA: el borde interior es el que retrocede. */
   transform-origin: left center;
+  /*
+   * Capa propia desde el principio. Sin esto, el navegador la crea con el
+   * primer golpe, que es cuando GSAP le pone el primer transform, y ese
+   * fotograma se atasca (medido: 80-100 ms justo en el primer impacto).
+   */
+  will-change: transform;
 }
 
 .vida-der .vida-relleno {

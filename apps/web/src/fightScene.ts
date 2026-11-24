@@ -43,7 +43,8 @@ export type Move =
   /** Vuelve a su sitio de espera. Se emite al cerrar el turno, no antes. */
   | { kind: 'retreat'; id: string }
   /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
-  | { kind: 'pose'; id: string; anim: AnimName }
+  /** `parada`: el golpe acaba contra una guardia (ver `animacion`). */
+  | { kind: 'pose'; id: string; anim: AnimName; parada?: boolean }
   /** Destello de color (parada, maña, curacion). */
   | { kind: 'flash'; id: string; color: number }
   /** Mueve la barra de vida a su nuevo valor. */
@@ -56,6 +57,12 @@ export type Move =
   | { kind: 'projectile'; from: string; to: string; weapon: string }
   /** El arma sale volando y cae al suelo. */
   | { kind: 'toss'; id: string; weapon: string }
+  /**
+   * El contacto de un golpe sobre `id`: chispa del lado por el que llega (el
+   * que mira al rival) y temblor segun el dano. `parada` es un golpe que choca
+   * con la guardia: chispa de metal y sin temblor.
+   */
+  | { kind: 'impact'; id: string; fuerza: number; parada: boolean }
   /** Anillo que se expande alrededor. */
   | { kind: 'ring'; id: string; color: number }
   /** Latido breve: marca de quien tiene el turno. */
@@ -117,7 +124,10 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
         type: 'turn',
         weight: PESO_RETIRADA,
         caption: null,
-        moves: [{ kind: 'retreat', id: embestida.id }],
+        moves: [
+          { kind: 'retreat', id: embestida.id },
+          { kind: 'pose', id: embestida.id, anim: 'walk' },
+        ],
       });
     }
     cerrar();
@@ -344,27 +354,58 @@ export function planFight(replay: Replayable): Scene {
         break;
 
       case 'hit':
-        push(event, [{ kind: 'pose', id: event.target, anim: 'hit' }]);
+        push(event, [
+          { kind: 'pose', id: event.target, anim: 'hit' },
+          { kind: 'impact', id: event.target, fuerza: 0, parada: false },
+        ]);
         break;
 
       case 'evade':
         push(event, [{ kind: 'pose', id: event.id, anim: 'evade' }]);
         break;
 
-      case 'block':
+      case 'block': {
+        // El ataque ya esta en el guion: se cambia por su version parada, que
+        // apunta a la guardia en vez de a la cara.
+        for (let i = crudos.length - 1; i >= 0; i--) {
+          const golpe = crudos[i]?.moves.find(
+            (m) => m.kind === 'pose' && m.id !== event.id && m.anim.startsWith('attack'),
+          );
+          if (golpe === undefined) continue;
+          if (golpe.kind === 'pose') golpe.parada = true;
+          break;
+        }
         push(event, [
+          // Sin destello: cualquier tinte oscurece (Pixi multiplica) y una
+          // parada que oscurece al que para se lee como un golpe encajado.
           { kind: 'pose', id: event.id, anim: 'block' },
-          { kind: 'flash', id: event.id, color: COLOR.parada },
+          { kind: 'impact', id: event.id, fuerza: 0, parada: true },
         ]);
         break;
+      }
 
-      case 'damage':
-        push(event, [
+      case 'damage': {
+        const moves: Move[] = [
           { kind: 'hp', id: event.id, hp: event.hp },
           { kind: 'float', id: event.id, text: `-${event.amount}`, color: COLOR.dano },
           { kind: 'flash', id: event.id, color: COLOR.dano },
-        ]);
+        ];
+        // El dano de un golpe va EN el golpe: el destello, el numero y la
+        // barra caen en el mismo instante en que el rival lo acusa. Separados,
+        // el impacto se leia en tres tiempos.
+        const previo = crudos.at(-1);
+        const impacto =
+          previo?.type === 'hit' ? previo.moves.find((m) => m.kind === 'impact') : undefined;
+        if (previo !== undefined && impacto?.kind === 'impact' && impacto.id === event.id) {
+          impacto.fuerza = event.amount;
+          previo.moves.push(...moves);
+          previo.weight += WEIGHT.damage;
+          previo.caption = describe(event, (id) => byId.get(id)?.name ?? id);
+          break;
+        }
+        push(event, moves);
         break;
+      }
 
       case 'heal':
         push(event, [

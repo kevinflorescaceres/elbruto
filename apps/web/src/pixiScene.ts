@@ -4,7 +4,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { getWeapon } from '@camorra/engine';
-import { aEntero, LIENZO, RADIO } from '@camorra/shared';
+import { aEntero, LIENZO, RADIO, TOKENS } from '@camorra/shared';
 import { colorOf, GROSOR, MASCOTAS, PALETA, TRAZO, type WeaponCategory } from './art/parts.js';
 import { ESCENARIOS } from './art/escenarios.js';
 import { buildRig, setWeapon, type Rig } from './art/pixiRig.js';
@@ -225,13 +225,45 @@ export function drawGround(): Graphics {
     .stroke({ width: 3, color: TRAZO, alpha: 0.55 });
 }
 
+/**
+ * Numero de dano. Grande y con contorno de tinta, como el resto del dibujo:
+ * a 20 px y sin borde se perdia sobre la madera del fondo.
+ */
 export function makeFloater(text: string, color: number): Text {
   const label = new Text({
     text,
-    style: { fontFamily: 'system-ui', fontSize: 20, fontWeight: 'bold', fill: color },
+    style: {
+      fontFamily: 'Alegreya, Georgia, serif',
+      fontSize: 38,
+      fontWeight: 'bold',
+      fill: color,
+      stroke: { color: aEntero(TRAZO), width: 7, join: 'round' },
+    },
   });
   label.anchor.set(0.5);
   return label;
+}
+
+/**
+ * La chispa del impacto: una estrella de ocho puntas irregular, con el mismo
+ * trazo grueso que los peleones. Crema y grande si el golpe entra; gris de
+ * metal y pequena si choca con la guardia.
+ */
+export function makeImpacto(parada: boolean): Graphics {
+  const puntas = 8;
+  const fuera = parada ? 19 : 34;
+  const dentro = parada ? 7 : 12;
+  const puntos: number[] = [];
+  for (let i = 0; i < puntas * 2; i++) {
+    // Una punta de cada dos, mas corta: si son todas iguales parece un sello.
+    const radio = i % 2 === 1 ? dentro : i % 4 === 0 ? fuera : fuera * 0.68;
+    const angulo = (Math.PI * i) / puntas - Math.PI / 2;
+    puntos.push(Math.cos(angulo) * radio, Math.sin(angulo) * radio);
+  }
+  return new Graphics()
+    .poly(puntos)
+    .fill(parada ? aEntero(PALETA.metal) : aEntero(TOKENS.papelClaro))
+    .stroke({ width: GROSOR, color: TRAZO, join: 'round' });
 }
 
 export const makeRing = (color: number): Graphics =>

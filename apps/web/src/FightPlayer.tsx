@@ -85,10 +85,16 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         aplicacion.canvas.style.objectFit = 'cover';
         contenedor.appendChild(aplicacion.canvas);
 
-        const tl = buildTimeline(aplicacion.stage, planFight(replay), setPie, {
-          A: barraA.current,
-          B: barraB.current,
-        });
+        const tl = buildTimeline(
+          aplicacion.stage,
+          planFight(replay),
+          setPie,
+          {
+            A: barraA.current,
+            B: barraB.current,
+          },
+          { menosMovimiento: sinMovimiento },
+        );
         if (sinMovimiento) tl.pause();
         timeline.current = tl;
         setListo(true);
