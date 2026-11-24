@@ -1,0 +1,54 @@
+# Camorra en el VPS de Pantheon con Kamal 2. Los secretos no van aquí: ver .kamal/secrets.
+service: camorra
+image: camorra
+
+servers:
+  web:
+    hosts:
+      - 213.136.85.175
+    options:
+      memory: 768m
+
+ssh:
+  user: deploy
+
+# Registry local de Kamal: la imagen viaja al VPS por un túnel SSH, sin GHCR ni tokens.
+registry:
+  server: localhost:5555
+
+builder:
+  arch: amd64
+
+proxy:
+  ssl: true
+  host: camorra.florescaceres.cl
+  app_port: 8080
+  healthcheck:
+    path: /api/health
+
+env:
+  clear:
+    PORT: "8080"
+    NODE_ENV: production
+    GAME_TIMEZONE: America/Santiago
+    PUBLIC_URL: https://camorra.florescaceres.cl
+    # Un salto: kamal-proxy. Al activar el proxy de Cloudflare pasa a 2.
+    TRUST_PROXY: "1"
+  secret:
+    - DATABASE_URL
+    - DIRECT_URL
+
+accessories:
+  db:
+    image: postgres:16
+    host: 213.136.85.175
+    # Sin `port`: Postgres solo es alcanzable dentro de la red `kamal` de Docker,
+    # como camorra-db:5432. Publicarlo saltaría ufw.
+    env:
+      clear:
+        POSTGRES_USER: camorra
+        POSTGRES_DB: camorra
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
