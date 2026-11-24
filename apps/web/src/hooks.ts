@@ -20,8 +20,8 @@ export function useIsMine(slug: string): { mio: boolean; sabido: boolean } {
   };
 }
 
-export const useBrute = (slug: string) =>
-  useQuery({ queryKey: ['brute', slug], queryFn: () => api.brute(slug) });
+export const useBrute = (slug: string, enabled = true) =>
+  useQuery({ queryKey: ['brute', slug], queryFn: () => api.brute(slug), enabled });
 
 /**
  * Los enlaces de recuperacion sin guardar, al dia: los cambia una tarjeta y lo

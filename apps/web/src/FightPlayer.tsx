@@ -28,7 +28,14 @@ function resolucion(contenedor: HTMLElement): number {
   return escala > 0 ? densidad * Math.min(1, escala) : densidad;
 }
 
-export function FightPlayer({ replay }: { replay: FightReplay }) {
+export function FightPlayer({
+  replay,
+  alTerminar,
+}: {
+  replay: FightReplay;
+  /** Avisa al acabar (o al saltar al final) y al volver a empezar. */
+  alTerminar?: (terminado: boolean) => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const barraA = useRef<HTMLDivElement>(null);
   const barraB = useRef<HTMLDivElement>(null);
@@ -41,6 +48,11 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
   const [reproduciendo, setReproduciendo] = useState(!sinMovimiento);
   const [velocidad, setVelocidad] = useState(1);
   const [pie, setPie] = useState<string | null>(null);
+  const [terminado, setTerminado] = useState(false);
+
+  useEffect(() => {
+    alTerminar?.(terminado);
+  }, [terminado, alTerminar]);
 
   useEffect(() => {
     const contenedor = host.current;
@@ -100,7 +112,10 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
         );
         if (sinMovimiento) tl.pause();
         // Al acabar solo, el boton seguia diciendo "Pausa" sin nada que pausar.
-        tl.eventCallback('onComplete', () => setReproduciendo(false));
+        tl.eventCallback('onComplete', () => {
+          setReproduciendo(false);
+          setTerminado(true);
+        });
         timeline.current = tl;
         setListo(true);
       } catch (error) {
@@ -128,6 +143,7 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
       nombres={[replay.snapshotA.name, replay.snapshotB.name]}
       barras={[barraA, barraB]}
       lienzo={host}
+      terminado={terminado}
       pie={pie ?? (listo ? 'Preparados…' : 'Montando la escena…')}
       aviso={
         fallo !== null && (
@@ -152,10 +168,12 @@ export function FightPlayer({ replay }: { replay: FightReplay }) {
               alFinal: () => {
                 tl.progress(1);
                 setReproduciendo(false);
+                setTerminado(true);
               },
               repetir: () => {
                 tl.restart();
                 setReproduciendo(true);
+                setTerminado(false);
               },
             }
       }

@@ -892,6 +892,52 @@ th {
   margin: var(--e-2) 0 var(--e-3);
 }
 
+/*
+ * El final: el resultado en texto (el lienzo no se lee en voz alta) y la
+ * siguiente accion. Es el momento de mas emocion y el de compartir.
+ */
+.fin {
+  margin-top: var(--e-4);
+}
+
+.fin-titulo {
+  margin: 0 0 var(--e-2);
+  font-size: var(--t-h2);
+}
+
+.fin-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-2) var(--e-3);
+  margin: 0;
+}
+
+.fin-nivel {
+  color: var(--acento);
+}
+
+.fin-acciones {
+  margin-top: var(--e-4);
+}
+
+.fin-acciones:empty {
+  display: none;
+}
+
+.fin-compartir {
+  margin-top: var(--e-4);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--linea);
+}
+
+/* Sin accion propia (quien mira sin peleon), la raya separaria del titulo nada. */
+.fin-acciones:empty + .fin-compartir {
+  margin-top: var(--e-3);
+  padding-top: 0;
+  border-top: 0;
+}
+
 .combate-ytu {
   margin-top: var(--e-8);
 }

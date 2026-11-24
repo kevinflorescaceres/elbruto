@@ -22,7 +22,17 @@ export function ArenaPage() {
       await queryClient.invalidateQueries({ queryKey: ['brute', slug] });
       await queryClient.invalidateQueries({ queryKey: ['fights', slug] });
       await queryClient.invalidateQueries({ queryKey: ['me'] });
-      await navigate(`/fight/${result.fightId}`);
+      // El resultado viaja con la navegacion: la repeticion no trae la experiencia.
+      await navigate(`/fight/${result.fightId}`, {
+        state: {
+          resultado: {
+            slug,
+            won: result.won,
+            xpGained: result.xpGained,
+            leveledUp: result.leveledUp,
+          },
+        },
+      });
     },
   });
 

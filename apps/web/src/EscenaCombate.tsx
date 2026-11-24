@@ -47,6 +47,7 @@ export function EscenaCombate({
   barras,
   lienzo,
   aviso,
+  terminado = false,
 }: {
   nombres: [string, string];
   pie: string;
@@ -55,6 +56,8 @@ export function EscenaCombate({
   barras?: [Ref<HTMLDivElement>, Ref<HTMLDivElement>];
   lienzo?: Ref<HTMLDivElement>;
   aviso?: ReactNode;
+  /** Acabado: los cuatro controles sobran, queda volver a verlo. */
+  terminado?: boolean;
 }) {
   const c = controles;
   const apagado = c === undefined;
@@ -71,25 +74,31 @@ export function EscenaCombate({
 
       <p className="apagado combate-pie">{pie}</p>
 
-      <div className="fila">
-        <button disabled={apagado} onClick={c?.pausa}>
-          {c === undefined || c.reproduciendo ? 'Pausa' : 'Seguir'}
-        </button>
-        {/* "×2" se lee "por dos": dicho asi, el lector de pantalla no deletrea la equis. */}
-        <button
-          disabled={apagado}
-          onClick={c?.acelerar}
-          aria-label={`Velocidad por ${c?.velocidad ?? 1}`}
-        >
-          ×{c?.velocidad ?? 1}
-        </button>
-        <button disabled={apagado} onClick={c?.alFinal}>
-          Ir al final
-        </button>
-        <button disabled={apagado} onClick={c?.repetir}>
-          Repetir
-        </button>
-      </div>
+      {terminado && c !== undefined ? (
+        <div className="fila">
+          <button onClick={c.repetir}>Repetir</button>
+        </div>
+      ) : (
+        <div className="fila">
+          <button disabled={apagado} onClick={c?.pausa}>
+            {c === undefined || c.reproduciendo ? 'Pausa' : 'Seguir'}
+          </button>
+          {/* "×2" se lee "por dos": dicho asi, el lector de pantalla no deletrea la equis. */}
+          <button
+            disabled={apagado}
+            onClick={c?.acelerar}
+            aria-label={`Velocidad por ${c?.velocidad ?? 1}`}
+          >
+            ×{c?.velocidad ?? 1}
+          </button>
+          <button disabled={apagado} onClick={c?.alFinal}>
+            Ir al final
+          </button>
+          <button disabled={apagado} onClick={c?.repetir}>
+            Repetir
+          </button>
+        </div>
+      )}
     </div>
   );
 }

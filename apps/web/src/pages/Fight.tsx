@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { api, ApiError } from '../api.js';
 import { Boton, Pagina } from '../ui.js';
 import { FightLog } from '../FightLog.js';
@@ -9,6 +9,7 @@ import { NadieAqui } from '../Escenario.js';
 import { CrearAqui } from '../CrearPeleon.js';
 import { useMe } from '../hooks.js';
 import { CompartirEnlace } from '../CompartirEnlace.js';
+import { FinCombate, resultadoDe } from '../FinCombate.js';
 
 // Pixi y GSAP son la mitad del peso del bundle y solo se usan en esta pantalla.
 const cargarPlayer = () => import('../FightPlayer.js');
@@ -18,6 +19,8 @@ export function FightPage() {
   const { id = '' } = useParams();
   const fight = useQuery({ queryKey: ['fight', id], queryFn: () => api.fight(id) });
   const me = useMe();
+  const location = useLocation();
+  const [terminado, setTerminado] = useState(false);
   // El reproductor se pide a la vez que el combate, no despues: `lazy` no lo
   // pediria hasta pintarlo, y eso es cuando ya han llegado los datos. En un
   // movil son dos viajes seguidos en vez de dos a la vez.
@@ -75,8 +78,10 @@ export function FightPage() {
           <EscenaCombate nombres={[snapshotA.name, snapshotB.name]} pie="Montando la escena…" />
         }
       >
-        <FightPlayer replay={fight.data} />
+        <FightPlayer replay={fight.data} alTerminar={setTerminado} />
       </Suspense>
+
+      {terminado && <FinCombate replay={fight.data} reciente={resultadoDe(location.state)} />}
 
       {/* Quien llega por el enlace y no tiene peleon: el suyo, aqui mismo. */}
       {me.data !== undefined && me.data.brutes.length === 0 && (
@@ -96,16 +101,23 @@ export function FightPage() {
         </div>
       </details>
 
+      {/* Al acabar, compartir sube al panel del final: aqui sobraria repetido. */}
       <div className="fila combate-acciones">
-        <CompartirEnlace
-          url={window.location.href}
-          titulo={titulo}
-          dondeCopiar="de la barra de direcciones"
-        >
+        {terminado ? (
           <Link to={`/b/${snapshotB.slug}`} className="apagado">
             Ver a {snapshotB.name}
           </Link>
-        </CompartirEnlace>
+        ) : (
+          <CompartirEnlace
+            url={window.location.href}
+            titulo={titulo}
+            dondeCopiar="de la barra de direcciones"
+          >
+            <Link to={`/b/${snapshotB.slug}`} className="apagado">
+              Ver a {snapshotB.name}
+            </Link>
+          </CompartirEnlace>
+        )}
       </div>
     </Pagina>
   );
