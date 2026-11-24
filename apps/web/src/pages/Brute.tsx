@@ -5,16 +5,9 @@ import { getPet, getSkill, getWeapon } from '@camorra/engine';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
-import { Barra, Boton, Chips, Estadistica, Pagina, Tarjeta } from '../ui.js';
+import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
 import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
-
-const STATS = [
-  ['Aguante', 'endurance'],
-  ['Fuerza', 'strength'],
-  ['Maña', 'agility'],
-  ['Brío', 'speed'],
-] as const;
 
 function Denuncia({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
@@ -164,7 +157,7 @@ export function BrutePage() {
           <div className="ficha-datos">
             <div className="estadisticas">
               <Estadistica etiqueta="Vida" valor={b.maxHp} />
-              {STATS.map(([etiqueta, campo]) => (
+              {ESTADISTICAS.map(([etiqueta, campo]) => (
                 <Estadistica key={campo} etiqueta={etiqueta} valor={b[campo]} />
               ))}
             </div>

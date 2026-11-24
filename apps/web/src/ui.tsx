@@ -93,6 +93,14 @@ export function Chips({ nombres, vacio }: { nombres: string[]; vacio: string }) 
   );
 }
 
+/** Las cuatro estadisticas con su nombre visible, en el orden de la ficha. */
+export const ESTADISTICAS = [
+  ['Aguante', 'endurance'],
+  ['Fuerza', 'strength'],
+  ['Maña', 'agility'],
+  ['Brío', 'speed'],
+] as const;
+
 /** Etiqueta encima y cifra grande debajo. */
 export function Estadistica({ etiqueta, valor }: { etiqueta: string; valor: number | string }) {
   return (

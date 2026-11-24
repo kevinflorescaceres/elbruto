@@ -32,6 +32,9 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   const propio = await crearPeleon(paginaMia, 'Peleon');
 
   await paginaMia.getByRole('button', { name: propio }).click();
+  // Primero la URL: la portada tambien tiene un titulo con el nombre ("Aqui esta
+  // ..."), y sin esto el expect siguiente podia darse por bueno antes de navegar.
+  await expect(paginaMia).toHaveURL(/\/b\//);
   await expect(paginaMia.getByRole('heading', { name: propio })).toBeVisible();
   await expect(paginaMia.getByRole('img', { name: 'Retrato del peleón' })).toBeVisible();
 

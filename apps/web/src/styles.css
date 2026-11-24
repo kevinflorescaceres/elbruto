@@ -653,6 +653,30 @@ th {
   font-size: 0.9rem;
 }
 
+/* Un enlace con aspecto de boton: lleva a otra pagina, asi que es <a>. */
+a.boton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+/* Recibe el foco por codigo al crear (tabIndex -1), no con el teclado. */
+.recien-titulo:focus {
+  outline: none;
+}
+
+/* Las acciones de la ficha a 44 px, como el resto de zonas de toque. */
+.ficha-datos .fila .boton {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.recien-inicial {
+  margin: 0;
+}
+
 .portada-seccion {
   margin-top: 2.5rem;
 }
