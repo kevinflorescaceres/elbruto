@@ -10,10 +10,10 @@ import {
   GROSOR,
   lookFrom,
   PUNO,
-  RIG,
   TRAZO,
   weaponShapes,
   Z_ORDER,
+  type Joint,
   type Look,
   type PartName,
   type Shape,
@@ -59,28 +59,29 @@ interface Props {
  * Vive aqui porque es una decision de dibujo, y la tenian copiada la arena y
  * la ficha.
  */
-export function armaVisible(ids: string[]): { category: WeaponCategory; reach: number } | undefined {
+export function armaVisible(
+  ids: string[],
+): { category: WeaponCategory; reach: number } | undefined {
   const arma = ids.map(getWeapon).sort((a, b) => b.reach - a.reach)[0];
   return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
 }
 
 export function Fighter({ appearance, slug, weapon, height = 150 }: Props) {
   const look = lookFrom(appearance, slug);
-  const hijos = new Map<PartName | null, typeof RIG>();
-  for (const part of RIG) {
+  const hijos = new Map<PartName | null, Joint[]>();
+  for (const part of look.rig) {
     const lista = hijos.get(part.parent) ?? [];
     lista.push(part);
     hijos.set(part.parent, lista);
   }
 
-  const orden = (a: (typeof RIG)[number], b: (typeof RIG)[number]): number =>
-    Z_ORDER.indexOf(a.name) - Z_ORDER.indexOf(b.name);
+  const orden = (a: Joint, b: Joint): number => Z_ORDER.indexOf(a.name) - Z_ORDER.indexOf(b.name);
 
   // El puno siempre: sin mano, el arma parece flotar al lado del cuerpo.
   const arma = weapon === undefined ? [] : weaponShapes(weapon.category, weapon.reach);
 
   const render = (name: PartName): React.ReactNode => {
-    const part = RIG.find((p) => p.name === name);
+    const part = look.rig.find((p) => p.name === name);
     if (part === undefined) return null;
     const pose = REST.parts[name] ?? {};
     const x = part.at[0] + (pose.x ?? 0);

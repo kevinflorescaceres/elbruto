@@ -11,8 +11,9 @@ import {
   MASCOTAS,
   PALETA,
   lookFrom,
+  montarCabeza,
+  type Rasgos,
   PUNO,
-  RIG,
   TRAZO,
   weaponShapes,
   Z_ORDER,
@@ -47,14 +48,14 @@ function figure(
   const arma = weapon === undefined ? [] : weaponShapes(weapon.category, weapon.reach);
 
   const render = (part: PartName): string => {
-    const spec = RIG.find((p) => p.name === part);
+    const spec = look.rig.find((p) => p.name === part);
     if (spec === undefined) return '';
     const pose = { ...REST.parts[part], ...frame.parts[part] };
     const x = spec.at[0] + (pose.x ?? 0);
     const y = spec.at[1] + (pose.y ?? 0);
-    const hijos = RIG.filter((p) => p.parent === part).sort(
-      (a, b) => Z_ORDER.indexOf(a.name) - Z_ORDER.indexOf(b.name),
-    );
+    const hijos = look.rig
+      .filter((p) => p.parent === part)
+      .sort((a, b) => Z_ORDER.indexOf(a.name) - Z_ORDER.indexOf(b.name));
     const propias = look.parts[part];
     return (
       `<g transform="translate(${x} ${y}) rotate(${((pose.rot ?? 0) * 180) / Math.PI})">` +
@@ -218,6 +219,66 @@ writeFileSync(
       .join('') +
     '</svg>',
 );
+
+// 5b. Cabezas: cada pelo sobre las cuatro mandibulas, y con dos sombreros de
+// prueba. Los sombreros son un galibo, no arte del juego: comprueban que la
+// calota comun deja sitio a uno sin que el pelo se salga por debajo del ala.
+const GALIBOS: Record<string, Shape[]> = {
+  boina: [
+    { d: 'M -20 -31 Q -24 -47 0 -49 Q 25 -48 21 -32 Q 0 -35 -20 -31 Z', fill: 'oscuro' },
+    { d: 'M -1 -49 L 0 -53 L 1.5 -49', fill: 'oscuro', trazo: 2.4 },
+  ],
+  ala: [
+    { d: 'M -14 -33 L -12.5 -50 Q 0 -54 12.5 -50 L 14 -33 Z', fill: 'cuero' },
+    { d: 'M -14 -38 L 14 -38 L 14 -34 L -14 -34 Z', fill: 'oscuro', stroke: false },
+    { d: 'M -27 -32 Q 0 -38 27 -32 Q 0 -29 -27 -32 Z', fill: 'cuero' },
+  ],
+};
+const colorHoja: Look['colors'] = {
+  piel: PALETA.piel[1],
+  pelo: PALETA.pelo[1],
+  ropa: PALETA.ropa[0],
+  ropa2: PALETA.ropa[1],
+};
+const cabezas: { label: string; body: string }[] = [];
+for (const sombrero of [undefined, 'boina', 'ala'] as const) {
+  for (let hair = 0; hair < 6; hair++) {
+    for (let head = 0; head < 4; head++) {
+      const rasgos: Rasgos = {
+        head,
+        hair,
+        beard: head === 3 ? 5 : head,
+        brow: head,
+        mouth: hair % 4,
+        mark: head === 0 ? 3 : 0,
+      };
+      const formas = montarCabeza(rasgos, sombrero === undefined ? undefined : GALIBOS[sombrero]);
+      cabezas.push({
+        label: `p${hair} c${head}${sombrero === undefined ? '' : ' ' + sombrero}`,
+        body: `<g transform="translate(0 40) scale(1.6)">${shapesToSvg(formas, colorHoja)}</g>`,
+      });
+    }
+  }
+}
+{
+  const porFila = 8;
+  const filas = Math.ceil(cabezas.length / porFila);
+  writeFileSync(
+    `${salida}/cabezas.svg`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${porFila * 110}" height="${filas * 130}" viewBox="0 0 ${porFila * 110} ${filas * 130}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
+      cabezas
+        .map((c, i) => {
+          const cx = (i % porFila) * 110 + 55;
+          const cy = Math.floor(i / porFila) * 130 + 75;
+          return (
+            `<g transform="translate(${cx} ${cy})">${c.body}</g>` +
+            `<text x="${cx}" y="${cy + 50}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`
+          );
+        })
+        .join('') +
+      '</svg>',
+  );
+}
 
 // 6. Escenarios, a tamano real del lienzo y con un peleon dentro para escala.
 const peleonMuestra = figure('Chirlo de la Cava', REST, { category: 'pesada', reach: 2 });

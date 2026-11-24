@@ -6,7 +6,7 @@
  */
 import { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { RIG, type PartName } from './art/parts.js';
+import type { PartName } from './art/parts.js';
 import { ANIMATIONS, type AnimName } from './art/poses.js';
 import { TIME_SCALE, type Move, type Scene } from './fightScene.js';
 import {
@@ -68,11 +68,6 @@ function fromTo(
   linea.fromTo(objetivo, desde, { ...hasta, immediateRender: false }, at);
 }
 
-/** Posicion de reposo de cada articulacion, para sumarle los desplazamientos. */
-const BASE = new Map<PartName, { x: number; y: number }>(
-  RIG.map((part) => [part.name, { x: part.at[0], y: part.at[1] }]),
-);
-
 /**
  * Toca una animacion del rig estirando sus keyframes a lo que dure el evento.
  * Las mascotas no tienen rig: se les hace un gesto equivalente de una pieza.
@@ -96,7 +91,7 @@ function playAnimation(
 
     for (const [name, pose] of Object.entries(frame.parts)) {
       const node = view.rig.parts.get(name as PartName);
-      const base = BASE.get(name as PartName);
+      const base = view.rig.base.get(name as PartName);
       if (node === undefined || base === undefined) continue;
 
       const destino: Record<string, number> = {};

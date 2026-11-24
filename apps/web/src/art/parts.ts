@@ -65,8 +65,18 @@ export const PALETA = {
 // Viven en los tokens compartidos; se reexportan para no romper imports.
 export { GROSOR, TRAZO } from '@camorra/shared';
 
-/** Articulaciones: donde cuelga cada parte de su padre. */
-export const RIG: { name: PartName; parent: PartName | null; at: [number, number] }[] = [
+export interface Joint {
+  name: PartName;
+  parent: PartName | null;
+  at: [number, number];
+}
+
+/**
+ * Articulaciones: donde cuelga cada parte de su padre. Es el rig base; los
+ * hombros los mueve cada complexion (ver `Look.rig`), asi que los renderers
+ * leen el rig del look y no este.
+ */
+export const RIG: Joint[] = [
   { name: 'hips', parent: null, at: [0, -42] },
   { name: 'legBack', parent: 'hips', at: [-6, 0] },
   { name: 'legFront', parent: 'hips', at: [6, 0] },
@@ -87,183 +97,402 @@ export const Z_ORDER: PartName[] = ['legBack', 'armBack', 'legFront', 'torso', '
  * El peleon es FRONTAL: dos ojos, torso simetrico, escote centrado y faja de
  * lado a lado. Por eso cada bota apunta hacia su lado, como en el encargo. Con
  * las dos mirando al mismo sitio el cuerpo se lee girado.
+ *
+ * Las piernas se abren hacia abajo (`abre` unidades en el tobillo): plantado
+ * con los pies separados se lee pendenciero; con las piernas paralelas, de
+ * soldadito de plomo.
  */
-const pierna = (lado: 'izq' | 'der'): Shape[] => [
-  { d: 'M -5 -2 L -5 30 L 5 30 L 5 -2 Z', fill: 'pantalon' },
-  {
-    d:
-      lado === 'izq'
-        ? 'M -7 28 L 5 28 L 5 37 L -10 37 Q -12 37 -12 34 Q -12 28 -7 28 Z'
-        : 'M -5 28 L 7 28 Q 12 28 12 34 Q 12 37 10 37 L -5 37 Z',
-    fill: 'cuero',
-  },
+const pierna = (lado: 'izq' | 'der'): Shape[] => {
+  const s = lado === 'izq' ? -2.5 : 2.5;
+  const p = (x: number) => x + s;
+  // Puntera hacia su lado: en la izquierda se refleja la bota entera.
+  const bota =
+    lado === 'der'
+      ? `M ${p(-5)} 25 L ${p(5)} 25 L ${p(5)} 29 Q ${p(13)} 29 ${p(13)} 34 L ${p(13)} 37 L ${p(-5.5)} 37 Z`
+      : `M ${p(5)} 25 L ${p(-5)} 25 L ${p(-5)} 29 Q ${p(-13)} 29 ${p(-13)} 34 L ${p(-13)} 37 L ${p(5.5)} 37 Z`;
+  const suela =
+    lado === 'der'
+      ? `M ${p(-5.5)} 34.5 L ${p(13)} 34.5 L ${p(13)} 37 L ${p(-5.5)} 37 Z`
+      : `M ${p(5.5)} 34.5 L ${p(-13)} 34.5 L ${p(-13)} 37 L ${p(5.5)} 37 Z`;
+  return [
+    // Pantalon con algo de holgura en la rodilla, que no parezca un tubo.
+    {
+      d: `M -6 -2 L 6 -2 Q ${7 + s * 0.4} 12 ${p(5.5)} 25 L ${p(-5.5)} 25 Q ${-7 + s * 0.4} 12 -6 -2 Z`,
+      fill: 'pantalon',
+    },
+    { d: bota, fill: 'cuero' },
+    { d: suela, fill: 'oscuro', stroke: false },
+    // Vuelta de la cana de la bota.
+    { d: `M ${p(-6.5)} 23 L ${p(6.5)} 23 L ${p(6)} 27 L ${p(-6)} 27 Z`, fill: 'cuero' },
+  ];
+};
+
+/**
+ * Antebrazo grueso arriba y fino en la muneca: el de alguien que trabaja con
+ * las manos. Acaba en y=16, donde monta el puno.
+ */
+const ANTEBRAZO: Shape[] = [
+  { d: 'M -4.5 -1 Q -6 5 -4 13 L -3.5 16 L 3.5 16 L 4 13 Q 6 5 4.5 -1 Z', fill: 'piel' },
 ];
 
-const ANTEBRAZO: Shape[] = [{ d: 'M -4 0 L -4 13 Q -4 16 0 16 Q 4 16 4 13 L 4 0 Z', fill: 'piel' }];
+/**
+ * El puno: un mazo cuadrado con la raya de los nudillos, no una bola. Centrado
+ * en (0,-1), donde estaba el circulo de antes, para que las armas sigan cayendo
+ * en la mano.
+ */
+export const PUNO: Shape[] = [
+  {
+    d: 'M -5.5 -3.5 Q -5.5 -7 -2 -7 L 2 -7 Q 5.5 -7 5.5 -3.5 L 5.5 1.5 Q 5.5 5 2 5 L -2 5 Q -5.5 5 -5.5 1.5 Z',
+    fill: 'piel',
+  },
+  { d: 'M -3 -2.5 L 3 -2.5', fill: 'oscuro', trazo: 1.4 },
+];
 
+/** La mano de atras no lleva arma: el puno va dibujado en el propio antebrazo. */
+const ANTEBRAZO_ATRAS: Shape[] = [
+  ...ANTEBRAZO,
+  ...PUNO.map((shape) => ({ ...shape, d: desplaza(shape.d, 0, 16) })),
+];
+
+/**
+ * Manga hasta el codo, ancha en el hombro. Una sola pieza: con manga y biceps
+ * por separado el brazo se leia como una ristra de salchichas.
+ */
 const BRAZO: Shape[] = [
   {
-    d: 'M -5 -2 L -5 14 Q -5 17 0 17 Q 5 17 5 14 L 5 -2 Q 5 -5 0 -5 Q -5 -5 -5 -2 Z',
+    d: 'M -6.5 -1 Q -6.5 -7 0 -7 Q 6.5 -7 6.5 -1 L 5.5 13 Q 5.5 17 0 17 Q -5.5 17 -5.5 13 Z',
     fill: 'ropa',
   },
 ];
 
-/** Tres complexiones: enjuto, recio y medio. */
-const TORSOS: Shape[][] = [
-  [
-    {
-      d: 'M -13 2 Q -16 -13 -14 -24 Q -14 -30 -8 -30 L 8 -30 Q 14 -30 14 -24 Q 16 -13 13 2 Z',
-      fill: 'ropa',
-    },
-  ],
-  [
-    {
-      d: 'M -16 2 Q -19 -14 -17 -25 Q -17 -31 -9 -31 L 9 -31 Q 17 -31 17 -25 Q 19 -14 16 2 Z',
-      fill: 'ropa',
-    },
-  ],
-  [
-    {
-      d: 'M -14 2 Q -18 -12 -15 -24 Q -15 -30 -8 -30 L 8 -30 Q 15 -30 15 -24 Q 18 -12 14 2 Z',
-      fill: 'ropa',
-    },
-  ],
-];
-
 /**
- * Detalle que llevan todos, no es variante. La faja va en `ropa2` para que no
- * desaparezca dentro del jubon, y el escote evita que la cabeza flote sobre un
- * rectangulo.
+ * Tres complexiones: enjuto, recio y medio. Tienen que distinguirse a
+ * golpe de vista, asi que cambian los hombros y la cintura, no un par de
+ * unidades. El recio lleva barriga, que asoma por encima de la faja.
+ *
+ * `cintura` es la media anchura en la faja: la faja se dibuja a su medida y
+ * un poco mas ancha que el torso, para que se lea como prenda ceñida.
  */
-const DETALLE_TORSO: Shape[] = [
-  { d: 'M -14 -5 L 14 -5 L 13 3 L -13 3 Z', fill: 'ropa2' },
-  { d: 'M -5 -30 L 0 -20 L 5 -30', fill: 'piel' },
+const COMPLEXIONES: { torso: string; cintura: number; hombro: number }[] = [
+  {
+    torso: 'M -11 3 Q -12 -12 -15 -22 Q -17 -30 -9 -30 L 9 -30 Q 17 -30 15 -22 Q 12 -12 11 3 Z',
+    cintura: 11,
+    hombro: 13,
+  },
+  {
+    torso:
+      'M -15 3 Q -20 -2 -19 -9 Q -18 -14 -20 -19 Q -23 -30 -13 -31 L 13 -31 Q 23 -30 20 -19 Q 18 -14 19 -9 Q 20 -2 15 3 Z',
+    cintura: 15,
+    hombro: 20,
+  },
+  {
+    torso: 'M -12 3 Q -13 -9 -18 -19 Q -21 -29 -11 -31 L 11 -31 Q 21 -29 18 -19 Q 13 -9 12 3 Z',
+    cintura: 12,
+    hombro: 17,
+  },
 ];
 
-/** Cuatro craneos: redonda, cuadrada, alargada y ancha de pomulos. */
+const TORSOS: Shape[][] = COMPLEXIONES.map(({ torso, cintura: w }) => [
+  { d: torso, fill: 'ropa' },
+  // Escote: evita que la cabeza flote sobre un rectangulo.
+  { d: 'M -6 -30 L 0 -19 L 6 -30', fill: 'piel' },
+  // Faja en `ropa2` para que no desaparezca dentro del jubon.
+  { d: `M ${-w - 1.5} -4 L ${w + 1.5} -4 L ${w + 1} 4 L ${-w - 1} 4 Z`, fill: 'ropa2' },
+]);
+
+/** Traslada una ruta absoluta. Igual que `scalePath`, no admite arcos. */
+function desplaza(d: string, dx: number, dy: number): string {
+  if (/[aA]/.test(d)) throw new Error(`desplaza no sabe mover arcos: ${d}`);
+  let index = 0;
+  return d.replace(/-?\d+(\.\d+)?/g, (raw) => {
+    const value = Number(raw);
+    const moved = index++ % 2 === 0 ? value + dx : value + dy;
+    return String(Math.round(moved * 100) / 100);
+  });
+}
+/**
+ * La cabeza. Origen en la base del cuello (el `head` del rig), la altura crece
+ * hacia -y. El borde de arriba del torso cae en y=-3.
+ *
+ * Regla que lo ordena todo: **las cuatro cabezas comparten la calota**, la
+ * cupula de y=-26 para arriba. Solo cambian de la sien para abajo (mandibula,
+ * pomulos, barbilla). Asi cualquier pelo, y mas adelante cualquier sombrero,
+ * se dibuja una vez contra la misma cupula y encaja en las cuatro. Antes cada
+ * craneo tenia su propia coronilla y los pelos se salian o se quedaban cortos.
+ *
+ * Calota: semicupula de anchura ±17 en y=-26 y cima en y=-42.
+ */
+const CALOTA = 'M -17 -26 Q -17 -42 0 -42 Q 17 -42 17 -26';
+
+/** Circulo como dos arcos, con el centro donde se lee. */
+const circulo = (cx: number, cy: number, r: number): string =>
+  `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${2 * r} 0 a ${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
+
+/**
+ * Cuello corto y ancho. Sin trazo abajo: va metido en el escote, y una raya
+ * ahi lo cortaria del cuerpo. Los lados se trazan aparte.
+ */
+const CUELLO: Shape[] = [
+  { d: 'M -6.5 0 L -6.5 -12 L 6.5 -12 L 6.5 0 Z', fill: 'piel', stroke: false },
+  { d: 'M -6.5 -1.5 L -6.5 -10 M 6.5 -1.5 L 6.5 -10', fill: 'oscuro', trazo: 3 },
+];
+
+/** Orejas: van detras del craneo, que tapa su mitad de dentro. */
+const OREJAS: Shape[] = [
+  { d: 'M -15 -27 Q -22 -28 -22 -22 Q -22 -16 -15 -17 Z', fill: 'piel' },
+  { d: 'M 15 -27 Q 22 -28 22 -22 Q 22 -16 15 -17 Z', fill: 'piel' },
+];
+
+/** Cuatro mandibulas bajo la misma calota: redonda, cuadrada, alargada y de pomulos. */
 const CABEZAS: Shape[][] = [
-  [{ d: 'M -20 -18 Q -20 -40 0 -40 Q 20 -40 20 -18 Q 20 0 0 0 Q -20 0 -20 -18 Z', fill: 'piel' }],
+  [{ d: `${CALOTA} Q 17 -7 0 -7 Q -17 -7 -17 -26 Z`, fill: 'piel' }],
+  [{ d: `${CALOTA} L 17 -14 Q 17 -7 10 -7 L -10 -7 Q -17 -7 -17 -14 Z`, fill: 'piel' }],
   [
     {
-      d: 'M -19 -38 L 19 -38 Q 21 -38 21 -34 L 21 -10 Q 21 0 11 0 L -11 0 Q -21 0 -21 -10 L -21 -34 Q -21 -38 -19 -38 Z',
+      d: `${CALOTA} Q 16.5 -12 9 -6 Q 4 -3 0 -3 Q -4 -3 -9 -6 Q -16.5 -12 -17 -26 Z`,
       fill: 'piel',
     },
   ],
-  [{ d: 'M -17 -20 Q -17 -42 0 -42 Q 17 -42 17 -20 Q 17 2 0 2 Q -17 2 -17 -20 Z', fill: 'piel' }],
   [
     {
-      d: 'M -22 -26 Q -22 -40 0 -40 Q 22 -40 22 -26 Q 22 -16 14 -8 Q 7 0 0 0 Q -7 0 -14 -8 Q -22 -16 -22 -26 Z',
+      d: `${CALOTA} Q 21.5 -19 14 -12 Q 7 -6 0 -6 Q -7 -6 -14 -12 Q -21.5 -19 -17 -26 Z`,
       fill: 'piel',
     },
   ],
 ];
 
 /**
- * Piezas de cara (ARTE-Y-TOKENS.md §1.2). El bloque va 4 unidades mas abajo que
- * en el encargo: con las coordenadas originales los ojos y las cejas caian en
- * la linea del pelo y varios peinados los tapaban.
+ * Rasgos. Linea de cejas en y=-28, ojos en -24, nariz en -19, boca en -13: la
+ * cara ocupa la franja de -30 a -10, que cabe en las cuatro mandibulas.
  */
 const OJOS: Shape[] = [
-  { d: 'M -9 -18 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
-  { d: 'M 9 -18 a 2.6 2.6 0 1 0 0.1 0 Z', fill: 'oscuro', stroke: false },
+  { d: circulo(-7, -24, 2.4), fill: 'oscuro', stroke: false },
+  { d: circulo(7, -24, 2.4), fill: 'oscuro', stroke: false },
 ];
+
+/**
+ * Nariz: solo la linea de abajo, como las cejas y la boca. Rellena y con
+ * contorno se comia la cara y se leia como un hocico.
+ */
+const NARIZ: Shape[] = [{ d: 'M -2.5 -18.5 Q 0 -16.5 2.5 -18.5', fill: 'oscuro', trazo: 2.2 }];
 
 /** Cuatro cejas: recta, caida, arqueada y partida por cicatriz. */
 const CEJAS: Shape[][] = [
   [
-    { d: 'M -12 -21 L -5 -21', fill: 'oscuro', trazo: 2.4 },
-    { d: 'M 12 -21 L 5 -21', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M -10.5 -28.5 L -4 -28.5', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 10.5 -28.5 L 4 -28.5', fill: 'oscuro', trazo: 2.4 },
   ],
   [
-    { d: 'M -12 -23 L -5 -19', fill: 'oscuro', trazo: 2.4 },
-    { d: 'M 12 -23 L 5 -19', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M -10.5 -30.5 L -4 -27.5', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 10.5 -30.5 L 4 -27.5', fill: 'oscuro', trazo: 2.4 },
   ],
   [
-    { d: 'M -12 -20 Q -8.5 -25 -5 -20', fill: 'oscuro', trazo: 2.4 },
-    { d: 'M 12 -20 Q 8.5 -25 5 -20', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M -10.5 -27.5 Q -7.25 -32 -4 -27.5', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 10.5 -27.5 Q 7.25 -32 4 -27.5', fill: 'oscuro', trazo: 2.4 },
   ],
   [
-    { d: 'M -12 -21 L -9 -21 M -7 -22 L -5 -22', fill: 'oscuro', trazo: 2.4 },
-    { d: 'M 12 -21 L 5 -21', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M -10.5 -28.5 L -8 -28.5 M -6.5 -29.5 L -4 -29.5', fill: 'oscuro', trazo: 2.4 },
+    { d: 'M 10.5 -28.5 L 4 -28.5', fill: 'oscuro', trazo: 2.4 },
   ],
 ];
 
 /** Cuatro bocas: sonrisa, torcida, apretada y mellada. */
 const BOCAS: Shape[][] = [
-  [{ d: 'M -6 -4 Q 0 0 6 -4', fill: 'oscuro', trazo: 2.4 }],
-  [{ d: 'M -6 -4 Q 0 -1 6 -7', fill: 'oscuro', trazo: 2.4 }],
-  [{ d: 'M -7 -3 L 7 -3', fill: 'oscuro', trazo: 2.4 }],
+  [{ d: 'M -5 -13 Q 0 -9.5 5 -13', fill: 'oscuro', trazo: 2.4 }],
+  [{ d: 'M -5 -12 Q 0 -10.5 5 -15', fill: 'oscuro', trazo: 2.4 }],
+  [{ d: 'M -5.5 -12.5 L 5.5 -12.5', fill: 'oscuro', trazo: 2.4 }],
   [
-    { d: 'M -6 -5 L 6 -5 L 6 0 L -6 0 Z', fill: 'oscuro' },
-    { d: 'M -1 -5 L 2 -5 L 2 -2 L -1 -2 Z', fill: 'piel', stroke: false },
+    { d: 'M -5 -14.5 L 5 -14.5 L 5 -10.5 L -5 -10.5 Z', fill: 'oscuro' },
+    { d: 'M -1 -14.5 L 1.5 -14.5 L 1.5 -12.5 L -1 -12.5 Z', fill: 'trapo', stroke: false },
   ],
 ];
 
-/** Seis barbas. La primera es no llevar. */
+/**
+ * Seis barbas. La primera es no llevar. Las que tapan la mandibula son algo
+ * mas anchas que la mas ancha de las cuatro, para cubrirlas todas sin que
+ * asome una esquina de la cuadrada.
+ */
 const BARBAS: Shape[][] = [
   [],
-  [{ d: 'M -4 -6 L 4 -6 L 3 4 Q 0 7 -3 4 Z', fill: 'pelo' }],
-  [{ d: 'M -9 -11 Q 0 -15 9 -11 Q 5 -6 0 -7 Q -5 -6 -9 -11 Z', fill: 'pelo' }],
+  [{ d: 'M -3 -10 L 3 -10 L 2.5 -1 Q 0 2 -2.5 -1 Z', fill: 'pelo' }],
+  [{ d: 'M -8.5 -15 Q 0 -19 8.5 -15 Q 5 -13 0 -14.5 Q -5 -13 -8.5 -15 Z', fill: 'pelo' }],
   [
-    { d: 'M -18 -23 L -13 -23 L -12 -6 L -17 -9 Z', fill: 'pelo' },
-    { d: 'M 18 -23 L 13 -23 L 12 -6 L 17 -9 Z', fill: 'pelo' },
+    // Sin contorno y pegadas al borde de dentro de la cara: con trazo propio
+    // parecian unos auriculares.
+    { d: 'M -16 -31 L -12 -31 L -12.5 -15.5 Q -14.5 -17 -16 -20 Z', fill: 'pelo', stroke: false },
+    { d: 'M 16 -31 L 12 -31 L 12.5 -15.5 Q 14.5 -17 16 -20 Z', fill: 'pelo', stroke: false },
   ],
-  [{ d: 'M -16 -15 Q -16 4 0 4 Q 16 4 16 -15 Q 12 -4 0 -4 Q -12 -4 -16 -15 Z', fill: 'pelo' }],
-  [{ d: 'M -18 -21 Q -19 10 0 12 Q 19 10 18 -21 Q 12 -8 0 -9 Q -12 -8 -18 -21 Z', fill: 'pelo' }],
+  [
+    {
+      d: 'M -18 -22 L -18 -12 Q -17 -1 0 -1 Q 17 -1 18 -12 L 18 -22 Q 12 -9.5 0 -9.5 Q -12 -9.5 -18 -22 Z',
+      fill: 'pelo',
+    },
+  ],
+  [
+    {
+      d: 'M -18.5 -24 L -18.5 -11 Q -18 5 0 8 Q 18 5 18.5 -11 L 18.5 -24 Q 12 -10 0 -10 Q -12 -10 -18.5 -24 Z',
+      fill: 'pelo',
+    },
+  ],
 ];
 
-/** Seis marcas, tres vacias: si la mitad no lleva, deja de ser una marca. */
-const MARCAS: Shape[][] = [
-  [],
-  [],
-  [],
-  [{ d: 'M 12 -30 L 7 -13', fill: 'oscuro', trazo: 2.6 }],
-  [
-    { d: 'M -21 -20 L 20 -17', fill: 'oscuro', trazo: 2.6 },
-    { d: 'M -14 -20 a 6.5 6.5 0 1 0 0.1 0 Z', fill: 'oscuro' },
-  ],
-  [{ d: 'M -21 -31 L 21 -28 L 21 -21 L -21 -24 Z', fill: 'trapo' }],
+/**
+ * Seis marcas, tres vacias: si la mitad no lleva, deja de ser una marca.
+ *
+ * Cada marca dice en que capa va. Lo que esta EN la piel (el chirlo) se pinta
+ * antes que el pelo, asi el nacimiento de cada peinado lo corta por donde toca
+ * y nunca queda encima del pelo. Lo que se LLEVA PUESTO (parche, venda) va
+ * despues de los ojos, para tapar el ojo y pasar por encima del pelo.
+ */
+const MARCAS: { enLaPiel: Shape[]; puesta: Shape[] }[] = [
+  { enLaPiel: [], puesta: [] },
+  { enLaPiel: [], puesta: [] },
+  { enLaPiel: [], puesta: [] },
+  { enLaPiel: [{ d: 'M 10 -34 L 5.5 -17', fill: 'oscuro', trazo: 2.6 }], puesta: [] },
+  {
+    enLaPiel: [],
+    puesta: [
+      { d: 'M -18 -28 L 17.5 -24', fill: 'oscuro', trazo: 2.6 },
+      { d: circulo(-7, -24, 5), fill: 'oscuro' },
+    ],
+  },
+  {
+    enLaPiel: [],
+    puesta: [{ d: 'M -18.5 -37 L 18.5 -35 L 18.5 -29.5 L -18.5 -31.5 Z', fill: 'trapo' }],
+  },
 ];
 
-/** Seis pelos: rapado, greñas, cresta, melena, entradas con coleta y calvo con corona. */
-const PELOS: Shape[][] = [
-  [
-    {
-      d: 'M -20 -24 Q -18 -42 0 -42 Q 18 -42 20 -24 Q 10 -34 0 -33 Q -10 -34 -20 -24 Z',
-      fill: 'pelo',
-    },
-  ],
-  [
-    {
-      d: 'M -21 -18 Q -22 -43 0 -43 Q 22 -43 21 -18 Q 17 -27 13 -20 Q 9 -29 4 -21 Q -1 -30 -6 -21 Q -11 -29 -15 -20 Q -18 -26 -21 -18 Z',
-      fill: 'pelo',
-    },
-  ],
-  [
-    {
-      d: 'M -16 -30 Q -14 -38 0 -38 Q 14 -38 16 -30 Q 8 -34 0 -34 Q -8 -34 -16 -30 Z',
-      fill: 'pelo',
-    },
-    { d: 'M -5 -36 Q -9 -52 0 -55 Q 9 -52 5 -36 Q 0 -39 -5 -36 Z', fill: 'pelo' },
-  ],
-  [
-    {
-      d: 'M -20 -22 Q -22 -42 0 -42 Q 22 -42 20 -22 L 22 4 Q 16 6 15 -2 Q 14 -28 0 -28 Q -14 -28 -15 -2 Q -16 6 -22 4 Z',
-      fill: 'pelo',
-    },
-  ],
-  [
-    {
-      d: 'M -18 -28 Q -14 -40 0 -40 Q 14 -40 18 -28 Q 12 -34 6 -33 Q 8 -38 0 -38 Q -8 -38 -6 -33 Q -12 -34 -18 -28 Z',
-      fill: 'pelo',
-    },
-    { d: 'M 17 -31 Q 29 -29 27 -15 Q 24 -22 16 -25 Z', fill: 'pelo' },
-  ],
-  [
-    { d: 'M -20 -20 Q -21 -29 -17 -32 Q -16 -23 -12 -20 Z', fill: 'pelo' },
-    { d: 'M 20 -20 Q 21 -29 17 -32 Q 16 -23 12 -20 Z', fill: 'pelo' },
-  ],
+/**
+ * Un peinado en tres capas:
+ *
+ * - `detras`: lo que cae por detras del craneo (melena, coleta). Se pinta
+ *   antes que la cabeza, asi enmarca la cara en vez de taparla.
+ * - `encima`: lo que va sobre la calota.
+ * - `bajoSombrero`: lo que se ve de `encima` si la cabeza lleva sombrero
+ *   (patillas, laterales). Lo de `detras` se ve siempre.
+ *
+ * Todo se dibuja contra la `CALOTA` comun.
+ */
+export interface Peinado {
+  detras: Shape[];
+  encima: Shape[];
+  bajoSombrero: Shape[];
+}
+
+/** Seis pelos: rapado, grenas, cresta, melena, entradas con coleta y calvo con corona. */
+const PELOS: Peinado[] = [
+  {
+    detras: [],
+    encima: [
+      {
+        d: 'M -18 -26 Q -18.5 -43.5 0 -43.5 Q 18.5 -43.5 18 -26 L 16 -27.5 Q 15 -35 0 -35 Q -15 -35 -16 -27.5 Z',
+        fill: 'pelo',
+      },
+    ],
+    bajoSombrero: [],
+  },
+  {
+    detras: [],
+    encima: [
+      {
+        d: 'M -19 -22 Q -20 -44.5 0 -44.5 Q 20 -44.5 19 -22 Q 17 -28 14.5 -26 Q 13 -34 9 -31 Q 5 -36 1 -32 Q -3 -36 -7 -31 Q -11 -35 -14 -27 Q -16.5 -29 -19 -22 Z',
+        fill: 'pelo',
+      },
+    ],
+    bajoSombrero: [
+      { d: 'M -19 -22 L -19 -32 L -15 -32 L -14 -27 Q -16.5 -29 -19 -22 Z', fill: 'pelo' },
+      { d: 'M 19 -22 L 19 -32 L 15 -32 L 14.5 -26 Q 17 -28 19 -22 Z', fill: 'pelo' },
+    ],
+  },
+  {
+    detras: [],
+    encima: [
+      { d: 'M -4.5 -42 L 4.5 -42 L 3.5 -34 L -3.5 -34 Z', fill: 'pelo' },
+      { d: 'M -5 -41 Q -9 -51 0 -55 Q 9 -51 5 -41 Q 0 -43 -5 -41 Z', fill: 'pelo' },
+    ],
+    bajoSombrero: [],
+  },
+  {
+    detras: [
+      {
+        d: 'M -20 -26 Q -21 -45.5 0 -45.5 Q 21 -45.5 20 -26 L 22 -1 Q 16 1 13.5 -6 L -13.5 -6 Q -16 1 -22 -1 Z',
+        fill: 'pelo',
+      },
+    ],
+    encima: [
+      {
+        d: 'M -18.5 -25 Q -19 -44.5 0 -44.5 Q 19 -44.5 18.5 -25 Q 16 -36 2 -36.5 L 0 -34 L -2 -36.5 Q -16 -36 -18.5 -25 Z',
+        fill: 'pelo',
+      },
+    ],
+    bajoSombrero: [],
+  },
+  {
+    detras: [{ d: 'M 13 -37 Q 29 -38 27 -21 Q 26 -14 22 -11 Q 21 -21 14 -28 Z', fill: 'pelo' }],
+    encima: [
+      {
+        d: 'M -18 -29 Q -17.5 -43.5 0 -43.5 Q 17.5 -43.5 18 -29 Q 13.5 -35 9.5 -34 Q 7 -39.5 0 -39.5 Q -7 -39.5 -9.5 -34 Q -13.5 -35 -18 -29 Z',
+        fill: 'pelo',
+      },
+    ],
+    bajoSombrero: [],
+  },
+  {
+    detras: [],
+    encima: [
+      { d: 'M -18.5 -22 Q -19.5 -32 -16 -35.5 Q -15 -28 -12.5 -24 Z', fill: 'pelo' },
+      { d: 'M 18.5 -22 Q 19.5 -32 16 -35.5 Q 15 -28 12.5 -24 Z', fill: 'pelo' },
+    ],
+    bajoSombrero: [
+      { d: 'M -18.5 -22 Q -19.5 -32 -16 -35.5 Q -15 -28 -12.5 -24 Z', fill: 'pelo' },
+      { d: 'M 18.5 -22 Q 19.5 -32 16 -35.5 Q 15 -28 12.5 -24 Z', fill: 'pelo' },
+    ],
+  },
 ];
+
+/**
+ * El hueco de un sombrero: todo lo que vaya por encima de y=-31 y dentro de
+ * ±21 lo puede tapar. Un sombrero nuevo se dibuja contra la `CALOTA` con el
+ * ala en esa linea, y el pelo pasa a pintar `bajoSombrero` en vez de `encima`.
+ */
+export const LINEA_DEL_SOMBRERO = -31;
+
+/** Los rasgos de la cabeza que salen de la apariencia. */
+export interface Rasgos {
+  head: number;
+  hair: number;
+  beard: number;
+  brow: number;
+  mouth: number;
+  mark: number;
+}
+
+/**
+ * Monta la cabeza en su orden de pintado. Con `sombrero`, el pelo pinta solo
+ * lo que asoma bajo el ala y el sombrero va encima de todo menos de la marca
+ * (una venda o un parche se llevan por debajo... salvo que el ala los tape).
+ */
+export function montarCabeza(r: Rasgos, sombrero?: Shape[]): Shape[] {
+  const pelo = pickFrom(PELOS, r.hair);
+  const marca = pickFrom(MARCAS, r.mark);
+  return [
+    ...CUELLO,
+    ...pelo.detras,
+    ...OREJAS,
+    ...pickFrom(CABEZAS, r.head),
+    // La barba antes que el pelo para que las patillas queden bajo la melena.
+    ...pickFrom(BARBAS, r.beard),
+    ...NARIZ,
+    ...marca.enLaPiel,
+    ...(sombrero === undefined ? pelo.encima : pelo.bajoSombrero),
+    ...pickFrom(CEJAS, r.brow),
+    ...OJOS,
+    ...pickFrom(BOCAS, r.mouth),
+    // Tras los ojos, para que el parche tape el ojo y no al reves.
+    ...marca.puesta,
+    ...(sombrero ?? []),
+  ];
+}
 
 // --- Armas: una silueta por categoria, con variacion segun las stats ---
 
@@ -289,13 +518,6 @@ const ARMAS: Record<WeaponCategory, Shape[]> = {
   ],
   arrojadiza: [{ d: 'M 4 -8 L 15 -9 L 19 0 L 14 8 L 4 7 L 1 -1 Z', fill: 'madera' }],
 };
-
-/**
- * El puno monta sobre el extremo del antebrazo, no cuelga de el. El arco
- * original arrancaba en (0,0), asi que el circulo quedaba entero por debajo de
- * la punta y con la rotacion de la mano se leia como una bola suelta.
- */
-export const PUNO: Shape[] = [{ d: 'M -5 -1 a 5 5 0 1 0 10 0 a 5 5 0 1 0 -10 0 Z', fill: 'piel' }];
 
 /**
  * Mascotas de perfil, mirando a la derecha. Pies en y=0, el cuerpo crece hacia
@@ -352,6 +574,8 @@ export const MASCOTAS: Record<string, Shape[]> = {
 
 export interface Look {
   parts: Partial<Record<PartName, Shape[]>>;
+  /** El rig con los hombros de esta complexion. */
+  rig: Joint[];
   colors: { piel: string; pelo: string; ropa: string; ropa2: string };
 }
 
@@ -367,9 +591,6 @@ const pickFrom = <T>(list: readonly T[], index: number): T => {
  * dibujados: el modulo reparte y sigue siendo determinista.
  */
 export function lookFrom(appearance: Appearance, slug: string): Look {
-  const cabeza = pickFrom(CABEZAS, appearance.head);
-  const pelo = pickFrom(PELOS, appearance.hair);
-
   const ropa = pickFrom(PALETA.ropa, appearance.clothColor);
   // Si la faja sale del mismo color que el jubon, desaparece dentro: se coge la
   // siguiente de la lista (ARTE-Y-TOKENS.md §1.6).
@@ -379,26 +600,30 @@ export function lookFrom(appearance: Appearance, slug: string): Look {
       ? pickFrom(PALETA.ropa, iFaja + 1)
       : pickFrom(PALETA.ropa, iFaja);
 
+  const { hombro } = pickFrom(COMPLEXIONES, appearance.body);
+  const rig = RIG.map((joint): Joint => {
+    if (joint.name === 'armFront') return { ...joint, at: [hombro, joint.at[1]] };
+    if (joint.name === 'armBack') return { ...joint, at: [-hombro, joint.at[1]] };
+    return joint;
+  });
+
   return {
+    rig,
     parts: {
-      torso: [...pickFrom(TORSOS, appearance.body), ...DETALLE_TORSO],
-      // Orden de §1.6: craneo, barba, pelo, cejas, ojos, boca, marca. La barba
-      // antes que el pelo para que las patillas queden bajo la melena, y la
-      // marca al final para que el parche tape el ojo y no al reves.
-      head: [
-        ...cabeza,
-        ...pickFrom(BARBAS, appearance.beard ?? campoDeApariencia(slug, 'beard')),
-        ...pelo,
-        ...pickFrom(CEJAS, appearance.brow ?? campoDeApariencia(slug, 'brow')),
-        ...OJOS,
-        ...pickFrom(BOCAS, appearance.mouth ?? campoDeApariencia(slug, 'mouth')),
-        ...pickFrom(MARCAS, appearance.mark ?? campoDeApariencia(slug, 'mark')),
-      ],
+      torso: pickFrom(TORSOS, appearance.body),
+      head: montarCabeza({
+        head: appearance.head,
+        hair: appearance.hair,
+        beard: appearance.beard ?? campoDeApariencia(slug, 'beard'),
+        brow: appearance.brow ?? campoDeApariencia(slug, 'brow'),
+        mouth: appearance.mouth ?? campoDeApariencia(slug, 'mouth'),
+        mark: appearance.mark ?? campoDeApariencia(slug, 'mark'),
+      }),
       legBack: pierna('izq'),
       legFront: pierna('der'),
       armBack: BRAZO,
       armFront: BRAZO,
-      forearmBack: ANTEBRAZO,
+      forearmBack: ANTEBRAZO_ATRAS,
       forearmFront: ANTEBRAZO,
     },
     colors: {

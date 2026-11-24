@@ -59,6 +59,10 @@ tests, asi que nunca pisan la base de desarrollo.
   (variedad, poses, armas, bichos). Es la unica forma de mirar el arte sin navegador:
   usalo antes de dar por buena cualquier ruta nueva. Para verlas como PNG hace falta un
   rasterizador (`@resvg/resvg-js` en un directorio aparte, no es dependencia del repo).
+- **Las cuatro cabezas comparten la calota** (`CALOTA` en `parts.ts`): solo cambian de la sien
+  para abajo. Pelos y sombreros se dibujan una vez contra ella. Un peinado tiene tres capas
+  (`detras`, `encima`, `bajoSombrero`) y `montarCabeza(rasgos, sombrero?)` ya sabe ponerle un
+  sombrero, aunque `Appearance` aun no tenga el campo. La hoja `cabezas.svg` lo comprueba.
 - La apariencia sale de `Appearance`, que se genera en el motor y **se guarda en la BD**:
   cambiar el arte no debe cambiar la cara de un peleon ya creado.
 

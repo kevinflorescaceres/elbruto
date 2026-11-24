@@ -68,10 +68,13 @@ Ventajas concretas:
 ### 1.4 Reglas de dibujo
 
 - Las piezas de cara (`brow`, `mouth`, `beard`, `mark`) son formas dentro de la lista de
-  `head`, en este orden de pintado: cráneo → cejas → ojos → boca → barba → pelo → marca.
-  La marca va al final para que un parche tape el ojo y no al revés.
+  `head`. El orden de pintado está en §1.6 y lo aplica `montarCabeza` en `parts.ts`.
+- **Las cuatro cabezas comparten la calota.** Solo cambian de la sien para abajo; cualquier
+  pelo o sombrero se dibuja una vez contra la calota común y encaja en las cuatro.
 - `beard` usa el tinte `pelo`, así queda del mismo color que la cabeza sin trabajo extra.
-- `mark`: el chirlo y la venda usan `oscuro` y `piel`; el parche, `oscuro`.
+- `mark`: el chirlo es una línea `oscuro`; el parche, `oscuro`; la venda, `trapo`. Cada marca
+  dice en qué capa va: lo que está **en la piel** (el chirlo) se pinta antes que el pelo, y lo
+  que se **lleva puesto** (parche, venda), después de los ojos.
 - **Colisiones:** ninguna barba puede solaparse con la boca mellada de forma que la tape. Si
   ocurre en alguna combinación, ajustar la ruta de la barba, no excluir la combinación: excluir
   rompe el reparto uniforme.
@@ -85,144 +88,82 @@ Ventajas concretas:
   juego, no arte, y no entran ahora. `Appearance` sigue congelada al crear.
 - No se añaden accesorios que dependan del equipo (llevar sombrero por tener un arma, etc.).
 
-### 1.6 Rutas ya dibujadas — copiar tal cual
+### 1.6 Geometría del peleón
 
-Todas están dibujadas y revisadas en el lienzo de diseño. Van en el sistema de coordenadas del
-peleón (origen entre los pies, la altura crece hacia −y), así que entran directas en `parts.ts`.
-Son rutas originales de este proyecto.
+**Las rutas viven en `apps/web/src/art/parts.ts`, y solo ahí.** Esta sección copiaba las rutas
+originales del lienzo de diseño. Se rehicieron el 2026-11-24 (cuerpo con hombros y complexiones
+que se distinguen, cabeza sobre una calota común) y la copia dejó de servir. Aquí quedan las
+medidas y las reglas que no se ven leyendo una ruta suelta.
 
-**Dos tintes nuevos** en la unión `Tinte`:
+Cada parte del rig usa sus propias coordenadas: origen en su articulación y la altura crece
+hacia −y. No son coordenadas absolutas del peleón.
+
+**Dos tintes** en la unión `Tinte`:
 
 ```ts
 cuero: '#5b3a22',   // botas, correas
-trapo: '#d8c9a8',   // vendas
+trapo: '#d8c9a8',   // vendas, el diente de la boca mellada
 ```
 
-**Un campo nuevo de color**, `clothColor2` (rango 0–7, misma paleta `ropa`), para la faja.
+**Un campo de color**, `clothColor2` (rango 0–7, misma paleta `ropa`), para la faja.
 Regla: si coincide con `clothColor`, se toma el siguiente de la lista. Sin esto la faja
 desaparece dentro del jubón.
 
-#### Cabezas — `head`, 4 valores
+#### Cuerpo
 
-```ts
-const CABEZAS = [
-  'M -20 -88 Q -20 -110 0 -110 Q 20 -110 20 -88 Q 20 -70 0 -70 Q -20 -70 -20 -88 Z',
-  'M -19 -108 L 19 -108 Q 21 -108 21 -104 L 21 -80 Q 21 -70 11 -70 L -11 -70 Q -21 -70 -21 -80 L -21 -104 Q -21 -108 -19 -108 Z',
-  'M -17 -90 Q -17 -112 0 -112 Q 17 -112 17 -90 Q 17 -68 0 -68 Q -17 -68 -17 -90 Z',
-  'M -22 -96 Q -22 -110 0 -110 Q 22 -110 22 -96 Q 22 -86 14 -78 Q 7 -70 0 -70 Q -7 -70 -14 -78 Q -22 -86 -22 -96 Z',
-]; // redonda · cuadrada · alargada · ancha de pómulos
-```
+- **Complexiones** (`body`, 3 valores, `COMPLEXIONES`): enjuto, recio y medio. Cambian los
+  hombros y la cintura, no un par de unidades. El recio lleva barriga sobre la faja.
+- **Hombros por complexión**: los brazos cuelgan a 13, 20 o 17 unidades del centro. Por eso
+  `Look` trae su propio `rig` y los renderers lo leen a él, no el `RIG` base.
+- **Faja** a la medida de la cintura de cada complexión, algo más ancha que el torso.
+  **Escote** en pico, en `piel`.
+- **Brazo**: manga hasta el codo, en una sola pieza. **Antebrazo**: grueso arriba y fino en la
+  muñeca. **Puño**: un mazo cuadrado con la raya de los nudillos, en las dos manos, centrado en
+  (0, −1) de la mano, donde montan las armas.
+- **Piernas** abiertas 2,5 unidades en el tobillo, con el pantalón algo holgado en la rodilla.
+  **Botas** con vuelta en la caña y suela, cada una apuntando hacia su lado (el peleón es
+  frontal).
 
-#### Pelos — `hair`, 6 valores, tinte `pelo`
+#### Cabeza
 
-```ts
-// rapado
-'M -20 -94 Q -18 -112 0 -112 Q 18 -112 20 -94 Q 10 -104 0 -103 Q -10 -104 -20 -94 Z';
-// greñas
-'M -21 -88 Q -22 -113 0 -113 Q 22 -113 21 -88 Q 17 -97 13 -90 Q 9 -99 4 -91 Q -1 -100 -6 -91 Q -11 -99 -15 -90 Q -18 -96 -21 -88 Z';
-// cresta (dos rutas)
-'M -16 -100 Q -14 -108 0 -108 Q 14 -108 16 -100 Q 8 -104 0 -104 Q -8 -104 -16 -100 Z';
-'M -5 -106 Q -9 -122 0 -125 Q 9 -122 5 -106 Q 0 -109 -5 -106 Z';
-// melena
-'M -20 -92 Q -22 -112 0 -112 Q 22 -112 20 -92 L 22 -66 Q 16 -64 15 -72 Q 14 -98 0 -98 Q -14 -98 -15 -72 Q -16 -64 -22 -66 Z';
-// entradas con coleta (dos rutas)
-'M -18 -98 Q -14 -110 0 -110 Q 14 -110 18 -98 Q 12 -104 6 -103 Q 8 -108 0 -108 Q -8 -108 -6 -103 Q -12 -104 -18 -98 Z';
-'M 17 -101 Q 29 -99 27 -85 Q 24 -92 16 -95 Z';
-// calvo con corona (dos rutas)
-'M -20 -90 Q -21 -99 -17 -102 Q -16 -93 -12 -90 Z';
-'M 20 -90 Q 21 -99 17 -102 Q 16 -93 12 -90 Z';
-```
+Origen en la base del cuello; el borde de arriba del torso cae en y = −3.
 
-La cresta sube hasta y = −125. **El `viewBox` del retrato debe llegar a −128**, no a −116, o se
-corta. En la ficha: `viewBox="-58 -128 116 136"`.
+- **Calota común**: semicúpula de anchura ±17 en y = −26, con la cima en y = −42.
+- **Cuatro mandíbulas** (`head`) bajo la calota: redonda, cuadrada, alargada (barbilla en
+  y = −3) y de pómulos.
+- **Cuello** corto y ancho, sin trazo abajo para que entre en el escote. **Orejas** detrás del
+  cráneo.
+- **Rasgos**: cejas en y = −28,5, ojos en (±7, −24), nariz (una línea) en −18,5 y boca en −13.
+- **Barbas**: las que tapan la mandíbula (corta y cerrada) son algo más anchas que la más ancha
+  de las cuatro, para cubrirlas todas. Las patillas van sin contorno y por dentro del borde de
+  la cara: con trazo propio se leían como auriculares.
+- **Pelos** (`hair`, 6 valores), en tres capas (`Peinado`): `detras` (se pinta antes que el
+  cráneo: melena, coleta), `encima` (sobre la calota) y `bajoSombrero` (lo que asoma bajo un
+  ala). Todos se dibujan contra la calota común.
+- **La cresta llega a y = −55** de la cabeza, −125 del peleón. **El `viewBox` del retrato debe
+  llegar a −128**: `viewBox="-58 -128 116 136"`.
 
-#### Cejas — `brow`, 4 valores, sin relleno, `stroke-width` 2.4
+#### Sombreros (preparado, sin campo todavía)
 
-```ts
-[
-  'M -12 -95 L -5 -95',
-  'M 12 -95 L 5 -95',
-] // recta
-[
-  ('M -12 -97 L -5 -93', 'M 12 -97 L 5 -93')
-] // caída
-[
-  ('M -12 -94 Q -8.5 -99 -5 -94', 'M 12 -94 Q 8.5 -99 5 -94')
-] // arqueada
-[('M -12 -95 L -9 -95 M -7 -96 L -5 -96', 'M 12 -95 L 5 -95')]; // partida
-```
+`Appearance` no tiene campo `hat`. La cabeza ya admite uno: `montarCabeza(rasgos, sombrero)`
+pinta `bajoSombrero` en vez de `encima` y el sombrero al final. Un sombrero se dibuja contra la
+calota con el ala en `LINEA_DEL_SOMBRERO` (y = −31) y dentro de ±21. La hoja `cabezas.svg`
+prueba los seis pelos sobre las cuatro cabezas con dos sombreros de prueba (boina y ala), que
+solo existen en la hoja.
 
-#### Bocas — `mouth`, 4 valores
-
-```ts
-[
-  { d: 'M -6 -78 Q 0 -74 6 -78', trazo: 2.4 },
-] // sonrisa
-[
-  { d: 'M -6 -78 Q 0 -75 6 -81', trazo: 2.4 }
-] // torcida
-[
-  { d: 'M -7 -77 L 7 -77', trazo: 2.4 }
-] // apretada
-[
-  ({ d: 'M -6 -79 L 6 -79 L 6 -74 L -6 -74 Z', fill: 'oscuro' }, // mellada
-  { d: 'M -1 -79 L 2 -79 L 2 -76 L -1 -76 Z', fill: 'piel' })
-];
-```
-
-#### Barbas — `beard`, 6 valores, tinte `pelo`
-
-```ts
-[]; // sin barba
-('M -4 -76 L 4 -76 L 3 -66 Q 0 -63 -3 -66 Z'); // perilla
-('M -9 -81 Q 0 -85 9 -81 Q 5 -76 0 -77 Q -5 -76 -9 -81 Z'); // bigote
-('M -18 -93 L -13 -93 L -12 -76 L -17 -79 Z'); // patillas (dos rutas)
-('M 18 -93 L 13 -93 L 12 -76 L 17 -79 Z');
-('M -16 -85 Q -16 -66 0 -66 Q 16 -66 16 -85 Q 12 -74 0 -74 Q -12 -74 -16 -85 Z'); // corta
-('M -18 -91 Q -19 -60 0 -58 Q 19 -60 18 -91 Q 12 -78 0 -79 Q -12 -78 -18 -91 Z'); // cerrada
-```
-
-#### Marcas — `mark`, 6 valores (0, 1 y 2 vacíos)
-
-```ts
-// chirlo
-{ d: 'M 12 -100 L 7 -83', trazo: 2.6 }
-// parche: correa + disco
-{ d: 'M -21 -94 L 20 -91', trazo: 2.6 }
-{ d: 'M -14 -94 a 6.5 6.5 0 1 0 0.1 0 Z', fill: 'oscuro' }
-// venda
-{ d: 'M -21 -101 L 21 -98 L 21 -91 L -21 -94 Z', fill: 'trapo' }
-```
-
-**El parche lleva un arco.** Es legal aquí, porque `scalePath` solo se aplica a las armas, pero
-nunca debe copiarse a una ruta de arma: la función lanza una excepción a propósito.
-
-#### Torsos — `body`, 3 valores, tinte `ropa`
-
-```ts
-'M -13 -40 Q -16 -55 -14 -66 Q -14 -72 -8 -72 L 8 -72 Q 14 -72 14 -66 Q 16 -55 13 -40 Z'; // enjuto
-'M -16 -40 Q -19 -56 -17 -67 Q -17 -73 -9 -73 L 9 -73 Q 17 -73 17 -67 Q 19 -56 16 -40 Z'; // recio
-'M -14 -40 Q -18 -54 -15 -66 Q -15 -72 -8 -72 L 8 -72 Q 15 -72 15 -66 Q 18 -54 14 -40 Z'; // medio
-```
-
-#### Detalle de cuerpo — siempre presente, no es variante
-
-```ts
-// faja, en clothColor2. Va en la parte baja del torso
-{ d: 'M -14 -47 L 14 -47 L 13 -39 L -13 -39 Z', fill: 'ropa2' }
-// escote en pico, tinte piel. Sin él la cabeza flota sobre un rectángulo
-{ d: 'M -5 -72 L 0 -62 L 5 -72', fill: 'piel' }
-// vuelta de bota, tinte cuero, sustituye al pie negro actual
-{ d: 'M -13 -14 L -1 -14 L -1 -5 L -16 -5 Q -18 -5 -18 -8 Q -18 -14 -13 -14 Z', fill: 'cuero' }
-{ d: 'M 1 -14 L 13 -14 Q 18 -14 18 -8 Q 18 -5 16 -5 L 1 -5 Z', fill: 'cuero' }
-```
+Si se añade el campo, decidir antes si los peleones ya creados lo derivan del slug (§1.3) o se
+quedan sin sombrero: derivarlo les cambia la cara.
 
 #### Orden de pintado dentro de `head`
 
-Cráneo → **barba** → pelo → cejas → ojos → boca → marca.
+Cuello → pelo de detrás → orejas → cráneo → barba → nariz → marca en la piel → pelo de encima
+(o lo que asoma bajo el sombrero) → cejas → ojos → boca → marca puesta → sombrero.
 
-La barba va **antes** que el pelo para que las patillas y la barba cerrada queden por debajo de
-la melena, y la marca al final para que el parche tape el ojo y no al revés.
+- El pelo de detrás va antes que el cráneo para enmarcar la cara en vez de taparla.
+- La barba va antes que el pelo para que las patillas queden bajo la melena.
+- El chirlo va antes que el pelo para que cada nacimiento de pelo lo corte; pintado después
+  quedaba encima del flequillo.
+- El parche va después de los ojos para taparlo, y no al revés.
 
 #### Qué cambia más la cara
 
@@ -337,8 +278,8 @@ tiene en absoluto. Si se pide más adelante, es un trabajo de arte, no de CSS.
 3. Componentes base (§2.4) y aplicarlos pantalla por pantalla, empezando por la ficha.
 4. Ranking en móvil (§2.5).
 5. Semilla por campo y campos nuevos de `Appearance` (§1.2, §1.3). Va al final porque toca el
-   motor y la base, y conviene hacerlo con todo lo demás estable. Las rutas están en §1.6: no
-   hace falta inventar ninguna.
+   motor y la base, y conviene hacerlo con todo lo demás estable. Las rutas están en `parts.ts`
+   (§1.6).
 
 Los tintes nuevos (`cuero`, `trapo`), el campo `clothColor2` y el detalle de cuerpo (faja,
 escote, vuelta de bota) entran en el paso 1 junto con las piezas que faltan: no dependen de

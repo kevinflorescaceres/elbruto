@@ -11,7 +11,6 @@ import {
   GROSOR,
   lookFrom,
   PUNO,
-  RIG,
   TRAZO,
   weaponShapes,
   Z_ORDER,
@@ -43,6 +42,8 @@ export interface Rig {
   /** La mano derecha: aqui se cuelga y se cambia el arma. */
   hand: Container;
   colors: Look['colors'];
+  /** Reposo de cada articulacion: las animaciones suman sus x/y sobre esto. */
+  base: Map<PartName, { x: number; y: number }>;
 }
 
 export function buildRig(
@@ -61,7 +62,7 @@ export function buildRig(
     return index === -1 ? Z_ORDER.indexOf('torso') : index;
   };
 
-  for (const spec of RIG) {
+  for (const spec of look.rig) {
     const node = new Container();
     const pose = REST.parts[spec.name] ?? {};
     node.x = spec.at[0] + (pose.x ?? 0);
@@ -79,7 +80,7 @@ export function buildRig(
     parts.set(spec.name, node);
   }
 
-  for (const spec of RIG) {
+  for (const spec of look.rig) {
     const node = parts.get(spec.name);
     if (node === undefined) continue;
     if (spec.parent === null) root.addChild(node);
@@ -92,7 +93,8 @@ export function buildRig(
   hand.zIndex = Z_ORDER.length;
   parts.get('forearmFront')?.addChild(hand);
 
-  const rig: Rig = { root, parts, hand, colors: look.colors };
+  const base = new Map(look.rig.map((spec) => [spec.name, { x: spec.at[0], y: spec.at[1] }]));
+  const rig: Rig = { root, parts, hand, colors: look.colors, base };
   setWeapon(rig, weapon);
   return rig;
 }
