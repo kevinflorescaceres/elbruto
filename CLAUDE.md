@@ -119,29 +119,38 @@ porque mide que un arma vale más que una maña, no que una categoría domine a 
 al medir el balance. Si vuelves a tocar los números del catálogo, corre `pnpm balance`:
 es la única forma de saber si un cambio rompe algo.
 
-## Despliegue (Fly.io + Supabase)
+## Despliegue (Kamal en el VPS de Pantheon)
 
-**Dos URLs de base de datos, y no son intercambiables:**
+Produccion: `https://camorra.florescaceres.cl`, en un VPS compartido con otras apps
+(Contabo, Ubuntu 24.04, usuario `deploy`). La ficha de despliegue vive en Pantheon.
 
-- `DATABASE_URL` la usa la aplicacion → el **pooler** de Supabase (puerto 6543).
-- `DIRECT_URL` la usan las migraciones → la conexion **directa** (puerto 5432).
-  A traves de un pooler en modo transaccion, `prisma migrate` falla.
-
-Primer despliegue:
+- `config/deploy.yml`: la app, kamal-proxy (TLS con Let's Encrypt, healthcheck en
+  `/api/health`) y dos accessories: `db` (PostgreSQL 16, alcanzable solo dentro de la red
+  `kamal` como `camorra-db:5432`) y `backup` (`pg_dump` diario a Cloudflare R2, 30 dias).
+- `.kamal/secrets` no tiene valores: lee la clave de Postgres de
+  `~/.config/camorra/postgres-password` y las credenciales de R2 de `~/.config/pantheon/`.
+  Sin esos archivos en la maquina que despliega, no hay deploy.
+- Registry local de Kamal (`localhost:5555`): la imagen se construye en tu maquina y
+  viaja al VPS por un tunel SSH. Hace falta Docker local y estar en el grupo `docker`.
+- Kamal construye desde el **commit** actual (git clone del HEAD), no desde el arbol de
+  trabajo: lo que no este commiteado no se despliega.
 
 ```bash
-fly launch --no-deploy          # usa el fly.toml que ya existe
-fly secrets set DATABASE_URL='...pooler...' DIRECT_URL='...directa...'
-fly deploy
+kamal setup                       # la primera vez: proxy, accessories y app
+kamal deploy                      # cada despliegue
+kamal app logs -f                 # logs de la app
+kamal accessory exec backup --reuse "sh backup.sh"   # backup a mano
 ```
 
-Las migraciones corren al arrancar el contenedor, asi que no hay paso aparte.
-`PUBLIC_URL` en `fly.toml` debe apuntar al dominio real: se usa en `og:url`.
+Las migraciones corren al arrancar el contenedor (`prisma migrate deploy`), asi que no hay
+paso aparte. Sin pooler de por medio, `DATABASE_URL` y `DIRECT_URL` apuntan a lo mismo.
 
-**El rate limit vive en memoria de cada maquina.** Con `min_machines_running = 0`
-se reinicia en cada arranque en frio, y con varias maquinas el limite es por
-maquina. Para un juego pequeno da igual; si deja de dar igual, hace falta un
-almacen compartido.
+**`TRUST_PROXY` cuenta los proxies por delante.** Hoy es 1 (kamal-proxy; el DNS de
+Cloudflare va sin proxy). Si se activa el proxy de Cloudflare pasa a 2, o el rate limit
+veria la IP del borde de Cloudflare en vez de la del jugador.
+
+**El rate limit vive en memoria del proceso** y se reinicia en cada deploy. Con una sola
+maquina basta; con varias, haria falta un almacen compartido.
 
 ## Antes de publicar
 
@@ -159,7 +168,7 @@ mentira. Necesita `pnpm exec playwright install chromium` la primera vez.
 
 ## Estado
 
-Fases 0 a 6 completas, salvo el despliegue en si, que necesita cuenta y dominio.
+Fases 0 a 6 completas. Desplegada el 2026-11-24 en `https://camorra.florescaceres.cl`.
 El combate sigue `combate.md`, implementado entero incluida la sección 5 del ritmo.
 Del ranking ya está hecho lo suyo. Quedan de las fases futuras: **torneos diarios** y **sonido**.
 

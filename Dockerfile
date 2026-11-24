@@ -1,5 +1,5 @@
 # Imagen unica: el servidor Fastify sirve la API y el frontend construido.
-# Generica a proposito: vale para Fly.io, Railway o Render sin cambios.
+# Generica a proposito: la usa Kamal y vale igual para cualquier PaaS con Docker.
 FROM node:22-alpine AS build
 WORKDIR /app
 
@@ -26,6 +26,6 @@ RUN corepack enable pnpm
 COPY --from=build /app /app
 
 EXPOSE 8080
-# Las migraciones corren al arrancar y van por DIRECT_URL: a traves del pooler
-# de Supabase en modo transaccion fallarian.
+# Las migraciones corren al arrancar y van por DIRECT_URL: a traves de un pooler
+# en modo transaccion fallarian.
 CMD ["sh", "-c", "pnpm --filter @camorra/server exec prisma migrate deploy && pnpm --filter @camorra/server start"]
