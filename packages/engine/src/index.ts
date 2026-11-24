@@ -3,4 +3,5 @@ export * from './prng.js';
 export * from './catalog.js';
 export * from './brute.js';
 export * from './simulate.js';
+export * from './bots.js';
 export * from './validate.js';

@@ -8,9 +8,11 @@
  * juego se descalibra sin que se note.
  *
  * Cada bot se genera con su propia semilla derivada del slug, asi que el
- * resultado no depende del orden del bucle.
+ * resultado no depende del orden del bucle. Crecen con `growBot`: en cada nivel
+ * se quedan con la mejor de las dos mejoras, como haria un jugador. Con `growTo`
+ * (a cara o cruz) quien elegia con cabeza les ganaba el 60-70%.
  */
-import { createBrute, growTo, hashString, mulberry32 } from '@camorra/engine';
+import { createBrute, growBot, hashString, mulberry32 } from '@camorra/engine';
 import { asJson, prisma } from './db.js';
 
 const PER_LEVEL = 8;
@@ -37,7 +39,8 @@ async function main(): Promise<void> {
     for (let i = 0; i < PER_LEVEL; i++) {
       const name = `${NOMBRES[i % NOMBRES.length]} ${APODOS[(i + level) % APODOS.length]} ${level}`;
       const base = createBrute(name);
-      const brute = growTo(base, level, mulberry32(hashString(`bot:${base.slug}`)));
+      // growBot y no growTo: eligen la mejora como un jugador, no a cara o cruz.
+      const brute = growBot(base, level, mulberry32(hashString(`bot:${base.slug}`)));
 
       // El nombre, el slug y la apariencia no cambian nunca: son del nombre.
       // Lo que se recalcula es todo lo que depende de las reglas del motor.
