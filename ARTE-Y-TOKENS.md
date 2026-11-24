@@ -11,21 +11,23 @@ intactas.
 El problema medido: de 17.280 apariencias que genera el motor, solo 3.840 se pueden dibujar.
 Cinco de cada seis peleones son el clon visual de otro.
 
-### 1.1 Primero, cerrar el hueco que ya existe
+### 1.1 Primero, cerrar el hueco que ya existía
 
-Antes de añadir nada nuevo, dibujar las piezas que faltan para los rangos actuales:
+Hecho. Antes de añadir nada nuevo se dibujaron las piezas que faltaban para los rangos de
+entonces:
 
-| Constante | Hoy | Debe tener | Qué falta                                       |
-| --------- | --- | ---------- | ----------------------------------------------- |
-| `TORSOS`  | 2   | **3**      | una complexión intermedia entre enjuto y recio  |
-| `CABEZAS` | 2   | **4**      | una alargada y una ancha de pómulos altos       |
-| `PELOS`   | 4   | **6**      | entradas con coleta, y calva con corona de pelo |
+| Constante                 | Antes | Ahora | Qué se añadió                                   |
+| ------------------------- | ----- | ----- | ----------------------------------------------- |
+| `TORSOS` / `COMPLEXIONES` | 2     | **3** | una complexión intermedia entre enjuto y recio  |
+| `CABEZAS`                 | 2     | **4** | una alargada y una ancha de pómulos altos       |
+| `PELOS`                   | 4     | **6** | entradas con coleta, y calva con corona de pelo |
 
-Con eso solo, las 17.280 apariencias pasan a ser todas distintas, sin tocar el motor, sin
-migrar nada y sin afectar a los peleones ya creados. **Hacer esto primero y medir.**
+Con eso solo, las 17.280 apariencias pasaron a ser todas distintas, sin tocar el motor, sin
+migrar nada y sin afectar a los peleones ya creados. Las rutas actuales, en §1.6.
 
 ### 1.2 Campos nuevos de `Appearance`
 
+Hechos (`packages/engine/src/types.ts`), opcionales para no tocar a los ya creados (§1.3).
 Cuatro campos, todos en la cara, que es donde se mira:
 
 | Campo   | Rango | Variantes | Notas                                                                        |
@@ -237,31 +239,30 @@ Dos usos del color con significado, y solo esos:
 - **Cartel** (`.cartel`): madera con letra de oro, el color de lo que se gana. Nombres en
   el escenario, el podio del ranking y el nivel al subir. No se usa para decorar.
 
-### 2.3 Cambios en el lienzo de combate
+### 2.3 El lienzo de combate, dentro de la paleta
 
-Tres valores del combate están fuera de paleta y hay que alinearlos:
+Hecho. Los valores viven en `LIENZO` (`packages/shared/src/tokens.ts`):
 
-| Qué                         | Hoy        | Debe ser                      |
-| --------------------------- | ---------- | ----------------------------- |
-| Fondo del lienzo            | `0xf6f6f4` | `0xede3d0` (`--papel`)        |
-| Línea de suelo              | `0xd8d4cc` | `0xc9b894`                    |
-| Relleno de la barra de vida | `0x8fbf5a` | `0x5f7245` (`PALETA.ropa[2]`) |
+| Qué                         | Antes      | Ahora                                        |
+| --------------------------- | ---------- | -------------------------------------------- |
+| Fondo del lienzo            | `0xf6f6f4` | `#e2d3b6` (`--papel-hondo`, no `--papel`)    |
+| Línea de suelo              | `0xd8d4cc` | `#c9b894`                                    |
+| Relleno de la barra de vida | `0x8fbf5a` | `#5f7245` (`PALETA.ropa[2]`, también `--vida`) |
 
-El verde actual es el único color saturado de todo el juego y se nota. El de `ropa` es el mismo
-verde apagado que puede llevar puesto un peleón.
+El fondo no es `--papel` como pedía este documento: con el mismo color que la página, el
+combate no se leía como superficie propia. Va en la superficie hundida.
 
-Los carteles del lienzo usan `Georgia`: cambiar a **Alegreya**, que ya se carga.
+Los textos del lienzo (carteles, números de daño, nombre de los bichos) van en Alegreya o
+Alegreya Sans con la tinta de la paleta. No queda `Georgia` ni gris suelto.
 
-### 2.4 Componentes que faltan
+### 2.4 Componentes
 
-Hoy hay 24 `style={{` repartidos por 9 archivos porque no hay dónde poner nada. Crear, con los
-tokens:
+Había 24 `style={{` repartidos por 9 archivos porque no había dónde poner nada. Los seis de
+base están en `ui.tsx`: `Boton` (principal y secundario) · `Tarjeta` · `Chips` (armas, mañas,
+bichos) · `Estadistica` (etiqueta + cifra) · `Barra` (experiencia y vida) · `Pagina` (barra
+superior + contenedor), más `TarjetaBoton` (una tarjeta entera que se pulsa).
 
-`Boton` (principal y secundario) · `Tarjeta` · `Chip` (armas, mañas, bichos) ·
-`Estadistica` (etiqueta + cifra) · `Barra` (experiencia y vida) · `Pagina` (barra superior +
-contenedor). Objetivo: dejar `styles.css` como hoja de tokens y estilos base, sin clases ad hoc.
-
-Hechos y en uso (2026-11-24). Además de los seis de arriba (`ui.tsx`):
+Además, en uso desde 2026-11-24:
 
 | Componente | Dónde | Para qué |
 | --- | --- | --- |
@@ -276,7 +277,9 @@ Un enlace que parece botón es `<Link className="boton">`, nunca un `<Boton>` de
 
 ### 2.5 Responsive
 
-No hay ninguna `@media` en el proyecto. Punto de corte único en **48rem**.
+Punto de corte único en **48rem**, y se mantiene: no hay otro ancho en `styles.css`. Aparte
+solo están `(hover: hover)`, para que el hover no se quede pegado en táctil, y
+`prefers-reduced-motion`.
 
 **Ranking en móvil: lista densa de tres columnas, no tarjetas ni scroll horizontal.**
 
@@ -296,10 +299,17 @@ No hay ninguna `@media` en el proyecto. Punto de corte único en **48rem**.
 - Cada fila entera es el enlace, no solo el nombre: a 390 px el objetivo táctil es la fila.
 - Por encima de 48rem, la tabla de cuatro columnas de siempre, con la fila propia destacada al
   pie en un panel `--papel-hondo`.
+- El puesto de la barra propia sale de la ficha (`GET /api/brutes/:slug`) y tiene que
+  desempatar igual que la lista: nivel, victorias y, a igualdad, el más veterano
+  (`puestoDe` en `apps/server/src/routes.ts`). Si no, la barra y la fila dicen puestos
+  distintos.
+- Los tres primeros llevan el puesto en `.cartel`.
 - **Sin retratos en el ranking por ahora.** Requiere añadir `appearance` a la respuesta y son 50
   personajes SVG por pantalla. Se reevalúa cuando el resto esté hecho.
-- La ficha en móvil: retrato pequeño junto al nombre, estadísticas en una fila de cinco
-  tarjetas estrechas, y el botón de pelea fijo abajo, fuera del área que hace scroll.
+- La ficha en móvil: estadísticas en una fila de cinco tarjetas estrechas (hecho). **Sin
+  hacer:** retrato pequeño junto al nombre y botón de pelea fijo abajo, fuera del área que
+  hace scroll; hoy el retrato va grande dentro de la tarjeta y el botón en la tarjeta de
+  acciones.
 
 ### 2.6 Modo oscuro
 
@@ -311,17 +321,19 @@ tiene en absoluto. Si se pide más adelante, es un trabajo de arte, no de CSS.
 
 ## Parte 3 — Orden de trabajo
 
-1. Piezas que faltan para los rangos actuales (§1.1). Medir con la hoja de contacto.
-2. `tokens.ts` + variables CSS + alinear los tres colores del lienzo (§2.1, §2.3).
-3. Componentes base (§2.4) y aplicarlos pantalla por pantalla, empezando por la ficha.
-4. Ranking en móvil (§2.5).
-5. Semilla por campo y campos nuevos de `Appearance` (§1.2, §1.3). Va al final porque toca el
-   motor y la base, y conviene hacerlo con todo lo demás estable. Las rutas están en `parts.ts`
-   (§1.6).
+Estado a 2026-11-24:
 
-Los tintes nuevos (`cuero`, `trapo`), el campo `clothColor2` y el detalle de cuerpo (faja,
-escote, vuelta de bota) entran en el paso 1 junto con las piezas que faltan: no dependen de
-campos nuevos de `Appearance` salvo `clothColor2`, que sí es un campo y sigue la regla de §1.3.
+1. ~~Piezas que faltan para los rangos actuales (§1.1).~~ Hecho, y luego el cuerpo y la
+   cabeza rehechos enteros (§1.6).
+2. ~~`tokens.ts` + variables CSS + alinear los tres colores del lienzo (§2.1, §2.3).~~ Hecho.
+3. ~~Componentes base (§2.4) y aplicarlos pantalla por pantalla.~~ Hecho, más la escala de
+   tipo y espaciado como tokens (§2.2).
+4. ~~Ranking en móvil (§2.5).~~ Hecho, salvo los retratos (descartados por ahora).
+5. ~~Semilla por campo y campos nuevos de `Appearance` (§1.2, §1.3).~~ Hecho.
+
+Pendiente: la ficha en móvil con el botón de pelea fijo (§2.5), los sombreros (§1.6, ya
+preparados en el dibujo pero sin campo en `Appearance`) y el modo oscuro, que sigue sin
+hacerse a propósito (§2.6).
 
 ## Cuidado con esto
 

@@ -1,7 +1,10 @@
 # CONTEXTO-DISENO.md — el repo de Camorra, para el trabajo de diseño
 
-Extraído del código el 2026-09-18. Donde el código y los documentos no coinciden, aquí manda
-el código; las diferencias van en la sección 8.
+Extraído del código el 2026-09-18. **Las secciones 2 (apariencia), 3 (animaciones) y 5
+(interfaz) se volvieron a extraer el 2026-11-24**, tras rehacer el arte, la animación del
+combate y la interfaz. El resto sigue siendo la extracción de septiembre: antes de fiarse de
+una cifra de las secciones 1, 4, 6, 7 o 9, comprobarla en el código. Donde el código y los
+documentos no coinciden, manda el código; las diferencias van en la sección 8.
 
 **Nombre del proyecto: Camorra.** Sigue pendiente de verificar contra el registro de marcas.
 
@@ -17,7 +20,8 @@ apps/web/      Vite + React + PixiJS
 packages/engine/  simulate(), PRNG, catálogo, reglas. Cero dependencias
 packages/shared/  esquemas Zod de la API
 docker/  e2e/  docs/
-plan.md  combate.md  CLAUDE.md  CREDITS.md  Dockerfile  fly.toml  docker-compose.yml
+plan.md  combate.md  CLAUDE.md  CREDITS.md  PRODUCT.md  ARTE-Y-TOKENS.md
+Dockerfile  docker-compose.yml  config/deploy.yml (Kamal)
 ```
 
 ### Versiones
@@ -82,67 +86,78 @@ export interface Appearance {
   skinColor: number;
   hairColor: number;
   clothColor: number;
+  clothColor2?: number; // faja
+  brow?: number;
+  mouth?: number;
+  beard?: number;
+  mark?: number;
 }
 ```
 
+Los cinco últimos son opcionales a propósito: los peleones creados antes de que existieran no
+los tienen guardados, y el arte los calcula desde el slug al pintar (`ARTE-Y-TOKENS.md` §1.3).
+
 ### Rangos exactos
 
-Generados en `rollAppearance()`, `packages/engine/src/brute.ts`:
+`rollAppearance()` y `RANGOS_POR_SEMILLA`, `packages/engine/src/brute.ts`:
 
-| Campo        | Rango | Nº de valores |
-| ------------ | ----- | ------------- |
-| `body`       | 0–2   | 3             |
-| `head`       | 0–3   | 4             |
-| `hair`       | 0–5   | 6             |
-| `skinColor`  | 0–4   | 5             |
-| `hairColor`  | 0–5   | 6             |
-| `clothColor` | 0–7   | 8             |
+| Campo         | Rango | Valores | De dónde sale                    |
+| ------------- | ----- | ------- | -------------------------------- |
+| `body`        | 0–2   | 3       | PRNG secuencial del peleón       |
+| `head`        | 0–3   | 4       | PRNG secuencial                  |
+| `hair`        | 0–5   | 6       | PRNG secuencial                  |
+| `skinColor`   | 0–4   | 5       | PRNG secuencial                  |
+| `hairColor`   | 0–5   | 6       | PRNG secuencial                  |
+| `clothColor`  | 0–7   | 8       | PRNG secuencial                  |
+| `clothColor2` | 0–7   | 8       | semilla propia `slug:clothColor2` |
+| `brow`        | 0–3   | 4       | semilla propia `slug:brow`       |
+| `mouth`       | 0–3   | 4       | semilla propia `slug:mouth`      |
+| `beard`       | 0–5   | 6       | semilla propia `slug:beard`      |
+| `mark`        | 0–5   | 6       | semilla propia `slug:mark`       |
 
 ### Cómo se deriva del nombre
 
 `slugify(name)` normaliza (sin acentos, minúsculas, todo lo demás a `-`) →
 `bruteSeed(slug) = hashString(slug)`, FNV-1a de 32 bits → `mulberry32(seed)`.
 
-`createBrute()` consume el PRNG **en este orden**: `rollStats()` (4 tiradas), `rollAppearance()`
-(6 tiradas), mejora inicial. **El orden importa:** meter una tirada antes de `rollAppearance`
-cambia la cara de todos los peleones existentes.
+`createBrute()` consume el PRNG secuencial **en este orden**: `rollStats()` (4 tiradas),
+`rollAppearance()` (6 tiradas), mejora inicial. **El orden importa:** meter una tirada antes
+de `rollAppearance` cambia la cara de todos los peleones existentes. Por eso los campos nuevos
+no tiran de ese PRNG: cada uno tiene su semilla (`fieldSeed(slug, campo)`), y añadir otro no
+mueve a ninguno.
 
-**Se guarda en la base** (`Brute.appearance`, columna `Json`); no se recalcula al leer, así que
-cambiar los rangos no altera a quien ya existe.
+**Se guarda en la base** (`Brute.appearance`, columna `Json`); no se recalcula al leer.
 
 ### Inventario de piezas dibujadas
 
-`apps/web/src/art/parts.ts`
+`apps/web/src/art/parts.ts`. Medido variando un campo cada vez a través de `lookFrom()` y
+contando dibujos distintos:
 
-| Parte             | Variantes                        | Campo que la elige | Constante            |
-| ----------------- | -------------------------------- | ------------------ | -------------------- |
-| Torso             | **2**                            | `appearance.body`  | `TORSOS`             |
-| Cabeza            | **2**                            | `appearance.head`  | `CABEZAS`            |
-| Pelo              | **4**                            | `appearance.hair`  | `PELOS`              |
-| Pierna            | 1, sin variantes                 | —                  | `PIERNA`             |
-| Brazo / antebrazo | 1 cada uno, sin variantes        | —                  | `BRAZO`, `ANTEBRAZO` |
-| Puño              | 1                                | —                  | `PUNO`               |
-| Arma en mano      | 5, una por categoría             | categoría del arma | `ARMAS`              |
-| Mascota           | 3 (`chucho`, `mastin`, `jabali`) | id de la mascota   | `MASCOTAS`           |
+| Campo         | Valores | Dibujos distintos | Constante                  |
+| ------------- | ------- | ----------------- | -------------------------- |
+| `body`        | 3       | 3                 | `COMPLEXIONES`, `TORSOS`   |
+| `head`        | 4       | 4                 | `CABEZAS` (calota común)   |
+| `hair`        | 6       | 6                 | `PELOS` (tres capas)       |
+| `skinColor`   | 5       | 5                 | `PALETA.piel`              |
+| `hairColor`   | 6       | 6                 | `PALETA.pelo`              |
+| `clothColor`  | 8       | 8                 | `PALETA.ropa`              |
+| `clothColor2` | 8       | **7**             | `PALETA.ropa` (faja)       |
+| `brow`        | 4       | 4                 | `CEJAS`                    |
+| `mouth`       | 4       | 4                 | `BOCAS`                    |
+| `beard`       | 6       | 6                 | `BARBAS` (0 = sin barba)   |
+| `mark`        | 6       | **4**             | `MARCAS` (0–2 vacíos)      |
 
-### Valores sin dibujo propio — **el número que interesa**
+- `clothColor2` da 7 y no 8 porque, si la faja sale del color del jubón, se coge la siguiente
+  de la lista: con un jubón dado, uno de los ocho valores repite otro.
+- `mark` da 4 porque los valores 0, 1 y 2 son «sin marca» a propósito: la mitad de los
+  peleones no debe llevar.
+- Combinaciones que genera el motor: **79.626.240**. Aspectos dibujables distintos:
+  **46.448.640**. Lo que se repite son solo esas dos reglas deliberadas; **ya no hay valores
+  sin dibujo propio** (en septiembre, cinco de cada seis peleones eran el clon de otro).
 
-`lookFrom()` usa `pickFrom(lista, i)`, que hace `lista[i % lista.length]`. Los valores que
-sobran caen sobre una pieza ya usada:
-
-| Campo        | Valores que genera | Dibujos | **Sin dibujo propio**                              |
-| ------------ | ------------------ | ------- | -------------------------------------------------- |
-| `body`       | 3                  | 2       | **1** (el valor 2 reusa el torso 0)                |
-| `head`       | 4                  | 2       | **2** (los valores 2 y 3 reusan las cabezas 0 y 1) |
-| `hair`       | 6                  | 4       | **2** (los valores 4 y 5 reusan los pelos 0 y 1)   |
-| `skinColor`  | 5                  | 5       | 0                                                  |
-| `hairColor`  | 6                  | 6       | 0                                                  |
-| `clothColor` | 8                  | 8       | 0                                                  |
-
-- Combinaciones distintas de `Appearance` que el motor genera: **17.280**
-- Aspectos visualmente distintos que se pueden dibujar hoy: **3.840**
-- **13.440 combinaciones caen sobre un aspecto ya usado.** Cinco de cada seis peleones son,
-  visualmente, el clon de otro.
+Piezas sin variante: piernas (`pierna`, con bota, suela y vuelta), brazo de una pieza
+(`BRAZO`), antebrazo (`ANTEBRAZO`, `ANTEBRAZO_ATRAS`) y puño (`PUNO`). Armas: 5, una por
+categoría (`ARMAS`). Mascotas: 3 (`MASCOTAS`: `chucho`, `mastin`, `jabali`).
 
 ### Paletas completas
 
@@ -151,118 +166,133 @@ piel   #f2d3b3  #e0b088  #c68a5e  #9c6440  #6f4529          (5)
 pelo   #2b2118  #5b3a22  #9c6b35  #c9a227  #8a8a8a  #b04a2a  (6)
 ropa   #8a5a3c  #41627f  #5f7245  #8a4a5a  #554a7a  #7a6a3a  #35696a  #7a3a3a  (8)
 
-metal     #8c8c94     madera    #8a6a44
-oscuro    #241f1c     pantalon  #3f3833
+metal  #8c8c94   madera  #8a6a44   oscuro  #241f1c   pantalon  #3f3833
+cuero  #5b3a22   trapo   #d8c9a8
 ```
 
-Trazo: `TRAZO = '#241f1c'`, `GROSOR = 3`. Fondo del lienzo de combate: `0xf6f6f4`.
-Línea de suelo: `0xd8d4cc`. Barra de vida (relleno): `0x8fbf5a`.
+Trazo: `TRAZO = '#241f1c'`, `GROSOR = 3` (en `packages/shared/src/tokens.ts`). Lienzo de
+combate (`LIENZO`): fondo `#e2d3b6`, suelo `#c9b894`, barra de vida `#5f7245`.
 
-**La interfaz no usa ninguno de estos colores.** Ver sección 5.
+**La interfaz usa esta paleta**: `--tinta` es `TRAZO`, `--acento` es `PALETA.ropa[7]` y
+`--vida` es `PALETA.ropa[2]`. Ver sección 5.
 
 ### El rig
 
-`RIG` en `parts.ts`. Cada parte es un contenedor colocado en su articulación; girarlo gira
-todo lo que cuelga.
+`RIG` en `parts.ts` es el rig base. **Los renderers no lo leen directamente**: leen
+`look.rig`, porque cada complexión mueve los hombros.
 
-| Parte          | Cuelga de  | Coordenada   |
-| -------------- | ---------- | ------------ |
-| `hips`         | — (raíz)   | `[0, -42]`   |
-| `legBack`      | `hips`     | `[-6, 0]`    |
-| `legFront`     | `hips`     | `[6, 0]`     |
-| `torso`        | `hips`     | `[0, 0]`     |
-| `armBack`      | `torso`    | `[-15, -25]` |
-| `forearmBack`  | `armBack`  | `[0, 15]`    |
-| `head`         | `torso`    | `[0, -28]`   |
-| `armFront`     | `torso`    | `[15, -25]`  |
-| `forearmFront` | `armFront` | `[0, 15]`    |
+| Parte          | Cuelga de  | Coordenada                          |
+| -------------- | ---------- | ----------------------------------- |
+| `hips`         | — (raíz)   | `[0, -42]`                          |
+| `legBack`      | `hips`     | `[-6, 0]`                           |
+| `legFront`     | `hips`     | `[6, 0]`                            |
+| `torso`        | `hips`     | `[0, 0]`                            |
+| `armBack`      | `torso`    | `[-hombro, -25]`                    |
+| `forearmBack`  | `armBack`  | `[0, 15]`                           |
+| `head`         | `torso`    | `[0, -28]`                          |
+| `armFront`     | `torso`    | `[hombro, -25]`                     |
+| `forearmFront` | `armFront` | `[0, 15]`                           |
 
-El arma cuelga de `forearmFront` en `[0, 16]`, con rotación −0,35 rad (−20° en el SVG).
+`hombro` por complexión (`body`): 0 enjuto → **13**, 1 recio → **20**, 2 medio → **17**. En
+el `RIG` base vale 15.
+
+El arma cuelga de `forearmFront` en `[0, 16]`, con rotación −20°, junto con el puño.
 
 `Z_ORDER = ['legBack', 'armBack', 'legFront', 'torso', 'head', 'armFront']`
 
-**Partes del rig fuera de `Z_ORDER`:** `hips`, `forearmBack`, `forearmFront`. La función
-`depth()` de `pixiRig.ts` les asigna el índice de `torso`. `hips` no dibuja nada propio; los
-antebrazos heredan así la profundidad de su brazo.
+### La cabeza
+
+Las cuatro cabezas comparten la **calota** (`CALOTA`): solo cambian de la sien para abajo, así
+que pelos y sombreros se dibujan una vez. Un peinado tiene tres capas (`detras`, `encima`,
+`bajoSombrero`). `montarCabeza(rasgos, sombrero?)` pinta en este orden: cuello, pelo de
+detrás, orejas, cabeza, barba, nariz, marca en la piel, pelo de encima (o bajo sombrero),
+cejas, ojos, boca, marca puesta, sombrero. **Sombreros: preparados en el dibujo, sin campo en
+`Appearance`** (`ARTE-Y-TOKENS.md` §1.6).
 
 ### Coordenadas y tamaño
 
-Origen del personaje en los pies, y crece hacia **−y**. El SVG de la ficha usa
-`viewBox="-58 -116 116 124"`.
+Origen del personaje en los pies; crece hacia **−y**. El SVG de la ficha usa
+`viewBox="-58 -128 116 136"`.
 
-| Referencia                       | y    |
-| -------------------------------- | ---- |
-| Pies (suelo)                     | −8   |
-| Caderas                          | −42  |
-| Hombros                          | −67  |
-| Base de la cabeza                | −70  |
-| Coronilla                        | −108 |
-| Punta del pelo más alto (cresta) | −124 |
-
-Alto: **100 unidades** de pies a coronilla, **116** contando la cresta. Ancho: unas **42
-unidades** (cabeza ø ~42, brazos a ±20). Proporción cabezona deliberada: la cabeza es el 38%
-de la altura.
+| Referencia                     | y    |
+| ------------------------------ | ---- |
+| Caderas                        | −42  |
+| Hombros                        | −67  |
+| Base de la cabeza              | −70  |
+| Línea del sombrero (`LINEA_DEL_SOMBRERO`) | −101 |
+| Coronilla (cima de la calota)  | −112 |
 
 ---
 
 ## 3. Animaciones
 
-`apps/web/src/art/poses.ts`. Son tablas de keyframes, no código imperativo: cada frame lleva
-`t` de 0 a 1 y las partes que cambian, con `rot` en radianes y `x`/`y` en unidades del rig.
-**Los keyframes son acumulativos:** cada uno solo lista lo que cambia.
+`apps/web/src/art/poses.ts`. Tablas de keyframes: cada frame lleva `t` de 0 a 1, las partes
+que cambian (`rot` en radianes, `x`/`y` en unidades del rig) y, opcionalmente, `ease`, el
+nombre de la curva GSAP con la que se **llega** a ese frame. Los keyframes son acumulativos.
 
-| Animación          | Frames | Bucle | Partes que mueve                                        |
-| ------------------ | ------ | ----- | ------------------------------------------------------- |
-| `idle`             | 3      | sí    | head, hips, torso                                       |
-| `walk`             | 5      | sí    | armBack, armFront, hips, legBack, legFront              |
-| `attackRapida`     | 4      | no    | armFront, forearmFront, hips, torso                     |
-| `attackPesada`     | 4      | no    | armFront, forearmFront, head, hips, torso               |
-| `attackLarga`      | 4      | no    | armFront, forearmFront, hips, legFront, torso           |
-| `attackArrojadiza` | 4      | no    | armFront, forearmFront, hips, torso                     |
-| `hit`              | 3      | no    | armBack, armFront, head, hips, torso                    |
-| `evade`            | 3      | no    | hips, legBack, legFront, torso                          |
-| `block`            | 3      | no    | armFront, forearmFront, hips, torso                     |
-| `throw`            | 4      | no    | armFront, forearmFront, hips, torso                     |
-| `death`            | 3      | no    | armBack, armFront, head, hips, legBack, legFront, torso |
-| `victory`          | 5      | no    | armBack, armFront, hips, torso                          |
+| Animación          | Frames | Bucle | Partes que mueve                                        | `contacto` | `adelanto` |
+| ------------------ | ------ | ----- | ------------------------------------------------------- | ---------- | ---------- |
+| `idle`             | 3      | sí    | head, hips, torso                                       | —          | —          |
+| `walk`             | 4      | no    | armBack, armFront, hips, legBack, legFront              | —          | —          |
+| `attackRapida`     | 5      | no    | armFront, forearmFront, hips, torso                     | 0,45       | —          |
+| `attackPesada`     | 6      | no    | armFront, forearmFront, head, hips, torso               | 0,55       | —          |
+| `attackLarga`      | 5      | no    | armFront, forearmFront, hips, legFront, torso           | 0,48       | —          |
+| `attackArrojadiza` | 5      | no    | armFront, forearmFront, hips, torso                     | 0,48       | —          |
+| `hit`              | 4      | no    | armBack, armFront, head, hips, torso                    | —          | —          |
+| `evade`            | 4      | no    | hips, legBack, legFront, torso                          | —          | —          |
+| `block`            | 5      | no    | armFront, forearmFront, hips, torso                     | —          | 0,3        |
+| `throw`            | 4      | no    | armFront, forearmFront, hips, torso                     | —          | —          |
+| `death`            | 5      | no    | armBack, armFront, head, hips, legBack, legFront, torso | —          | —          |
+| `victory`          | 5      | no    | armBack, armFront, hips, torso                          | —          | —          |
 
-**Ninguna animación tiene duración propia.** El reproductor estira los keyframes a lo que dure
-el hueco del evento dentro del turno. Ver sección 9.
+- **`contacto`**: momento del impacto. La línea de tiempo estira la animación para que ese
+  frame caiga justo cuando el rival acusa el golpe; la recuperación pisa el turno siguiente.
+- **`adelanto`**: parte que suena antes de su turno. La guardia tiene que estar subida cuando
+  llega el golpe.
+- Los cuatro ataques comparten compás: carga (`power2.out`), salida de golpe
+  (`power4.in`/`expo.in`), **hit-stop** (dos frames iguales) y recuperación.
+- **Ataque parado**: `animacion(nombre, true)` devuelve el mismo ataque apuntado a la guardia
+  y con un rebote en lugar del hit-stop. Se deriva de los cuatro; no tiene keyframes propios.
+- `walk` empieza y acaba con los pies plantados; su primer frame no toca los brazos.
+
+**Ninguna animación tiene duración propia**: se estiran al hueco del evento dentro del turno
+(`TIME_SCALE` 1,5).
 
 ### Cómo se eligen desde el combate
 
 `apps/web/src/fightScene.ts` traduce cada evento del motor a movimientos:
 
-| Evento        | Pose del rig             | Otros movimientos                                                 |
-| ------------- | ------------------------ | ----------------------------------------------------------------- |
-| `start`       | —                        | `announce` (cartel de apertura, insertado tras el último `spawn`) |
-| `spawn`       | —                        | `appear`                                                          |
-| `turn`        | —                        | `pulse`                                                           |
-| `move`        | `walk`                   | `approach`                                                        |
-| `attack`      | según categoría del arma | `lunge`                                                           |
-| `counter`     | según arma en mano       | `lunge`                                                           |
-| `hit`         | `hit`                    | —                                                                 |
-| `evade`       | `evade`                  | —                                                                 |
-| `block`       | `block`                  | `flash`                                                           |
-| `damage`      | —                        | `hp`, `float`, `flash`                                            |
-| `heal`        | —                        | `hp`, `float`, `flash`                                            |
-| `drawWeapon`  | —                        | `weapon`                                                          |
-| `throwWeapon` | `throw`                  | `projectile`, `weapon`                                            |
-| `disarm`      | —                        | `toss`, `weapon`                                                  |
-| `skill`       | —                        | `ring`, `flash`                                                   |
-| `death`       | `death`                  | `fall`                                                            |
-| `end`         | `victory`                | `announce`                                                        |
+| Evento        | Pose del rig                     | Otros movimientos                                         |
+| ------------- | -------------------------------- | --------------------------------------------------------- |
+| `start`       | —                                | `announce` (cartel de apertura)                           |
+| `spawn`       | —                                | `appear`                                                  |
+| `turn`        | —                                | `pulse`                                                   |
+| `move`        | `walk`                           | `approach`                                                |
+| `attack`      | según categoría del arma         | `lunge`                                                   |
+| `counter`     | según el arma en mano            | `lunge`                                                   |
+| `hit`         | `hit`                            | `impact` (chispa, temblor)                                |
+| `evade`       | `evade`                          | —                                                         |
+| `block`       | `block`                          | `impact` con `parada`; marca el ataque anterior como parado |
+| `damage`      | — (se funde en el `hit` previo)  | `hp`, `float`, `flash`                                    |
+| `heal`        | —                                | `hp`, `float`, `flash`                                    |
+| `drawWeapon`  | —                                | `weapon`                                                  |
+| `throwWeapon` | `throw`                          | `projectile`, `weapon`                                    |
+| `disarm`      | —                                | `toss`, `weapon`                                          |
+| `skill`       | —                                | `ring`, `flash`                                           |
+| `death`       | `death`                          | `fall`                                                    |
+| `end`         | `victory`                        | `announce`                                                |
+
+Al cerrar el turno, la vuelta a su sitio (`retreat`) lleva también `walk`.
+
+El impacto se dispara en el mismo fotograma de contacto: retroceso del rival, chispa, número,
+tinte aclarado y temblor amortiguado según el daño. La parada no tiñe ni tiembla: chispa gris
+a la altura de la guardia. Con `prefers-reduced-motion` no hay temblor ni saltos, y los
+desplazamientos son fundidos.
 
 Categoría de arma → animación: `pesada`→`attackPesada`, `larga`→`attackLarga`,
-`arrojadiza`→`attackArrojadiza`, todo lo demás y las mascotas→`attackRapida`.
-
-**Eventos sin animación asignada: ninguno.** Los 17 producen al menos un movimiento, y hay un
-test que lo comprueba. Ahora bien, **ocho de ellos no mueven el rig**: `spawn`, `turn`,
-`damage`, `heal`, `drawWeapon`, `disarm`, `skill` y `start` solo producen efectos (destellos,
-números, anillos). Ahí hay hueco para poses nuevas sin tocar el motor.
-
-Las mascotas **no tienen rig**: se dibujan de una pieza y reciben un gesto sustituto
-(`playFallback` en `timeline.ts`).
+`arrojadiza`→`attackArrojadiza`, todo lo demás y las mascotas→`attackRapida`. Las mascotas
+**no tienen rig**: se dibujan de una pieza y reciben un gesto sustituto (`playFallback` en
+`timeline.ts`).
 
 ---
 
@@ -391,65 +421,64 @@ Objetivos de sensación (`combate.md` §3), todos en rango:
 
 ### Rutas
 
-| Ruta                | Archivo             | Qué muestra                                                       |
-| ------------------- | ------------------- | ----------------------------------------------------------------- |
-| `/`                 | `pages/Home.tsx`    | Crear peleón, lista de "mis peleones", enlace al ranking          |
-| `/reclutar/:slug`   | `pages/Home.tsx`    | La portada, más un cartel de quién te recluta                     |
-| `/b/:slug`          | `pages/Brute.tsx`   | Ficha: retrato, stats, equipo, reclutamiento, historial, denuncia |
-| `/b/:slug/arena`    | `pages/Arena.tsx`   | Seis rivales en tarjetas                                          |
-| `/b/:slug/level-up` | `pages/LevelUp.tsx` | Dos opciones de mejora                                            |
-| `/fight/:id`        | `pages/Fight.tsx`   | Reproductor PixiJS + log de texto plegado                         |
-| `/claim/:token`     | `pages/Claim.tsx`   | Recuperar peleón; sin interfaz propia, solo estados               |
-| `/ranking`          | `pages/Ranking.tsx` | Tabla de los mejores                                              |
-| `/legal`            | `pages/Legal.tsx`   | Condiciones y privacidad                                          |
-| `*`                 | `main.tsx` (inline) | 404                                                               |
+| Ruta                | Archivo             | Qué muestra                                                            |
+| ------------------- | ------------------- | ---------------------------------------------------------------------- |
+| `/`                 | `pages/Home.tsx`    | Crear peleón con vista previa de la cara; quien ya juega ve sus peleones |
+| `/reclutar/:slug`   | `pages/Home.tsx`    | La portada, con el maestro en el escenario                             |
+| `/b/:slug`          | `pages/Brute.tsx`   | Ficha: retrato, cifras, equipo, acciones, reclutamiento, historial    |
+| `/b/:slug/arena`    | `pages/Arena.tsx`   | Seis rivales en tarjetas                                               |
+| `/b/:slug/level-up` | `pages/LevelUp.tsx` | El peleón en escena con el cartel del nivel, y dos caminos            |
+| `/fight/:id`        | `pages/Fight.tsx`   | Reproductor PixiJS, log de texto plegado, compartir                    |
+| `/claim/:token`     | `pages/Claim.tsx`   | Recuperar peleón; solo estados                                         |
+| `/ranking`          | `pages/Ranking.tsx` | Lista densa, podio en cartel, barra con el puesto propio              |
+| `/legal`            | `pages/Legal.tsx`   | Condiciones y privacidad                                               |
+| `*`                 | `main.tsx`          | 404 con `NadieAqui`                                                    |
 
-### Estado de diseño por pantalla
+### Estilos y tokens
 
-**Todas siguen en el "mínimo funcional" de la fase 3.** Ninguna tiene diseño propio.
-Las únicas dos cosas con identidad visual son el **lienzo de combate** y la **imagen de Open
-Graph** (`apps/web/public/og.png`), y ambas usan la paleta del arte, que la interfaz ignora.
+- **Un único archivo**: `apps/web/src/styles.css`. Sin CSS modules, utilidades ni framework.
+- **Tokens** en `:root`: colores de `ARTE-Y-TOKENS.md` §2.2 (los mismos que
+  `packages/shared/src/tokens.ts`; un test falla si dejan de coincidir), escala de tipo
+  (`--t-meta` 14 … `--t-h1` 34, `--t-cartel` fluido de 34 a 56), espaciado en múltiplos de 4
+  (`--e-1` … `--e-16`) y las dos familias (`--letra-titulo`, `--letra-cuerpo`).
+- **Tipografía**: Alegreya (700, 800) para títulos, cifras y botones; Alegreya Sans (400, 500,
+  700) para el resto. Cuerpo a 17 px. Se cargan de Google Fonts con `display=swap`.
+- **`style={{`**: solo quedan los anchos que salen de datos (barras de vida y experiencia).
 
-### Dónde viven los estilos
+### Componentes
 
-- **Un único archivo**: `apps/web/src/styles.css`, 130 líneas.
-- **No hay archivo de tokens.** (no existe)
-- **No hay CSS modules, ni utilidades, ni framework.** (no existe)
-- Clases disponibles: `.apagado`, `.tarjeta`, `.rejilla`, `.fila`, `.error`, `.barra`, `.log`.
-- Variables CSS declaradas en `:root`: `--linea: #d4d4d4`, `--apagado: #6b6b6b`,
-  `--fondo-suave: #f6f6f4`. Nada más.
-- Tipografía: `system-ui, sans-serif` en `body`. `Georgia, serif` solo dentro del lienzo de
-  combate (carteles) y en la imagen de compartir.
-- **Estilos en línea repartidos por 9 archivos** (24 apariciones de `style={{`). Esa es la vía
-  de escape que se ha usado para todo lo que la hoja no cubre.
+| Componente                     | Archivo               | Para qué                                                |
+| ------------------------------ | --------------------- | ------------------------------------------------------- |
+| `Pagina`                       | `ui.tsx`              | Barra superior de madera y contenedor                   |
+| `Tarjeta`, `TarjetaBoton`      | `ui.tsx`              | Superficie; tarjeta entera pulsable                     |
+| `Boton`                        | `ui.tsx`              | Principal y secundario, 44 px de zona táctil            |
+| `Chips`, `Estadistica`, `Barra` | `ui.tsx`             | Equipo, cifras, experiencia                             |
+| `Resultado`, `record`, `cuenta` | `ui.tsx`             | Ganó/Perdió con color y palabra; récord y cuentas legibles |
+| `Escenario`, `NadieAqui`       | `Escenario.tsx`       | Escenario en pequeño; páginas vacías con «Nadie»         |
+| `EscenaCombate`                | `EscenaCombate.tsx`   | Marco del combate sin Pixi; también la espera           |
+| `CompartirEnlace`              | `CompartirEnlace.tsx` | Menú de compartir en el móvil, copiar en escritorio     |
+| `EnlaceRecuperacion`           | `EnlaceRecuperacion.tsx` | El enlace que se enseña una vez                      |
+| `Fighter`                      | `art/Fighter.tsx`     | El peleón en SVG                                        |
+| `FightPlayer`, `FightLog`      | `FightPlayer.tsx`, `FightLog.tsx` | Combate en Pixi (carga aparte) y en texto   |
+| `Cuenta`, `ErrorBoundary`      |                       | Cuenta atrás; red de seguridad de toda la app           |
 
-### Componentes reutilizados
-
-| Componente      | Archivo             | Usado en                    |
-| --------------- | ------------------- | --------------------------- |
-| `Fighter`       | `art/Fighter.tsx`   | ficha y arena (2 pantallas) |
-| `FightPlayer`   | `FightPlayer.tsx`   | solo `/fight/:id`           |
-| `FightLog`      | `FightLog.tsx`      | solo `/fight/:id`           |
-| `Cuenta`        | `Cuenta.tsx`        | solo la ficha               |
-| `ErrorBoundary` | `ErrorBoundary.tsx` | envuelve toda la app        |
-
-No hay componentes de botón, tarjeta, tabla ni layout: se repiten las clases a mano.
+Un enlace con aspecto de botón es `<Link className="boton">`, nunca un botón dentro de un
+enlace.
 
 ### Responsive
 
-- **No hay ni una `@media` en todo el proyecto. Cero breakpoints.**
-- Lo único adaptable es `.rejilla`: `repeat(auto-fill, minmax(15rem, 1fr))`.
-- `main` tiene `max-width: 52rem` y `padding: 1.5rem 1rem 4rem`.
-- El lienzo de combate se escala con `width: 100%; height: auto` sobre un
-  `aspect-ratio: 900 / 420`.
-- El resto se apaña por el flujo natural del navegador. **La tabla del ranking no tiene ningún
-  tratamiento para pantallas estrechas.**
+Punto de corte único en **48rem**. Además: `(hover: hover)` para que el hover no se quede
+pegado en táctil, y `prefers-reduced-motion`. `main` mide `max-width: 52rem`. El marcador y el
+lienzo del combate van de lado a lado (`100vw`); el lienzo es `1440 / 420` y en el móvil mide
+13rem de alto y se recorta por los lados (`object-fit: cover`). Pixi dibuja a la densidad que
+de verdad ocupa en pantalla, no a la de la pantalla entera.
 
 ### El ranking
 
-`<table>` HTML plana dentro de un `.tarjeta`, sin scroll horizontal ni contenedor propio.
-Columnas: **`#`**, **`Peleón`**, **`Nivel`**, **`Récord`**. Los peleones propios se marcan con
-`fontWeight: 'bold'` en línea y con el sufijo " · tuyo". Se piden 50 filas por defecto.
+Un panel con todas las filas; cada fila entera es el enlace. En el móvil, tres columnas
+(puesto, nombre con elipsis, nivel y récord apilados) y la barra del puesto propio fija al pie;
+por encima de 48rem, cuatro columnas y la barra al pie del contenido. Los tres primeros llevan
+el puesto en `.cartel`. 50 filas por defecto.
 
 ---
 
@@ -532,14 +561,17 @@ Z.» · «X le tira Z a Y.» · «X desarma a Y: Z al suelo.» · «X se desplom
   El texto visible dice `CORREO_DE_CONTACTO_PENDIENTE`.
 - Tres tests de metadatos usan `it.runIf(construido)`: **se saltan si no existe
   `apps/web/dist`**. No están rotos, pero pasan en silencio sin avisar.
-- Tres marcadores `ponytail:` de deuda consciente: `ORDER BY random()` al buscar oponentes
-  (`routes.ts:296`), el puesto del ranking contado en cada visita (`routes.ts:57`), y la cuenta
-  atrás que se desvía una hora el día del cambio de horario (`db.ts:33`).
+- Tres marcadores `ponytail:` de deuda consciente: `ORDER BY random()` al buscar oponentes,
+  el puesto del ranking contado en cada visita (`puestoDe` en `routes.ts`, que desde el
+  2026-11-24 desempata igual que la lista), y la cuenta atrás que se desvía una hora el día del
+  cambio de horario (`db.ts`).
+- La ficha en móvil sin botón de pelea fijo, y los sombreros sin campo en `Appearance`
+  (`ARTE-Y-TOKENS.md` Parte 3).
 
 ### Decisiones tomadas que no están en ningún documento
 
-- **El rate limit vive en memoria de cada máquina.** Con escalado a cero en Fly se reinicia en
-  cada arranque en frío, y con varias máquinas el límite es por máquina.
+- **El rate limit vive en memoria del proceso.** Se reinicia en cada despliegue (Kamal, una
+  sola máquina); con varias, haría falta un almacén compartido.
 - **Los paquetes del workspace se publican como TypeScript fuente** (`exports: "./src/index.ts"`),
   sin paso de build. Vite y `tsx` los consumen directos.
 - **El seed es correctivo**: al cambiar las reglas del motor hay que volver a correrlo o los
