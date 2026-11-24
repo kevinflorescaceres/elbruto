@@ -686,6 +686,33 @@ th {
   margin: 0 0 var(--e-1);
 }
 
+.transcripcion {
+  margin: 0;
+  padding: 0 0 0 var(--e-6);
+}
+
+/* Texto a la izquierda, la vida de los dos alineada a la derecha. */
+.transcripcion li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-3);
+  padding: 2px 0;
+}
+
+.transcripcion-vida {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.transcripcion-leyenda,
+.transcripcion-final {
+  margin: 0 0 var(--e-2);
+}
+
+.transcripcion-final {
+  margin: var(--e-2) 0 0;
+}
+
 /* --- Componentes base (ARTE-Y-TOKENS.md §2.4) --- */
 
 .barra-superior {
@@ -930,9 +957,17 @@ th {
 /* --- Combate (pagina) --- */
 
 /* Hueco fijo de una linea para el pie: el texto cambia en cada golpe. */
+/*
+ * La narracion: es lo que cuenta el combate a quien no conoce el juego, asi que
+ * va en tinta y a tamano de entrada, no en gris pequeno. Dos lineas de hueco
+ * fijo: el texto cambia en cada golpe y no debe empujar lo de debajo.
+ */
 .combate-pie {
-  min-height: var(--e-6);
-  margin: var(--e-2) 0 var(--e-3);
+  min-height: calc(2 * 1.4em);
+  margin: var(--e-3) 0;
+  font-size: var(--t-entrada);
+  line-height: 1.4;
+  color: var(--tinta);
 }
 
 /*

@@ -72,7 +72,10 @@ export function EscenaCombate({
 
       {aviso}
 
-      <p className="apagado combate-pie">{pie}</p>
+      {/* Se anuncia sola mientras pasa: la narracion es el combate para quien no lo ve. */}
+      <p className="combate-pie" aria-live="polite">
+        {pie}
+      </p>
 
       {terminado && c !== undefined ? (
         <div className="fila">

@@ -70,7 +70,11 @@ export function FightPage() {
   return (
     <Pagina
       volver={{ a: `/b/${snapshotA.slug}`, texto: snapshotA.name }}
-      cabecera={{ titulo }}
+      cabecera={{
+        titulo,
+        // Quien llega por un enlace no sabe donde esta: una linea basta.
+        bajada: 'En Camorra cada peleón sale de un nombre y pelea solo. Esto es lo que pasó.',
+      }}
       pegada
     >
       <Suspense
@@ -83,8 +87,9 @@ export function FightPage() {
 
       {terminado && <FinCombate replay={fight.data} reciente={resultadoDe(location.state)} />}
 
-      {/* Quien llega por el enlace y no tiene peleon: el suyo, aqui mismo. */}
-      {me.data !== undefined && me.data.brutes.length === 0 && (
+      {/* Quien llega por el enlace y no tiene peleon: el suyo, aqui mismo. Al final,
+          cuando ya ha visto el golpe que lo decide: antes se lo pedia a mitad. */}
+      {terminado && me.data !== undefined && me.data.brutes.length === 0 && (
         <div className="combate-ytu">
           <CrearAqui
             titulo="¿Y tú?"
