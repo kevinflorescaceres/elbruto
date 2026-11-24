@@ -1,13 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+} from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { createBrute, getSkill, getWeapon } from '@camorra/engine';
 import { NAME_MAX, type BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
-import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta, TarjetaEnlace } from '../ui.js';
+import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
+import { Cuenta } from '../Cuenta.js';
 import { useMe } from '../hooks.js';
-import { ayudaNombre } from '../nombre.js';
+import { ayudaNombre, type AyudaNombre } from '../nombre.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
 import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
 
@@ -17,6 +23,13 @@ import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPend
  * bien. No existen en la base; si alguien crea uno con ese nombre, sera este.
  */
 const MUESTRA = ['Rosca la Brava', 'Matías Puñetas'].map(createBrute);
+
+/** "1 victoria · 3 derrotas": la abreviatura "1V 3D" no la entendia nadie. */
+function record(wins: number, losses: number): string {
+  const v = wins === 1 ? '1 victoria' : `${wins} victorias`;
+  const d = losses === 1 ? '1 derrota' : `${losses} derrotas`;
+  return `${v} · ${d}`;
+}
 
 /**
  * Lo primero que se ve al crear: el peleon en grande y el siguiente paso. Antes
@@ -40,39 +53,205 @@ function RecienCreado({ brute, otro }: { brute: BruteProfile; otro: () => void }
   ];
 
   return (
-    <Tarjeta>
-      <h1 ref={titulo} tabIndex={-1} className="recien-titulo">
-        Aquí está {brute.name}
-      </h1>
-      <div className="ficha-cuerpo">
-        <div className="retrato">
-          <Fighter
-            appearance={brute.appearance}
-            slug={brute.slug}
-            weapon={armaVisible(brute.weapons)}
-            height={170}
-          />
-        </div>
-        <div className="ficha-datos">
-          <div className="estadisticas">
-            <Estadistica etiqueta="Vida" valor={brute.maxHp} />
-            {ESTADISTICAS.map(([etiqueta, campo]) => (
-              <Estadistica key={campo} etiqueta={etiqueta} valor={brute[campo]} />
-            ))}
+    <div className="recien">
+      <Tarjeta>
+        <h1 ref={titulo} tabIndex={-1} className="recien-titulo">
+          Aquí está {brute.name}
+        </h1>
+        <div className="ficha-cuerpo">
+          <div className="retrato">
+            <Fighter
+              appearance={brute.appearance}
+              slug={brute.slug}
+              weapon={armaVisible(brute.weapons)}
+              height={170}
+            />
           </div>
-          {inicial.length > 0 && (
-            <p className="recien-inicial">
-              Sale a la calle con <strong>{inicial.join(' y ')}</strong>.
-            </p>
-          )}
-          <div className="fila">
+          <div className="ficha-datos">
+            <div className="estadisticas">
+              <Estadistica etiqueta="Vida" valor={brute.maxHp} />
+              {ESTADISTICAS.map(([etiqueta, campo]) => (
+                <Estadistica key={campo} etiqueta={etiqueta} valor={brute[campo]} />
+              ))}
+            </div>
+            {inicial.length > 0 && (
+              <p className="recien-inicial">
+                Sale a la calle con <strong>{inicial.join(' y ')}</strong>.
+              </p>
+            )}
+            <div className="fila recien-acciones">
+              <Link to={`/b/${brute.slug}/arena`} className="boton principal">
+                Buscar pelea
+              </Link>
+              <Boton onClick={otro}>Crear otro</Boton>
+              <Link to={`/b/${brute.slug}`} className="apagado">
+                Ver su ficha
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Tarjeta>
+    </div>
+  );
+}
+
+/**
+ * Un peleon propio en la portada, con lo que puede hacer hoy. Quien vuelve cada
+ * dia viene a esto: antes tenia que entrar en cada ficha para saber si le
+ * quedaban peleas.
+ */
+function TarjetaPeleon({ brute }: { brute: BruteProfile }) {
+  const quedan = brute.fightsLeftToday;
+  return (
+    <div className="tarjeta tarjeta-peleon">
+      <Link to={`/b/${brute.slug}`} className="ficha-mini enlace-ficha">
+        <Fighter
+          appearance={brute.appearance}
+          slug={brute.slug}
+          weapon={armaVisible(brute.weapons)}
+          height={92}
+        />
+        <div>
+          <strong className="enlace-ficha-nombre">{brute.name}</strong>
+          <div className="apagado">
+            Nivel {brute.level} · {record(brute.wins, brute.losses)}
+          </div>
+        </div>
+      </Link>
+      {/* Dos enlaces hermanos, no uno dentro de otro: no se pueden anidar. */}
+      <div className="peleon-estado">
+        {brute.pendingLevelUp ? (
+          <>
+            <span className="aviso">Mejora pendiente</span>
+            <Link to={`/b/${brute.slug}/level-up`} className="boton principal">
+              Elegir mejora
+            </Link>
+          </>
+        ) : quedan > 0 ? (
+          <>
+            <span>{quedan === 1 ? 'Queda 1 pelea hoy' : `Quedan ${quedan} peleas hoy`}</span>
             <Link to={`/b/${brute.slug}/arena`} className="boton principal">
               Buscar pelea
             </Link>
-            <Boton onClick={otro}>Crear otro</Boton>
-          </div>
-        </div>
+          </>
+        ) : (
+          <span className="apagado">
+            Por hoy se acabó. Vuelven en <Cuenta hasta={brute.nextResetAt} />.
+          </span>
+        )}
       </div>
+    </div>
+  );
+}
+
+function MisPeleones({ brutes, principal }: { brutes: BruteProfile[]; principal: boolean }) {
+  // Quien ya juega llega aqui primero: entonces es el titulo de la pagina.
+  const Titulo = principal ? 'h1' : 'h2';
+  return (
+    <section className={principal ? 'mis-peleones' : 'mis-peleones portada-seccion'}>
+      <Titulo>Mis peleones</Titulo>
+      <div className="lista-peleones">
+        {brutes.map((brute) => (
+          <TarjetaPeleon key={brute.slug} brute={brute} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * La cara que saldria con el nombre escrito. El servidor crea el peleon con
+ * `createBrute(name.trim())` y rechaza los nombres repetidos sin anadir sufijo,
+ * asi que esta es exactamente la que se guardara.
+ */
+function VistaPrevia({ name, ayuda }: { name: string; ayuda: AyudaNombre }) {
+  // Diferido: mientras se teclea rapido no se recalcula a cada letra.
+  const diferido = useDeferredValue(name.trim());
+  if (!ayuda.valido || diferido.length === 0) return null;
+  let brute;
+  try {
+    brute = createBrute(diferido);
+  } catch {
+    return null;
+  }
+  return (
+    <div className="nombre-vista" aria-hidden="true">
+      <Fighter
+        appearance={brute.appearance}
+        slug={brute.slug}
+        weapon={armaVisible(brute.weapons)}
+        height={72}
+      />
+    </div>
+  );
+}
+
+function FormularioNombre({
+  titulo,
+  name,
+  setName,
+  ayuda,
+  create,
+  aviso,
+}: {
+  titulo: string;
+  name: string;
+  setName: (n: string) => void;
+  ayuda: AyudaNombre;
+  create: UseMutationResult<Awaited<ReturnType<typeof api.createBrute>>, Error, void>;
+  aviso: string | null;
+}) {
+  return (
+    <Tarjeta>
+      <h2>{titulo}</h2>
+      {aviso !== null && <p className="apagado recluta-texto">{aviso}</p>}
+      <label htmlFor="nombre-peleon" className="etiqueta">
+        Nombre del peleón
+      </label>
+      <form
+        className="campo-nombre"
+        onSubmit={(e) => {
+          e.preventDefault();
+          create.mutate();
+        }}
+      >
+        {/* Es un nombre inventado y para siempre: sin autocorrector que lo cambie. */}
+        <input
+          id="nombre-peleon"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Chirlo de la Cava"
+          maxLength={NAME_MAX}
+          aria-describedby="nombre-ayuda"
+          aria-invalid={ayuda.tipo === 'error'}
+          autoCapitalize="words"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
+          enterKeyHint="go"
+        />
+        <Boton type="submit" tipo="principal" disabled={!ayuda.valido || create.isPending}>
+          {create.isPending ? 'Creando…' : 'Crear'}
+        </Boton>
+      </form>
+      <div className="nombre-ayuda-fila">
+        <VistaPrevia name={name} ayuda={ayuda} />
+        {/* Dice por que el boton no se deja pulsar, en vez de dejarlo apagado sin mas. */}
+        <p
+          id="nombre-ayuda"
+          className={ayuda.tipo === 'error' ? 'ayuda error' : 'ayuda apagado'}
+          aria-live="polite"
+        >
+          {ayuda.texto}
+        </p>
+      </div>
+      {create.error && (
+        <p className="error" role="alert">
+          {create.error instanceof ApiError
+            ? create.error.message
+            : 'No se ha podido crear. Inténtalo otra vez.'}
+        </p>
+      )}
     </Tarjeta>
   );
 }
@@ -136,13 +315,16 @@ export function Home() {
   const [creado, setCreado] = useState<BruteProfile | null>(null);
 
   const ayuda = ayudaNombre(name);
+  const misPeleones = me.data?.brutes ?? [];
   const reclutamiento = recluta(
     masterSlug,
     maestro,
-    (me.data?.brutes ?? []).map((b) => b.slug),
+    misPeleones.map((b) => b.slug),
   );
   // Si te recluta alguien, en el escenario esta el: dice mas que dos de muestra.
   const escena = reclutamiento.tipo === 'valido' ? [reclutamiento.maestro] : MUESTRA;
+  // Quien ya tiene peleones y no viene por un enlace de otro, viene a jugar.
+  const veterano = misPeleones.length > 0 && reclutamiento.tipo === 'ninguno';
 
   const create = useMutation({
     mutationFn: () => api.createBrute(name, masterSlug),
@@ -161,26 +343,71 @@ export function Home() {
     },
   });
 
+  const aviso =
+    reclutamiento.tipo === 'cargando'
+      ? 'Buscando a quien te recluta…'
+      : reclutamiento.tipo === 'aviso'
+        ? reclutamiento.texto
+        : null;
+  const formulario = (titulo: string) => (
+    <FormularioNombre
+      titulo={titulo}
+      name={name}
+      setName={setName}
+      ayuda={ayuda}
+      create={create}
+      aviso={aviso}
+    />
+  );
+
+  const enlaces = pendientes.map((enlace) => (
+    <EnlaceRecuperacion
+      key={enlace.slug}
+      enlace={enlace}
+      // Con "Buscar pelea" en pantalla, un solo boton principal.
+      discreto={creado !== null || veterano}
+      onGuardado={() => setPendientes(quitarPendiente(enlace.slug))}
+    />
+  ));
+
+  // Hasta saber si tiene peleones no se decide que portada toca: si no,
+  // quien vuelve veria un instante la de bienvenida.
+  if (me.isPending) {
+    return (
+      <Pagina>
+        <p className="apagado">Cargando…</p>
+      </Pagina>
+    );
+  }
+
   return (
     <Pagina>
       {creado !== null ? (
-        <RecienCreado
-          brute={creado}
-          otro={() => {
-            create.reset();
-            setCreado(null);
-          }}
-        />
+        <>
+          <RecienCreado
+            brute={creado}
+            otro={() => {
+              create.reset();
+              setCreado(null);
+            }}
+          />
+          {enlaces}
+        </>
+      ) : veterano ? (
+        <>
+          <MisPeleones brutes={misPeleones} principal />
+          {enlaces}
+          <div className="portada-seccion">{formulario('Otro peleón')}</div>
+        </>
       ) : (
         <>
-          {/* La marca ya esta en la barra: el h1 dice lo que pasa aqui. */}
-          <header className="portada-cabecera">
-            <div>
+          <section className="portada-cabecera">
+            <div className="portada-texto">
               {/* Si te recluta alguien, la cabecera habla de el: es por quien has venido. */}
               {reclutamiento.tipo === 'valido' ? (
                 <>
                   <h1>Te recluta {reclutamiento.maestro.name}</h1>
-                  <p className="apagado">
+                  <p className="portada-voz">
                     Crea tu peleón y {reclutamiento.maestro.name} se lleva una pelea diaria más. Tú
                     empiezas igual que todos: eso no te quita nada.
                   </p>
@@ -188,10 +415,10 @@ export function Home() {
               ) : (
                 <>
                   <h1>Pon un nombre y tendrás un peleón.</h1>
-                  <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+                  <p className="portada-voz">Lo demás lo deciden él y la mala suerte.</p>
                 </>
               )}
-              <p className="portada-vuelta">
+              <p className="apagado portada-vuelta">
                 Cada día, unas cuantas peleas. Cada nivel, una mejora a elegir entre dos.
               </p>
             </div>
@@ -211,99 +438,18 @@ export function Home() {
                 </figure>
               ))}
             </div>
-          </header>
-
-          <Tarjeta>
-            <h2>Nuevo peleón</h2>
-            {reclutamiento.tipo === 'cargando' && (
-              <p className="apagado recluta-texto">Buscando a quien te recluta…</p>
-            )}
-            {reclutamiento.tipo === 'aviso' && (
-              <p className="apagado recluta-texto">{reclutamiento.texto}</p>
-            )}
-            <label htmlFor="nombre-peleon" className="etiqueta">
-              Nombre del peleón
-            </label>
-            <form
-              className="campo-nombre"
-              onSubmit={(e) => {
-                e.preventDefault();
-                create.mutate();
-              }}
-            >
-              <input
-                id="nombre-peleon"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Chirlo de la Cava"
-                maxLength={NAME_MAX}
-                aria-describedby="nombre-ayuda"
-                aria-invalid={ayuda.tipo === 'error'}
-              />
-              <Boton type="submit" tipo="principal" disabled={!ayuda.valido || create.isPending}>
-                {create.isPending ? 'Creando…' : 'Crear'}
-              </Boton>
-            </form>
-            {/* Dice por que el boton no se deja pulsar, en vez de dejarlo apagado sin mas. */}
-            <p
-              id="nombre-ayuda"
-              className={ayuda.tipo === 'error' ? 'ayuda error' : 'ayuda apagado'}
-              aria-live="polite"
-            >
-              {ayuda.texto}
-            </p>
-            {create.error && (
-              <p className="error" role="alert">
-                {create.error instanceof ApiError
-                  ? create.error.message
-                  : 'No se ha podido crear. Inténtalo otra vez.'}
-              </p>
-            )}
-          </Tarjeta>
+            <div className="portada-form">{formulario('Nuevo peleón')}</div>
+          </section>
+          {enlaces}
+          {/* Tiene peleones pero viene por el enlace de otro: abajo, por si acaso. */}
+          {misPeleones.length > 0 && <MisPeleones brutes={misPeleones} principal={false} />}
         </>
       )}
 
-      {pendientes.map((enlace) => (
-        <EnlaceRecuperacion
-          key={enlace.slug}
-          enlace={enlace}
-          onGuardado={() => setPendientes(quitarPendiente(enlace.slug))}
-        />
-      ))}
-
-      {me.isPending && <p className="apagado">Cargando...</p>}
-      {/* Quien llega por primera vez no tiene peleones: no se le ensena una lista vacia. */}
-      {me.data !== undefined && me.data.brutes.length > 0 && (
-        <section className="portada-seccion">
-          <h2>Mis peleones</h2>
-          <div className="rejilla">
-            {me.data?.brutes.map((brute) => (
-              <TarjetaEnlace key={brute.slug} a={`/b/${brute.slug}`}>
-                {/* Con cara: es la lista que mas se mira y era la unica sin retrato. */}
-                <div className="ficha-mini">
-                  <Fighter
-                    appearance={brute.appearance}
-                    slug={brute.slug}
-                    weapon={armaVisible(brute.weapons)}
-                    height={92}
-                  />
-                  <div>
-                    <strong>{brute.name}</strong>
-                    <div className="apagado">
-                      Nivel {brute.level} · {brute.wins}V {brute.losses}D
-                    </div>
-                    {brute.pendingLevelUp && <div className="aviso">Mejora pendiente</div>}
-                  </div>
-                </div>
-              </TarjetaEnlace>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* El ranking ya esta en la barra superior: aqui solo lo legal. */}
       <footer className="apagado portada-pie">
-        Juego inspirado en los combates automáticos por turnos. Todo el contenido es original. ·{' '}
+        <p>
+          Juego inspirado en los combates automáticos por turnos. Todo el contenido es original.
+        </p>
         <Link to="/legal">Condiciones y privacidad</Link>
       </footer>
     </Pagina>

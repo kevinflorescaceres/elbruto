@@ -15,10 +15,14 @@ const puedeCompartir = (): boolean => typeof navigator.share === 'function';
 export function EnlaceRecuperacion({
   enlace,
   onGuardado,
+  discreto = false,
 }: {
   enlace: EnlacePendiente;
   onGuardado: () => void;
+  /** Sin boton principal: cuando ya hay otro en pantalla ("Buscar pelea"). */
+  discreto?: boolean;
 }) {
+  const tipo = discreto ? 'secundario' : 'principal';
   const [aviso, setAviso] = useState<Aviso>(null);
   const [confirmando, setConfirmando] = useState(false);
   const texto = useRef<HTMLElement>(null);
@@ -85,13 +89,13 @@ export function EnlaceRecuperacion({
           <>
             {puedeCompartir() ? (
               <>
-                <Boton tipo="principal" onClick={() => void compartir()}>
+                <Boton tipo={tipo} onClick={() => void compartir()}>
                   Enviármelo
                 </Boton>
                 <Boton onClick={() => void copiar()}>Copiar</Boton>
               </>
             ) : (
-              <Boton tipo="principal" onClick={() => void copiar()}>
+              <Boton tipo={tipo} onClick={() => void copiar()}>
                 Copiar
               </Boton>
             )}

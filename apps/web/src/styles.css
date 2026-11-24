@@ -210,24 +210,9 @@ h3 {
   text-align: left;
 }
 
-/* La tarjeta que lleva a otra pagina: un enlace con el mismo aspecto que la de boton. */
-.tarjeta-enlace {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-  font-family: Alegreya, Georgia, serif;
-  font-weight: 700;
-}
-
 @media (hover: hover) {
-  .tarjeta-enlace:hover {
-    background: var(--acento);
-    color: var(--papel-claro);
-  }
-
   /* El texto apagado se perdia sobre el acento. */
-  .tarjeta-boton:hover:not(:disabled) .apagado,
-  .tarjeta-enlace:hover .apagado {
+  .tarjeta-boton:hover:not(:disabled) .apagado {
     color: inherit;
   }
 }
@@ -428,6 +413,8 @@ th {
  */
 .boton:disabled,
 .boton.principal:disabled {
+  /* Sin la opacidad de button:disabled: sumadas, el texto quedaba a 1,6:1. */
+  opacity: 1;
   background: var(--papel-hondo);
   color: var(--linea);
   border-color: var(--linea);
@@ -448,7 +435,8 @@ th {
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
-  padding: 0.4rem 0.6rem;
+  /* Poco padding lateral: a 360 px «Aguante» llenaba la celda de borde a borde. */
+  padding: 0.4rem 0.25rem;
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
   background: var(--papel-hondo);
@@ -609,15 +597,42 @@ th {
 
 /* --- Portada --- */
 
+/*
+ * Texto, escena y formulario en una rejilla. En el movil van uno bajo otro; en
+ * escritorio el formulario sube a la columna del texto y la escena ocupa la
+ * otra: antes la tarjeta del formulario cruzaba la pagina con media vacia.
+ */
 .portada-cabecera {
   display: grid;
   gap: 1.25rem;
+  grid-template-areas: 'texto' 'escena' 'form';
   margin: 0.5rem 0 1.5rem;
 }
 
+.portada-texto {
+  grid-area: texto;
+}
+
+.portada-escena {
+  grid-area: escena;
+}
+
+.portada-form {
+  grid-area: form;
+}
+
+.portada-form .tarjeta {
+  margin-bottom: 0;
+}
+
+/* La voz del juego manda; la regla del bucle va debajo, mas callada. */
+.portada-voz {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
 .portada-vuelta {
-  margin: 0.75rem 0 0;
-  font-weight: 500;
+  margin: 0.5rem 0 0;
 }
 
 /*
@@ -673,8 +688,13 @@ th {
 @media (min-width: 48rem) {
   .portada-cabecera {
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 2rem;
+    grid-template-areas: 'texto escena' 'form escena';
+    align-items: start;
+    gap: 1.5rem 2rem;
+  }
+
+  .portada-escena {
+    align-self: center;
   }
 
   .portada-escena {
@@ -687,11 +707,6 @@ th {
   line-height: 1.1;
   text-wrap: balance;
   margin-bottom: 0.4rem;
-}
-
-.portada-cabecera p {
-  margin: 0;
-  font-size: 1.05rem;
 }
 
 /*
@@ -764,6 +779,126 @@ a.boton {
 
 .enlace-acciones {
   margin-top: 0.75rem;
+}
+
+/* --- Portada de quien ya juega --- */
+
+.mis-peleones {
+  margin-top: 0.5rem;
+}
+
+.lista-peleones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.75rem;
+}
+
+.tarjeta-peleon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+/* El retrato y el nombre llevan a la ficha; el estado y el boton van aparte. */
+.enlace-ficha {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radio);
+}
+
+.enlace-ficha-nombre {
+  font-family: Alegreya, Georgia, serif;
+  font-size: 1.15rem;
+}
+
+@media (hover: hover) {
+  .enlace-ficha:hover .enlace-ficha-nombre {
+    text-decoration: underline;
+  }
+}
+
+.peleon-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--linea);
+}
+
+/* --- Vista previa del nombre --- */
+
+.nombre-ayuda-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.nombre-vista {
+  flex: none;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem 0;
+  background: linear-gradient(to top, var(--linea) 0 0.5rem, var(--papel-hondo) 0.5rem);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+/* --- Recien creado --- */
+
+.recien-acciones {
+  margin-top: 1rem;
+}
+
+/*
+ * En el movil, el retrato al lado de lo que sale con el y de los botones, y las
+ * cinco cifras en una fila debajo. Apilado se comia la pantalla y el enlace de
+ * recuperacion quedaba debajo del pliegue.
+ */
+@media (max-width: 48rem) {
+  .recien .ficha-cuerpo {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'retrato inicial' 'retrato acciones' 'cifras cifras';
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .recien .ficha-datos {
+    display: contents;
+  }
+
+  .recien .retrato {
+    grid-area: retrato;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .recien .retrato svg {
+    height: 120px;
+    width: auto;
+  }
+
+  .recien .recien-inicial {
+    grid-area: inicial;
+  }
+
+  .recien .recien-acciones {
+    grid-area: acciones;
+    margin-top: 0;
+  }
+
+  .recien .estadisticas {
+    grid-area: cifras;
+  }
+}
+
+.mis-peleones {
+  margin-bottom: 1.5rem;
+}
+
+.portada-pie p {
+  margin: 0 0 0.25rem;
 }
 
 .recluta-texto {
