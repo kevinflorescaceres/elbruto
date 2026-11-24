@@ -186,7 +186,14 @@ export function drawActor(actor: Actor): ActorView {
 
   const nombre = new Text({
     text: actor.name,
-    style: { fontFamily: 'system-ui', fontSize: 11, fill: 0x555555 },
+    // La letra y la tinta de la interfaz: era system-ui gris, lo unico del
+    // lienzo fuera de la paleta.
+    style: {
+      fontFamily: "'Alegreya Sans', system-ui, sans-serif",
+      fontWeight: '700',
+      fontSize: 12,
+      fill: aEntero(TOKENS.tintaSuave),
+    },
   });
   nombre.anchor.set(0.5);
   nombre.y = -alto - 28;
