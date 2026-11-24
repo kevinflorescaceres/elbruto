@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { armaVisible, Fighter } from '../art/Fighter.js';
-import { Pagina, TarjetaBoton } from '../ui.js';
+import { cuenta, Pagina, record, TarjetaBoton } from '../ui.js';
 import { api, ApiError } from '../api.js';
 
 export function ArenaPage() {
@@ -49,7 +49,7 @@ export function ArenaPage() {
         </p>
       )}
 
-      {opponents.isPending && <p className="apagado">Buscando...</p>}
+      {opponents.isPending && <p className="apagado">Buscando…</p>}
       <div className="rejilla">
         {opponents.data?.opponents.map((rival) => (
           <TarjetaBoton
@@ -64,15 +64,17 @@ export function ArenaPage() {
                 weapon={armaVisible(rival.weapons)}
                 height={92}
               />
-              <div>
-                <strong>{rival.name}</strong>
-                <div className="apagado">
-                  Nivel {rival.level} · {rival.wins}V {rival.losses}D · {rival.maxHp} de vida
-                </div>
-                <div className="apagado">
-                  {rival.weapons.length} armas · {rival.skills.length} mañas · {rival.pets.length}{' '}
-                  bichos
-                </div>
+              <div className="rival-datos">
+                <strong className="rival-nombre">{rival.name}</strong>
+                <span className="apagado">
+                  Nivel {rival.level} · {rival.maxHp} de vida
+                </span>
+                <span className="apagado">{record(rival.wins, rival.losses)}</span>
+                <span className="apagado">
+                  {cuenta(rival.weapons.length, 'arma', 'armas')} ·{' '}
+                  {cuenta(rival.skills.length, 'maña', 'mañas')} ·{' '}
+                  {cuenta(rival.pets.length, 'bicho', 'bichos')}
+                </span>
               </div>
             </div>
           </TarjetaBoton>

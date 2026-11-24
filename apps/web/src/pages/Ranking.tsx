@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api } from '../api.js';
 import { useMe } from '../hooks.js';
-import { Pagina } from '../ui.js';
+import { Pagina, record } from '../ui.js';
 
 interface Fila {
   rank: number;
@@ -18,9 +18,7 @@ function Marcador({ fila }: { fila: Fila }) {
   return (
     <span className="rk-marcador">
       <span className="rk-nivel">Nivel {fila.level}</span>
-      <span className="apagado">
-        {fila.wins}V {fila.losses}D
-      </span>
+      <span className="apagado">{record(fila.wins, fila.losses)}</span>
     </span>
   );
 }
@@ -29,7 +27,9 @@ function FilaRanking({ fila, mia }: { fila: Fila; mia: boolean }) {
   // La fila entera es el enlace: a 390 px el objetivo tactil es la fila.
   return (
     <Link to={`/b/${fila.slug}`} className={mia ? 'rk-fila mia' : 'rk-fila'}>
-      <span className="rk-puesto">{fila.rank}</span>
+      <span className="rk-puesto">
+        {fila.rank <= 3 ? <span className="cartel">{fila.rank}</span> : fila.rank}
+      </span>
       <span className="rk-nombre">{fila.name}</span>
       <Marcador fila={fila} />
     </Link>
@@ -53,7 +53,7 @@ export function RankingPage() {
   if (ranking.isPending)
     return (
       <Pagina>
-        <p className="apagado">Cargando...</p>
+        <p className="apagado">Cargando…</p>
       </Pagina>
     );
 

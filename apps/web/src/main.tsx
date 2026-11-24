@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Link, Route, Routes } from 'react-router';
+import { Pagina } from './ui.js';
+import { NadieAqui } from './Escenario.js';
 import { Home } from './pages/Home.js';
 import { BrutePage } from './pages/Brute.js';
 import { ArenaPage } from './pages/Arena.js';
@@ -20,10 +22,14 @@ const queryClient = new QueryClient({
 
 function NotFound() {
   return (
-    <main>
-      <h1>Por aqui no hay nada</h1>
-      <a href="/">Volver al principio</a>
-    </main>
+    <Pagina>
+      <NadieAqui titulo="Por aquí no hay nada">
+        <p className="apagado">Esa dirección no lleva a ningún sitio.</p>
+        <Link to="/" className="boton">
+          Volver al principio
+        </Link>
+      </NadieAqui>
+    </Pagina>
   );
 }
 

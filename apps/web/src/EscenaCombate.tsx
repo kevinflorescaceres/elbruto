@@ -69,9 +69,7 @@ export function EscenaCombate({
 
       {aviso}
 
-      <p className="apagado" style={{ minHeight: '1.5rem', marginTop: '0.5rem' }}>
-        {pie}
-      </p>
+      <p className="apagado combate-pie">{pie}</p>
 
       <div className="fila">
         <button disabled={apagado} onClick={c?.pausa}>

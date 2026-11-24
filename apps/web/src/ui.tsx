@@ -3,7 +3,7 @@
  * dejen de resolver cada hueco con un `style={{}}` suelto: todo lo visual sale
  * de los tokens y de aqui.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 
 /** Barra superior de madera y contenedor. Envuelve cada pantalla. */
@@ -36,20 +36,8 @@ export function Pagina({
   );
 }
 
-export function Tarjeta({
-  children,
-  hundida,
-  style,
-}: {
-  children: ReactNode;
-  hundida?: boolean;
-  style?: CSSProperties;
-}) {
-  return (
-    <div className={hundida === true ? 'tarjeta hundida' : 'tarjeta'} style={style}>
-      {children}
-    </div>
-  );
+export function Tarjeta({ children, hundida }: { children: ReactNode; hundida?: boolean }) {
+  return <div className={hundida === true ? 'tarjeta hundida' : 'tarjeta'}>{children}</div>;
 }
 
 interface BotonProps {
@@ -79,7 +67,6 @@ export function Boton({
   );
 }
 
-/** Un arma, una maña o un bicho. Si no hay nada, lo dice en vez de dejar hueco. */
 /** "1 victoria · 3 derrotas": la abreviatura "1V 3D" no la entendia nadie. */
 export function record(wins: number, losses: number): string {
   const v = wins === 1 ? '1 victoria' : `${wins} victorias`;
@@ -87,10 +74,26 @@ export function record(wins: number, losses: number): string {
   return `${v} · ${d}`;
 }
 
+/** "1 arma", "0 mañas": la cuenta con su nombre, concordando. */
+export function cuenta(n: number, uno: string, varios: string): string {
+  return `${n} ${n === 1 ? uno : varios}`;
+}
+
+/**
+ * Ganó o perdió, con su color y su palabra: el color solo no lo distingue quien
+ * no ve el rojo del verde.
+ */
+export function Resultado({ gano }: { gano: boolean }) {
+  return (
+    <span className={gano ? 'resultado gana' : 'resultado pierde'}>{gano ? 'Ganó' : 'Perdió'}</span>
+  );
+}
+
+/** Un arma, una maña o un bicho. Si no hay nada, lo dice en vez de dejar hueco. */
 export function Chips({ nombres, vacio }: { nombres: string[]; vacio: string }) {
   if (nombres.length === 0) return <span className="apagado">{vacio}</span>;
   return (
-    <span className="fila" style={{ gap: '0.3rem' }}>
+    <span className="chips">
       {nombres.map((n) => (
         <span key={n} className="chip">
           {n}
@@ -127,13 +130,24 @@ export function TarjetaBoton({
   children,
   disabled,
   onClick,
+  alPasar,
 }: {
   children: ReactNode;
   disabled?: boolean;
   onClick: () => void;
+  /** Avisa cuando el puntero o el foco entran (true) y salen (false). */
+  alPasar?: (dentro: boolean) => void;
 }) {
   return (
-    <button className="tarjeta tarjeta-boton" disabled={disabled} onClick={onClick}>
+    <button
+      className="tarjeta tarjeta-boton"
+      disabled={disabled}
+      onClick={onClick}
+      onPointerEnter={() => alPasar?.(true)}
+      onPointerLeave={() => alPasar?.(false)}
+      onFocus={() => alPasar?.(true)}
+      onBlur={() => alPasar?.(false)}
+    >
       {children}
     </button>
   );
@@ -145,9 +159,9 @@ export function Barra({ de, entre, etiqueta }: { de: number; entre: number; etiq
   return (
     <div>
       {etiqueta !== undefined && (
-        <div className="fila" style={{ justifyContent: 'space-between' }}>
-          <span className="apagado">{etiqueta}</span>
-          <span className="apagado">
+        <div className="barra-cabecera apagado">
+          <span>{etiqueta}</span>
+          <span className="barra-cifras">
             {de} / {entre}
           </span>
         </div>

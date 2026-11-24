@@ -1,7 +1,12 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
 import { ESTADISTICAS, Pagina, TarjetaBoton } from '../ui.js';
+import { armaVisible, Fighter } from '../art/Fighter.js';
+import { Escenario } from '../Escenario.js';
+import { useBrute } from '../hooks.js';
+import type { WeaponCategory } from '../art/parts.js';
 import { api } from '../api.js';
 import { describeSkill } from '../skillText.js';
 
@@ -10,13 +15,21 @@ const STAT_NAMES: Record<string, string> = Object.fromEntries(
   ESTADISTICAS.map(([etiqueta, campo]) => [campo, etiqueta]),
 );
 
-function describeOption(option: LevelUpOption): { title: string; detail: string } {
+interface Opcion {
+  title: string;
+  detail: string;
+  /** Si es un arma, lo que hace falta para dibujarla en la mano. */
+  arma?: { category: WeaponCategory; reach: number };
+}
+
+function describeOption(option: LevelUpOption): Opcion {
   switch (option.type) {
     case 'weapon': {
       const weapon = getWeapon(option.id);
       return {
         title: weapon.name,
         detail: `Arma ${weapon.category} · ${weapon.damage} de daño · intervalo ${weapon.interval}`,
+        arma: { category: weapon.category, reach: weapon.reach },
       };
     }
     case 'skill': {
@@ -49,6 +62,9 @@ export function LevelUpPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pending = useQuery({ queryKey: ['level-up', slug], queryFn: () => api.levelUp(slug) });
+  const brute = useBrute(slug);
+  // La opcion bajo el puntero o el foco: si es un arma, el peleon se la prueba.
+  const [probando, setProbando] = useState<number | null>(null);
 
   const choose = useMutation({
     mutationFn: (index: 0 | 1) => api.chooseLevelUp(slug, index),
@@ -70,30 +86,59 @@ export function LevelUpPage() {
   if (pending.isPending)
     return (
       <Pagina>
-        <p className="apagado">Cargando...</p>
+        <p className="apagado">Cargando…</p>
       </Pagina>
     );
 
-  return (
-    <Pagina>
-      <h1>Nivel {pending.data.level}</h1>
-      <p className="apagado">Dos caminos. Uno se queda por el camino.</p>
+  const opciones = pending.data.options.map(describeOption);
+  const b = brute.data;
+  const enLaMano =
+    (probando === null ? undefined : opciones[probando]?.arma) ?? (b && armaVisible(b.weapons));
 
-      <div className="rejilla">
-        {pending.data.options.map((option, index) => {
-          const { title, detail } = describeOption(option);
-          return (
-            <TarjetaBoton
-              key={index}
-              disabled={choose.isPending}
-              onClick={() => choose.mutate(index as 0 | 1)}
-            >
-              <strong>{title}</strong>
-              <div className="apagado">{detail}</div>
-            </TarjetaBoton>
-          );
-        })}
-      </div>
+  return (
+    <Pagina volver={b === undefined ? undefined : { a: `/b/${slug}`, texto: b.name }}>
+      <section className="subida">
+        <div className="subida-cabecera">
+          {b !== undefined && (
+            <Escenario
+              className="subida-escena"
+              alto={140}
+              figuras={[{ appearance: b.appearance, slug: b.slug, weapon: enLaMano }]}
+            />
+          )}
+          {/* El cartel cuelga sobre el escenario, como los rotulos del combate. */}
+          <h1 className="cartel subida-titulo">Nivel {pending.data.level}</h1>
+        </div>
+        <div className="subida-opciones">
+          <p className="subida-voz">Dos caminos. Uno se queda por el camino.</p>
+          <div className="rejilla">
+            {opciones.map(({ title, detail, arma }, index) => (
+              <TarjetaBoton
+                key={index}
+                disabled={choose.isPending}
+                onClick={() => choose.mutate(index as 0 | 1)}
+                alPasar={(dentro) =>
+                  setProbando((actual) => (dentro ? index : actual === index ? null : actual))
+                }
+              >
+                <span className="opcion">
+                  {/* Un arma se ensena ya en la mano de tu peleon: en el movil no hay
+                      puntero que pasar por encima, y tocar la tarjeta ya la elige. */}
+                  {arma !== undefined && b !== undefined && (
+                    <span className="opcion-figura" aria-hidden>
+                      <Fighter appearance={b.appearance} slug={b.slug} weapon={arma} height={76} />
+                    </span>
+                  )}
+                  <span className="opcion-texto">
+                    <strong className="opcion-titulo">{title}</strong>
+                    <span className="apagado">{detail}</span>
+                  </span>
+                </span>
+              </TarjetaBoton>
+            ))}
+          </div>
+        </div>
+      </section>
     </Pagina>
   );
 }

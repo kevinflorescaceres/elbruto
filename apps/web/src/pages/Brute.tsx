@@ -5,10 +5,21 @@ import { getPet, getSkill, getWeapon } from '@camorra/engine';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
-import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
+import {
+  Barra,
+  Boton,
+  Chips,
+  ESTADISTICAS,
+  Estadistica,
+  Pagina,
+  record,
+  Resultado,
+  Tarjeta,
+} from '../ui.js';
 import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
 import { CompartirEnlace } from '../CompartirEnlace.js';
+import { NadieAqui } from '../Escenario.js';
 import { describeSkill } from '../skillText.js';
 
 function Denuncia({ slug }: { slug: string }) {
@@ -36,11 +47,12 @@ function Denuncia({ slug }: { slug: string }) {
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="Qué problema hay con este peleón"
-        style={{ flex: 1 }}
+        aria-label="Qué problema hay con este peleón"
+        className="campo-crece"
       />
-      <button type="submit" disabled={reason.trim().length < 3}>
+      <Boton type="submit" disabled={reason.trim().length < 3}>
         Enviar
-      </button>
+      </Boton>
     </form>
   );
 }
@@ -124,14 +136,18 @@ export function BrutePage() {
   if (brute.isPending)
     return (
       <Pagina>
-        <p className="apagado">Cargando...</p>
+        <p className="apagado">Cargando…</p>
       </Pagina>
     );
   if (brute.error)
     return (
       <Pagina>
-        <h1>No hay nadie con ese nombre</h1>
-        <Link to="/">Volver</Link>
+        <NadieAqui titulo="No hay nadie con ese nombre">
+          <p className="apagado">O se escribió mal, o ese peleón nunca existió.</p>
+          <Link to="/" className="boton">
+            Volver al principio
+          </Link>
+        </NadieAqui>
       </Pagina>
     );
 
@@ -192,12 +208,14 @@ export function BrutePage() {
           {/* Mientras se refresca, lo cacheado puede estar viejo: ensenar el boton
               de pelear cuando ya hay mejora pendiente lleva a un 409 sin sentido. */}
           {brute.isFetching ? (
-            <p className="apagado">Comprobando...</p>
+            <p className="apagado">Comprobando…</p>
           ) : b.pendingLevelUp ? (
             <>
               <p>Tienes una mejora sin elegir. Hasta que la elijas no puedes pelear.</p>
-              <Link to={`/b/${slug}/level-up`}>
-                <Boton tipo="principal">Elegir mejora</Boton>
+              {/* Un enlace con forma de boton, no un boton dentro de un enlace: anidados
+                  son dos paradas de tabulador y un lector de pantalla los anuncia dos veces. */}
+              <Link to={`/b/${slug}/level-up`} className="boton principal">
+                Elegir mejora
               </Link>
             </>
           ) : (
@@ -215,11 +233,16 @@ export function BrutePage() {
                   .
                 </p>
               )}
-              <Link to={`/b/${slug}/arena`}>
-                <Boton tipo="principal" disabled={b.fightsLeftToday === 0}>
+              {/* Sin peleas no hay enlace: apagado, el boton seguia llevando a la arena. */}
+              {b.fightsLeftToday > 0 ? (
+                <Link to={`/b/${slug}/arena`} className="boton principal">
+                  Buscar pelea
+                </Link>
+              ) : (
+                <Boton tipo="principal" disabled>
                   Buscar pelea
                 </Boton>
-              </Link>
+              )}
             </>
           )}
         </Tarjeta>
@@ -232,7 +255,7 @@ export function BrutePage() {
             Cada peleón que entre con tu enlace te da <strong>una pelea diaria más</strong>, hasta
             seis. A quien recluta no le cuesta nada.
           </p>
-          <code style={{ wordBreak: 'break-all' }}>{enlaceRecluta}</code>
+          <code className="enlace-url">{enlaceRecluta}</code>
           <div className="fila enlace-recluta">
             <CompartirEnlace
               url={enlaceRecluta}
@@ -252,15 +275,24 @@ export function BrutePage() {
 
       <h2>Peleas</h2>
       {history.data?.fights.length === 0 && <p className="apagado">Todavía no ha peleado.</p>}
-      {history.data?.fights.map((fight) => (
-        <p key={fight.id}>
-          <Link to={`/fight/${fight.id}`}>
-            {fight.won ? 'Ganó' : 'Perdió'} contra {fight.opponent.name} (nivel{' '}
-            {fight.opponent.level})
-          </Link>{' '}
-          <span className="apagado">{new Date(fight.createdAt).toLocaleDateString('es')}</span>
-        </p>
-      ))}
+      {history.data !== undefined && history.data.fights.length > 0 && (
+        <ul className="historial">
+          {history.data.fights.map((fight) => (
+            <li key={fight.id}>
+              <Link to={`/fight/${fight.id}`}>
+                <Resultado gano={fight.won} />
+                <span className="historial-rival">
+                  contra {fight.opponent.name}{' '}
+                  <span className="apagado">(nivel {fight.opponent.level})</span>
+                </span>
+                <time dateTime={fight.createdAt}>
+                  {new Date(fight.createdAt).toLocaleDateString('es')}
+                </time>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="denuncia">
         <Denuncia slug={slug} />

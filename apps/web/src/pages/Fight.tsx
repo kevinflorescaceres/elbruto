@@ -5,6 +5,7 @@ import { api, ApiError } from '../api.js';
 import { Boton, Pagina } from '../ui.js';
 import { FightLog } from '../FightLog.js';
 import { EscenaCombate } from '../EscenaCombate.js';
+import { NadieAqui } from '../Escenario.js';
 import { CompartirEnlace } from '../CompartirEnlace.js';
 
 // Pixi y GSAP son la mitad del peso del bundle y solo se usan en esta pantalla.
@@ -31,17 +32,28 @@ export function FightPage() {
     // Solo un 404 dice que no existe. Un corte de red o un fallo del servidor no
     // significa eso, y decirlo mandaba a casa a quien solo tenia que reintentar.
     const noExiste = fight.error instanceof ApiError && fight.error.status === 404;
+    const volver = (
+      <div className="fila">
+        {!noExiste && (
+          <Boton tipo="principal" onClick={() => void fight.refetch()}>
+            Reintentar
+          </Boton>
+        )}
+        <Link to="/" className={noExiste ? 'boton' : undefined}>
+          Volver al principio
+        </Link>
+      </div>
+    );
     return (
       <Pagina>
-        <h1>{noExiste ? 'Ese combate no existe' : 'No se ha podido cargar el combate'}</h1>
-        <div className="fila">
-          {!noExiste && (
-            <Boton tipo="principal" onClick={() => void fight.refetch()}>
-              Reintentar
-            </Boton>
-          )}
-          <Link to="/">Volver al principio</Link>
-        </div>
+        {noExiste ? (
+          <NadieAqui titulo="Ese combate no existe">{volver}</NadieAqui>
+        ) : (
+          <>
+            <h1>No se ha podido cargar el combate</h1>
+            {volver}
+          </>
+        )}
       </Pagina>
     );
   }
@@ -64,15 +76,15 @@ export function FightPage() {
         <FightPlayer replay={fight.data} />
       </Suspense>
 
-      <details style={{ marginTop: '1.5rem' }}>
+      <details className="combate-texto">
         {/* Un lienzo no lo lee un lector de pantalla: el texto es el respaldo. */}
         <summary>Ver el combate en texto</summary>
-        <div style={{ marginTop: '0.75rem' }}>
+        <div className="combate-texto-cuerpo">
           <FightLog replay={fight.data} />
         </div>
       </details>
 
-      <div className="fila" style={{ marginTop: '1rem' }}>
+      <div className="fila combate-acciones">
         <CompartirEnlace
           url={window.location.href}
           titulo={titulo}

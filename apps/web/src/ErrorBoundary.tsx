@@ -25,13 +25,13 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { fallo: E
         </p>
         <div className="fila">
           <button onClick={() => window.location.reload()}>Recargar</button>
-          <a href="/">
-            <button>Volver al principio</button>
+          <a href="/" className="boton">
+            Volver al principio
           </a>
         </div>
-        <details style={{ marginTop: '1.5rem' }}>
-          <summary className="apagado">Detalle tecnico</summary>
-          <pre style={{ overflowX: 'auto', fontSize: '0.8rem' }}>{this.state.fallo.message}</pre>
+        <details className="combate-texto">
+          <summary className="apagado">Detalle técnico</summary>
+          <pre className="error-detalle">{this.state.fallo.message}</pre>
         </details>
       </main>
     );

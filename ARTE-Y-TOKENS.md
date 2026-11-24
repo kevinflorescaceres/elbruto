@@ -212,6 +212,31 @@ Tipografía: **Alegreya** (700, 800) para títulos, cifras y botones; **Alegreya
 
 Escala: 14 · 15 · 17 · 19 · 21 · 25 · 34 · 56 px. Espaciado en múltiplos de 4.
 
+Las dos viven como variables en `:root` de `styles.css`, con nombre de papel y no de valor.
+**No se escribe un tamaño ni un espaciado a mano**: si falta un paso, se añade aquí y allí.
+
+```
+--t-meta     14px   cifras pequeñas, fechas, cabeceras de tabla
+--t-apoyo    15px   texto secundario (.apagado), ayudas, detalle
+--t-cuerpo   17px   texto corrido y botones
+--t-entrada  19px   la frase que abre una pantalla
+--t-h3 21 · --t-h2 25 · --t-h1 34
+--t-cartel   34-56  fluido: título de portada
+--e-1 4 · --e-2 8 · --e-3 12 · --e-4 16 · --e-5 20 · --e-6 24 · --e-8 32 · --e-10 40 · --e-12 48 · --e-16 64
+--letra-titulo (Alegreya) · --letra-cuerpo (Alegreya Sans)
+```
+
+Ritmo: un título lleva más aire encima que debajo (`* + h2` a `--e-10`, `* + h3` a
+`--e-6`). Títulos con `text-wrap: balance`, párrafos con `pretty`, y cifras que se comparan
+en columna con `tabular-nums`.
+
+Dos usos del color con significado, y solo esos:
+
+- **Ganó / Perdió** (`Resultado`): `--gana` y `--pierde`, siempre con la palabra y con un
+  fondo tintado del mismo tono. Es el único verde y rojo de la interfaz.
+- **Cartel** (`.cartel`): madera con letra de oro, el color de lo que se gana. Nombres en
+  el escenario, el podio del ranking y el nivel al subir. No se usa para decorar.
+
 ### 2.3 Cambios en el lienzo de combate
 
 Tres valores del combate están fuera de paleta y hay que alinearlos:
@@ -235,6 +260,19 @@ tokens:
 `Boton` (principal y secundario) · `Tarjeta` · `Chip` (armas, mañas, bichos) ·
 `Estadistica` (etiqueta + cifra) · `Barra` (experiencia y vida) · `Pagina` (barra superior +
 contenedor). Objetivo: dejar `styles.css` como hoja de tokens y estilos base, sin clases ad hoc.
+
+Hechos y en uso (2026-11-24). Además de los seis de arriba (`ui.tsx`):
+
+| Componente | Dónde | Para qué |
+| --- | --- | --- |
+| `Escenario` (`Escenario.tsx`) | portada, subida de nivel, páginas vacías | El escenario del combate en pequeño, con un cartel por peleón |
+| `NadieAqui` (`Escenario.tsx`) | 404, peleón o combate que no existe | En escena está **Nadie**, un peleón sacado del motor con ese nombre |
+| `EscenaCombate` | reproductor y su espera | Marcador, lienzo, pie y controles, sin Pixi: la espera ocupa lo mismo |
+| `CompartirEnlace` | combate, reclutamiento | Menú de compartir en el móvil, copiar en escritorio; siempre confirma |
+| `Resultado`, `cuenta()`, `record()` | ficha, arena, ranking | «Ganó», «1 arma», «1 victoria · 3 derrotas»: nada de «1V 3D» |
+
+Un enlace que parece botón es `<Link className="boton">`, nunca un `<Boton>` dentro de un
+`<Link>`. Los `style={{}}` que quedan son anchos que salen de los datos (barras).
 
 ### 2.5 Responsive
 

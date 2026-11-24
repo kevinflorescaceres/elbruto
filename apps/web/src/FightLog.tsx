@@ -8,10 +8,10 @@ import { buildSteps } from './fightLines.js';
 
 function Vida({ nombre, hp, maxHp }: { nombre: string; hp: number; maxHp: number }) {
   return (
-    <div style={{ flex: '1 1 12rem' }}>
-      <div className="fila" style={{ justifyContent: 'space-between' }}>
+    <div className="log-vida">
+      <div className="barra-cabecera">
         <strong>{nombre}</strong>
-        <span className="apagado">
+        <span className="apagado barra-cifras">
           {hp} / {maxHp}
         </span>
       </div>
@@ -39,7 +39,7 @@ export function FightLog({ replay }: { replay: FightReplay }) {
 
   return (
     <div>
-      <div className="fila" style={{ gap: '1.5rem', marginBottom: '0.75rem' }}>
+      <div className="fila log-vidas">
         <Vida
           nombre={replay.snapshotA.name}
           hp={current?.hpA ?? replay.snapshotA.maxHp}
@@ -52,11 +52,16 @@ export function FightLog({ replay }: { replay: FightReplay }) {
         />
       </div>
 
-      <div className="fila" style={{ marginBottom: '0.75rem' }}>
+      <div className="fila log-controles">
         <button onClick={() => setPlaying((p) => !p)} disabled={ended}>
           {playing ? 'Pausa' : 'Seguir'}
         </button>
-        <button onClick={() => setSpeed((s) => (s === 1 ? 2 : 1))}>x{speed}</button>
+        <button
+          onClick={() => setSpeed((s) => (s === 1 ? 2 : 1))}
+          aria-label={`Velocidad por ${speed}`}
+        >
+          ×{speed}
+        </button>
         <button onClick={() => setShown(steps.length)} disabled={ended}>
           Ir al final
         </button>

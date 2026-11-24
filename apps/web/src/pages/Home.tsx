@@ -15,6 +15,7 @@ import { Cuenta } from '../Cuenta.js';
 import { useMe } from '../hooks.js';
 import { ayudaNombre, type AyudaNombre } from '../nombre.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
+import { Escenario } from '../Escenario.js';
 import { describeSkill } from '../skillText.js';
 import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
 
@@ -415,21 +416,15 @@ export function Home() {
               </p>
             </div>
             {/* Decorativa: el nombre ya va en el texto, o son de muestra. */}
-            <div className="portada-escena" aria-hidden="true">
-              {escena.map((brute, i) => (
-                <figure key={brute.slug} className={i === 1 ? 'rival' : undefined}>
-                  <div className="portada-figura">
-                    <Fighter
-                      appearance={brute.appearance}
-                      slug={brute.slug}
-                      weapon={armaVisible(brute.weapons)}
-                      height={150}
-                    />
-                  </div>
-                  <figcaption>{brute.name}</figcaption>
-                </figure>
-              ))}
-            </div>
+            <Escenario
+              className="portada-escena"
+              figuras={escena.map((brute) => ({
+                appearance: brute.appearance,
+                slug: brute.slug,
+                weapon: armaVisible(brute.weapons),
+                nombre: brute.name,
+              }))}
+            />
             <div className="portada-form">{formulario('Nuevo peleón')}</div>
           </section>
           {enlaces}

@@ -31,7 +31,7 @@ export function ClaimPage() {
 
   return (
     <Pagina>
-      <p className="apagado">Recuperando tu peleón...</p>
+      <p className="apagado">Recuperando tu peleón…</p>
     </Pagina>
   );
 }

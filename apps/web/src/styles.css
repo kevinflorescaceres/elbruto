@@ -21,6 +21,35 @@
   --borde: 2px;
   --radio: 3px;
 
+  /*
+   * Escala tipografica de ARTE-Y-TOKENS.md §2.2, con nombre de papel y no de
+   * valor. Antes solo estaba escrita: la hoja mezclaba px con 0,85-1,25rem, y
+   * como rem va sobre 16 px y el cuerpo es de 17, nada caia en la escala.
+   */
+  --t-meta: 14px; /* cifras pequenas, fechas, cabeceras de tabla */
+  --t-apoyo: 15px; /* texto secundario: subtitulos, ayudas, detalle */
+  --t-cuerpo: 17px; /* texto corrido y botones */
+  --t-entrada: 19px; /* la frase que abre una pantalla */
+  --t-h3: 21px;
+  --t-h2: 25px;
+  --t-h1: 34px;
+  --t-cartel: clamp(34px, 26px + 2.6vw, 56px); /* titulo de portada y de momentos */
+
+  --letra-titulo: Alegreya, Georgia, serif;
+  --letra-cuerpo: 'Alegreya Sans', system-ui, sans-serif;
+
+  /* Espaciado en multiplos de 4 (§2.2). */
+  --e-1: 4px;
+  --e-2: 8px;
+  --e-3: 12px;
+  --e-4: 16px;
+  --e-5: 20px;
+  --e-6: 24px;
+  --e-8: 32px;
+  --e-10: 40px;
+  --e-12: 48px;
+  --e-16: 64px;
+
   /* Alias de lo que ya usaban las pantallas, para no romper nada hoy. */
   --apagado: var(--tinta-suave);
   --fondo-suave: var(--papel-hondo);
@@ -40,8 +69,8 @@ body {
 
 body {
   margin: 0;
-  font-family: 'Alegreya Sans', system-ui, sans-serif;
-  font-size: 17px;
+  font-family: var(--letra-cuerpo);
+  font-size: var(--t-cuerpo);
   line-height: 1.5;
   color: var(--tinta);
   background: var(--papel);
@@ -50,14 +79,14 @@ body {
 h1,
 h2,
 h3 {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 800;
 }
 
 main {
   max-width: 52rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: var(--e-6) var(--e-4) var(--e-16);
 }
 
 a {
@@ -88,20 +117,66 @@ a {
 h1,
 h2,
 h3 {
-  line-height: 1.2;
-  margin: 0 0 0.5rem;
+  line-height: 1.15;
+  margin: 0 0 var(--e-2);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--t-h1);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: var(--t-h2);
+}
+
+h3 {
+  font-size: var(--t-h3);
+}
+
+/*
+ * Mas aire encima de un titulo que debajo: el titulo es de lo que viene, no de
+ * lo que acaba. Antes iba al reves y en la pagina legal cada h2 parecia el pie
+ * del parrafo anterior.
+ */
+* + h2 {
+  margin-top: var(--e-10);
+}
+
+* + h3 {
+  margin-top: var(--e-6);
+}
+
+/* La tarjeta ya separa con su padding: un titulo dentro no suma margen encima. */
+.tarjeta > h2:first-child,
+.tarjeta > h3:first-child {
+  margin-top: 0;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Cifras que se comparan en columna: todas del mismo ancho. */
+.estadistica strong,
+.rk-puesto,
+.rk-marcador,
+.barra-cifras,
+time {
+  font-variant-numeric: tabular-nums;
 }
 
 .apagado {
   color: var(--apagado);
-  font-size: 0.9rem;
+  font-size: var(--t-apoyo);
 }
 
 .tarjeta {
   border: var(--borde) solid var(--tinta);
   border-radius: var(--radio);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: var(--e-4);
+  margin-bottom: var(--e-4);
   background: var(--papel-claro);
 }
 
@@ -122,10 +197,10 @@ h3 {
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--e-4);
   width: 100vw;
   margin-inline: calc(50% - 50vw);
-  padding: 0.6rem 1rem 0.5rem;
+  padding: var(--e-3) var(--e-4) var(--e-2);
   background: var(--madera);
   border-top: var(--borde) solid var(--tinta);
 }
@@ -135,7 +210,7 @@ h3 {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--e-1);
 }
 
 .vida-der {
@@ -178,9 +253,9 @@ h3 {
 }
 
 .vida-nombre {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
-  font-size: 19px;
+  font-size: var(--t-entrada);
   color: var(--oro);
   max-width: 100%;
   overflow: hidden;
@@ -224,7 +299,7 @@ h3 {
 /* El boton pone Alegreya en negrita a todo; el detalle es texto corrido y va en la
    letra del cuerpo, o el titulo y la frase pesan lo mismo. */
 .tarjeta-boton .apagado {
-  font-family: 'Alegreya Sans', system-ui, sans-serif;
+  font-family: var(--letra-cuerpo);
   font-weight: 400;
 }
 
@@ -239,7 +314,26 @@ h3 {
 .ficha-mini {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--e-3);
+}
+
+/* Datos del rival: nombre, y debajo una linea por cosa. */
+.rival-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rival-nombre {
+  font-size: var(--t-entrada);
+  line-height: 1.2;
+  margin-bottom: var(--e-1);
+}
+
+.campo-crece {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Algo que hay que atender, no un dato mas: no va en --tinta-suave. */
@@ -250,8 +344,9 @@ h3 {
 
 .rejilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: 0.75rem;
+  /* 17rem: a 15 el nombre y la cuenta de armas partian en tres lineas. */
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--e-3);
 }
 
 /* En la rejilla separa el gap: el margen de la tarjeta se sumaba y lo doblaba. */
@@ -262,15 +357,15 @@ h3 {
 .fila {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e-2);
   align-items: center;
 }
 
 button {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
-  font-size: 17px;
-  padding: 0.4rem 0.9rem;
+  font-size: var(--t-cuerpo);
+  padding: var(--e-2) var(--e-4);
   border: var(--borde) solid var(--tinta);
   border-radius: var(--radio);
   background: var(--papel-hondo);
@@ -294,7 +389,7 @@ button:disabled {
 input,
 textarea {
   font: inherit;
-  padding: 0.4rem 0.6rem;
+  padding: var(--e-2) var(--e-3);
   border: var(--borde) solid var(--tinta);
   border-radius: var(--radio);
   background: var(--papel-claro);
@@ -310,11 +405,90 @@ table {
 td,
 th {
   text-align: left;
-  padding: 0.25rem 0.75rem 0.25rem 0;
+  padding: var(--e-1) var(--e-3) var(--e-1) 0;
 }
 
 .error {
   color: var(--acento);
+}
+
+/* Etiqueta y cifra a los dos extremos, encima de la barra. */
+.barra-cabecera {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-2);
+  margin-bottom: var(--e-1);
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--e-1);
+}
+
+/*
+ * Ganó / Perdió: el unico sitio de la interfaz con verde y rojo, y siempre con
+ * la palabra. Fondo tintado del mismo tono para que se lea de un vistazo en una
+ * lista de diez. Tinta sobre su tinte: 7,9:1 y 7,1:1.
+ */
+.resultado {
+  display: inline-block;
+  min-width: 4.5em;
+  padding: 0 var(--e-2);
+  border: var(--borde) solid currentcolor;
+  border-radius: var(--radio);
+  font-family: var(--letra-titulo);
+  font-weight: 700;
+  font-size: var(--t-apoyo);
+  text-align: center;
+}
+
+.resultado.gana {
+  color: var(--gana);
+  background: color-mix(in srgb, var(--gana) 12%, var(--papel-claro));
+}
+
+.resultado.pierde {
+  color: var(--pierde);
+  background: color-mix(in srgb, var(--pierde) 10%, var(--papel-claro));
+}
+
+/* Historial de peleas: una fila por pelea, la fecha a la derecha. */
+.historial {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linea);
+}
+
+.historial li {
+  border-bottom: 1px solid var(--linea);
+}
+
+.historial a {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-height: 44px;
+  padding: var(--e-2) 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.historial-rival {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (hover: hover) {
+  .historial a:hover .historial-rival {
+    text-decoration: underline;
+  }
+}
+
+.historial time {
+  color: var(--apagado);
+  font-size: var(--t-meta);
 }
 
 .barra {
@@ -337,12 +511,30 @@ th {
   overflow-y: auto;
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
-  padding: 0.75rem;
+  padding: var(--e-3);
   background: var(--papel-hondo);
 }
 
+.log-vidas {
+  gap: var(--e-6);
+  margin-bottom: var(--e-3);
+}
+
+.log-vida {
+  flex: 1 1 12rem;
+}
+
+.log-controles {
+  margin-bottom: var(--e-3);
+}
+
+.error-detalle {
+  overflow-x: auto;
+  font-size: var(--t-meta);
+}
+
 .log p {
-  margin: 0 0 0.2rem;
+  margin: 0 0 var(--e-1);
 }
 
 /* --- Componentes base (ARTE-Y-TOKENS.md §2.4) --- */
@@ -351,8 +543,8 @@ th {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
   background: var(--madera);
   border-bottom: var(--borde) solid var(--tinta);
 }
@@ -360,7 +552,7 @@ th {
 .barra-superior a {
   color: var(--oro);
   text-decoration: none;
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
 }
 
@@ -380,7 +572,7 @@ th {
  * 44 px sin cambiar como se ve. La barra pierde el suyo para no crecer.
  */
 .barra-superior {
-  padding-block: 0.1rem;
+  padding-block: 2px;
 }
 
 .barra-superior a {
@@ -390,7 +582,7 @@ th {
 }
 
 .marca {
-  font-size: 25px;
+  font-size: var(--t-h2);
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -400,10 +592,10 @@ th {
 }
 
 .boton {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
-  font-size: 17px;
-  padding: 0.4rem 0.9rem;
+  font-size: var(--t-cuerpo);
+  padding: var(--e-2) var(--e-4);
   border: var(--borde) solid var(--tinta);
   border-radius: var(--radio);
   background: var(--papel-hondo);
@@ -446,20 +638,20 @@ th {
 
 .chip {
   display: inline-block;
-  padding: 0.1rem 0.5rem;
+  padding: 2px var(--e-2);
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
   background: var(--papel-hondo);
-  font-size: 15px;
+  font-size: var(--t-apoyo);
 }
 
 .estadistica {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.1rem;
+  gap: 2px;
   /* Poco padding lateral: a 360 px «Aguante» llenaba la celda de borde a borde. */
-  padding: 0.4rem 0.25rem;
+  padding: var(--e-2) var(--e-1);
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
   background: var(--papel-hondo);
@@ -468,12 +660,12 @@ th {
 }
 
 .estadistica strong {
-  font-family: Alegreya, Georgia, serif;
-  font-size: 21px;
+  font-family: var(--letra-titulo);
+  font-size: var(--t-h3);
 }
 
 .estadistica .apagado {
-  font-size: 14px;
+  font-size: var(--t-meta);
 }
 
 /* --- Ficha del peleon --- */
@@ -481,7 +673,7 @@ th {
 .ficha-cuerpo {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.2rem;
+  gap: var(--e-5);
   align-items: flex-start;
 }
 
@@ -489,33 +681,33 @@ th {
   background: var(--papel-hondo);
   border: var(--borde) solid var(--linea);
   border-radius: var(--radio);
-  padding: 0.5rem 0.8rem;
+  padding: var(--e-2) var(--e-3);
 }
 
 .ficha-datos {
   flex: 1 1 18rem;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: var(--e-4);
 }
 
 .estadisticas {
   /* Cinco columnas fijas: en flex envolvian 3+2 y quedaba desequilibrado. */
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.4rem;
+  gap: var(--e-2);
 }
 
 .equipo {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.35rem 0.8rem;
+  gap: var(--e-2) var(--e-3);
   margin: 0;
   align-items: baseline;
 }
 
 .equipo dt {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
 }
 
@@ -530,20 +722,20 @@ th {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.6rem;
+  gap: var(--e-3);
 }
 
 .manas li {
   display: grid;
   justify-items: start;
-  gap: 0.2rem;
+  gap: var(--e-1);
 }
 
 @media (min-width: 48rem) {
   .manas {
     grid-template-columns: max-content 1fr;
-    column-gap: 0.6rem;
-    row-gap: 0.4rem;
+    column-gap: var(--e-3);
+    row-gap: var(--e-2);
   }
 
   .manas li {
@@ -554,11 +746,167 @@ th {
 }
 
 .denuncia {
-  margin-top: 2rem;
+  margin-top: var(--e-8);
 }
 
 .enlace-recluta {
-  margin-top: 0.5rem;
+  margin-top: var(--e-2);
+}
+
+/* --- Paginas sin nadie (NadieAqui) --- */
+
+.nadie {
+  display: grid;
+  gap: var(--e-5);
+  align-items: center;
+  margin-top: var(--e-4);
+}
+
+.nadie-escena {
+  justify-self: start;
+  padding-inline: var(--e-8);
+}
+
+.nadie p {
+  margin: 0 0 var(--e-4);
+}
+
+@media (min-width: 48rem) {
+  .nadie {
+    grid-template-columns: auto 1fr;
+    gap: var(--e-8);
+  }
+}
+
+/* --- Combate (pagina) --- */
+
+/* Hueco fijo de una linea para el pie: el texto cambia en cada golpe. */
+.combate-pie {
+  min-height: var(--e-6);
+  margin: var(--e-2) 0 var(--e-3);
+}
+
+.combate-texto {
+  margin-top: var(--e-6);
+}
+
+.combate-texto-cuerpo {
+  margin-top: var(--e-3);
+}
+
+.combate-acciones {
+  margin-top: var(--e-4);
+}
+
+/* --- Subida de nivel --- */
+
+/*
+ * El momento de la recompensa: el peleon en su escenario y el cartel del nivel
+ * colgado encima. En escritorio, escenario a la izquierda y caminos a la
+ * derecha; en el movil, uno sobre otro.
+ */
+.subida {
+  display: grid;
+  gap: var(--e-6);
+}
+
+.subida-cabecera {
+  display: grid;
+  justify-items: center;
+}
+
+.subida-escena {
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: var(--e-12);
+}
+
+/* El cartel grande, montado sobre el borde superior del escenario. */
+.cartel.subida-titulo {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: start;
+  margin: calc(var(--e-5) * -1) 0 0;
+  padding: var(--e-1) var(--e-5);
+  font-size: var(--t-h1);
+  font-weight: 800;
+  line-height: 1.2;
+  box-shadow: 0 6px 14px -6px rgb(36 31 28 / 45%);
+}
+
+.subida-cabecera > .escenario {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.subida-voz {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-entrada);
+}
+
+.subida-opciones .rejilla {
+  grid-template-columns: 1fr;
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.opcion-figura {
+  flex: none;
+  padding: var(--e-1) var(--e-1) 0;
+  background: linear-gradient(to top, var(--linea) 0 var(--e-2), var(--papel-hondo) var(--e-2));
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+.opcion-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.opcion-titulo {
+  font-size: var(--t-h3);
+  line-height: 1.2;
+}
+
+@media (min-width: 48rem) {
+  .subida {
+    grid-template-columns: minmax(16rem, 22rem) 1fr;
+    align-items: start;
+    margin-top: var(--e-6);
+  }
+
+  .subida-opciones {
+    padding-top: var(--e-4);
+  }
+}
+
+/* El cartel cae y se clava, una vez. Quien pide menos movimiento lo ve ya colgado. */
+@media (prefers-reduced-motion: no-preference) {
+  .subida-titulo {
+    animation: clavar 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes clavar {
+    from {
+      transform: translateY(-18px) rotate(-4deg);
+      opacity: 0;
+    }
+
+    70% {
+      transform: translateY(2px) rotate(0.6deg);
+      opacity: 1;
+    }
+
+    to {
+      transform: none;
+    }
+  }
 }
 
 /* --- Ranking (ARTE-Y-TOKENS.md §2.5) --- */
@@ -575,14 +923,14 @@ th {
   display: grid;
   grid-template-columns: 34px 1fr auto;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.7rem;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-3);
 }
 
 .rk-cabecera {
   background: var(--papel-hondo);
   border-bottom: var(--borde) solid var(--tinta);
-  font-size: 14px;
+  font-size: var(--t-meta);
   color: var(--tinta-suave);
 }
 
@@ -599,6 +947,14 @@ th {
 
 .rk-fila:hover {
   background: var(--papel-hondo);
+}
+
+/* Los tres primeros, en cartel: el podio se ve sin leer los numeros. */
+.rk-puesto .cartel {
+  min-width: 2ch;
+  padding-inline: var(--e-1);
+  text-align: center;
+  font-size: var(--t-apoyo);
 }
 
 .rk-fila.mia {
@@ -624,11 +980,11 @@ th {
   flex-direction: column;
   align-items: flex-end;
   line-height: 1.15;
-  font-size: 15px;
+  font-size: var(--t-apoyo);
 }
 
 .rk-nivel {
-  font-family: Alegreya, Georgia, serif;
+  font-family: var(--letra-titulo);
   font-weight: 700;
 }
 
@@ -657,9 +1013,9 @@ th {
  */
 .portada-cabecera {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--e-5);
   grid-template-areas: 'texto' 'escena' 'form';
-  margin: 0.5rem 0 1.5rem;
+  margin: var(--e-2) 0 var(--e-6);
 }
 
 .portada-texto {
@@ -681,27 +1037,62 @@ th {
 /* La voz del juego manda; la regla del bucle va debajo, mas callada. */
 .portada-voz {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--t-entrada);
 }
 
 .portada-vuelta {
-  margin: 0.5rem 0 0;
+  margin: var(--e-2) 0 0;
 }
 
 /*
- * El mismo escenario que el combate en pequeno: fondo hondo, trazo de tinta y
- * una franja de suelo donde se plantan. Los nombres van en la madera de la
- * barra superior, como carteles.
+ * El mismo escenario que el combate en pequeno (Escenario.tsx): fondo hondo,
+ * trazo de tinta y una franja de suelo donde se plantan.
  */
-.portada-escena {
+.escenario {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: clamp(1.5rem, 8vw, 3.5rem);
-  padding: 1.25rem 1rem 0.75rem;
-  background: linear-gradient(to top, var(--linea) 0 1.4rem, var(--papel-hondo) 1.4rem);
+  gap: clamp(var(--e-6), 8vw, var(--e-12));
+  padding: var(--e-5) var(--e-4) var(--e-3);
+  background: linear-gradient(to top, var(--linea) 0 var(--e-6), var(--papel-hondo) var(--e-6));
   border: var(--borde) solid var(--tinta);
   border-radius: var(--radio);
+}
+
+.escenario figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.escenario .rival .escenario-figura {
+  transform: scaleX(-1);
+}
+
+/* El cartel se monta un pelo sobre los pies, como un letrero clavado delante. */
+.escenario figcaption {
+  position: relative;
+  margin-top: calc(var(--e-1) * -1);
+}
+
+/*
+ * Cartel: madera con letra de oro, como la barra superior y los rotulos del
+ * combate. Es el color de lo que se gana: nombres en escena, el podio del
+ * ranking y la subida de nivel. Oro sobre madera da 8,1:1.
+ */
+.cartel {
+  display: inline-block;
+  padding: 2px var(--e-2);
+  background: var(--madera);
+  color: var(--oro);
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+  font-family: var(--letra-titulo);
+  font-weight: 700;
+  font-size: var(--t-meta);
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 /* En el movil la escena se comia un cuarto de pantalla y empujaba el campo abajo. */
@@ -712,54 +1103,25 @@ th {
   }
 }
 
-.portada-escena figure {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* El de la derecha mira hacia el otro. Solo la figura: el cartel se lee igual. */
-.portada-escena .rival .portada-figura {
-  transform: scaleX(-1);
-}
-
-.portada-escena figcaption {
-  position: relative;
-  margin-top: -0.3rem;
-  padding: 0.1rem 0.55rem;
-  background: var(--madera);
-  color: var(--oro);
-  border: var(--borde) solid var(--tinta);
-  border-radius: var(--radio);
-  font-family: Alegreya, Georgia, serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
 @media (min-width: 48rem) {
   .portada-cabecera {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: 'texto escena' 'form escena';
     align-items: start;
-    gap: 1.5rem 2rem;
+    gap: var(--e-6) var(--e-8);
   }
 
   .portada-escena {
     align-self: center;
-  }
-
-  .portada-escena {
-    padding-inline: 2rem;
+    padding-inline: var(--e-8);
   }
 }
 
 .portada-cabecera h1 {
-  font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.5rem);
-  line-height: 1.1;
+  font-size: var(--t-cartel);
+  line-height: 1.05;
   text-wrap: balance;
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--e-2);
 }
 
 /*
@@ -769,7 +1131,7 @@ th {
 .campo-nombre {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.5rem;
+  gap: var(--e-2);
   /* Un nombre son pocas palabras: en escritorio no hace falta un campo de 700 px. */
   max-width: 30rem;
 }
@@ -782,16 +1144,16 @@ th {
 /* Etiqueta visible: el placeholder es un ejemplo, no dice que va ahi. */
 .etiqueta {
   display: block;
-  margin-bottom: 0.3rem;
+  margin-bottom: var(--e-1);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--t-apoyo);
 }
 
 /* Hueco fijo de una linea: el texto cambia al escribir y la tarjeta no salta. */
 .ayuda {
-  margin: 0.5rem 0 0;
+  margin: var(--e-2) 0 0;
   min-height: 1.5em;
-  font-size: 0.9rem;
+  font-size: var(--t-apoyo);
 }
 
 /* Un enlace con aspecto de boton: lleva a otra pagina, asi que es <a>. */
@@ -815,47 +1177,47 @@ a.boton {
 /* Lo que hace la mania, en su propia linea: pegado a la frase se leia como nota al pie. */
 .recien-inicial .apagado {
   display: block;
-  margin-top: 0.25rem;
+  margin-top: var(--e-1);
 }
 
 /* El enlace largo parte por cualquier sitio: es un token, no hay palabras. */
 .enlace-url {
   display: block;
-  padding: 0.5rem 0.6rem;
+  padding: var(--e-2) var(--e-3);
   background: var(--papel-claro);
   border: 1px solid var(--linea);
   border-radius: var(--radio);
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 0.85rem;
+  font-size: var(--t-meta);
   line-height: 1.4;
   word-break: break-all;
   user-select: all;
 }
 
 .enlace-titulo {
-  font-size: 1.25rem;
+  font-size: var(--t-h3);
 }
 
 .enlace-acciones {
-  margin-top: 0.75rem;
+  margin-top: var(--e-3);
 }
 
 /* --- Portada de quien ya juega --- */
 
 .mis-peleones {
-  margin-top: 0.5rem;
+  margin-top: var(--e-2);
 }
 
 .lista-peleones {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: 0.75rem;
+  gap: var(--e-3);
 }
 
 .tarjeta-peleon {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--e-3);
   margin-bottom: 0;
 }
 
@@ -867,8 +1229,8 @@ a.boton {
 }
 
 .enlace-ficha-nombre {
-  font-family: Alegreya, Georgia, serif;
-  font-size: 1.15rem;
+  font-family: var(--letra-titulo);
+  font-size: var(--t-entrada);
 }
 
 @media (hover: hover) {
@@ -882,8 +1244,8 @@ a.boton {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
+  gap: var(--e-2);
+  padding-top: var(--e-3);
   border-top: 1px solid var(--linea);
 }
 
@@ -892,13 +1254,13 @@ a.boton {
 .nombre-ayuda-fila {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--e-3);
 }
 
 .nombre-vista {
   flex: none;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem 0;
+  margin-top: var(--e-2);
+  padding: var(--e-1) var(--e-2) 0;
   background: linear-gradient(to top, var(--linea) 0 0.5rem, var(--papel-hondo) 0.5rem);
   border: 1px solid var(--linea);
   border-radius: var(--radio);
@@ -907,7 +1269,7 @@ a.boton {
 /* --- Recien creado --- */
 
 .recien-acciones {
-  margin-top: 1rem;
+  margin-top: var(--e-4);
 }
 
 /*
@@ -920,7 +1282,7 @@ a.boton {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas: 'retrato inicial' 'retrato acciones' 'cifras cifras';
-    gap: 0.75rem;
+    gap: var(--e-3);
     align-items: start;
   }
 
@@ -930,7 +1292,7 @@ a.boton {
 
   .recien .retrato {
     grid-area: retrato;
-    padding: 0.4rem 0.5rem;
+    padding: var(--e-2) var(--e-2);
   }
 
   .recien .retrato svg {
@@ -953,28 +1315,28 @@ a.boton {
 }
 
 .mis-peleones {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--e-6);
 }
 
 .portada-pie p {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--e-1);
 }
 
 .recluta-texto {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--e-4);
 }
 
 .portada-seccion {
-  margin-top: 2.5rem;
+  margin-top: var(--e-10);
 }
 
 .portada-pie {
-  margin-top: 3rem;
+  margin-top: var(--e-12);
 }
 
 /* Hueco para que la barra fija no tape la ultima fila. */
 .rk-panel {
-  margin-bottom: 4rem;
+  margin-bottom: var(--e-16);
 }
 
 @media (min-width: 48rem) {
@@ -996,12 +1358,12 @@ a.boton {
   /* Al pie del contenido, no pegada a la ventana. */
   .rk-propia {
     position: static;
-    margin-bottom: 2rem;
+    margin-bottom: var(--e-8);
     border: var(--borde) solid var(--tinta);
     border-radius: var(--radio);
   }
 
   .rk-panel {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--e-6);
   }
 }
