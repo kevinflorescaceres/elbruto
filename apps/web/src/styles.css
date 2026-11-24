@@ -884,6 +884,14 @@ th {
   margin: var(--e-2) 0 var(--e-3);
 }
 
+.combate-ytu {
+  margin-top: var(--e-8);
+}
+
+.combate-ytu .tarjeta {
+  margin-bottom: 0;
+}
+
 .combate-texto {
   margin-top: var(--e-6);
 }

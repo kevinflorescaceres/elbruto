@@ -20,6 +20,7 @@ import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
 import { CompartirEnlace } from '../CompartirEnlace.js';
 import { NadieAqui } from '../Escenario.js';
+import { CrearAqui } from '../CrearPeleon.js';
 import { describeSkill } from '../skillText.js';
 
 function Denuncia({ slug }: { slug: string }) {
@@ -82,13 +83,13 @@ function Desafio({ rival }: { rival: BruteProfile }) {
     },
   });
 
-  if (me.data === undefined || me.data.brutes.length === 0) {
+  if (me.data === undefined) return null;
+  if (me.data.brutes.length === 0) {
     return (
-      <Tarjeta hundida>
-        <p className="apagado">
-          Para desafiar a {rival.name} necesitas un peleón. <Link to="/">Créate uno.</Link>
-        </p>
-      </Tarjeta>
+      <CrearAqui
+        titulo="¿Y tú?"
+        aviso={`Para desafiar a ${rival.name} necesitas un peleón. Pon un nombre y lo tienes.`}
+      />
     );
   }
 

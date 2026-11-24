@@ -1,23 +1,18 @@
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-} from '@tanstack/react-query';
-import { Link, useParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link, useLocation, useParams } from 'react-router';
 import { createBrute, getSkill } from '@camorra/engine';
-import { NAME_MAX, type BruteProfile } from '@camorra/shared';
+import type { BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
 import { Boton, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import { useMe } from '../hooks.js';
-import { ayudaNombre, type AyudaNombre } from '../nombre.js';
+import { FormularioNombre, useCrearPeleon } from '../CrearPeleon.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
 import { Escenario } from '../Escenario.js';
 import { describeSkill } from '../skillText.js';
-import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
+import { leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
 
 /*
  * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
@@ -152,101 +147,10 @@ function MisPeleones({ brutes, principal }: { brutes: BruteProfile[]; principal:
   );
 }
 
-/**
- * La cara que saldria con el nombre escrito. El servidor crea el peleon con
- * `createBrute(name.trim())` y rechaza los nombres repetidos sin anadir sufijo,
- * asi que esta es exactamente la que se guardara.
- */
-function VistaPrevia({ name, ayuda }: { name: string; ayuda: AyudaNombre }) {
-  // Diferido: mientras se teclea rapido no se recalcula a cada letra.
-  const diferido = useDeferredValue(name.trim());
-  if (!ayuda.valido || diferido.length === 0) return null;
-  let brute;
-  try {
-    brute = createBrute(diferido);
-  } catch {
-    return null;
-  }
-  return (
-    <div className="nombre-vista" aria-hidden="true">
-      <Fighter
-        appearance={brute.appearance}
-        slug={brute.slug}
-        weapon={armaVisible(brute.weapons)}
-        height={72}
-      />
-    </div>
-  );
-}
-
-function FormularioNombre({
-  titulo,
-  name,
-  setName,
-  ayuda,
-  create,
-  aviso,
-}: {
-  titulo: string;
-  name: string;
-  setName: (n: string) => void;
-  ayuda: AyudaNombre;
-  create: UseMutationResult<Awaited<ReturnType<typeof api.createBrute>>, Error, void>;
-  aviso: string | null;
-}) {
-  return (
-    <Tarjeta>
-      <h2>{titulo}</h2>
-      {aviso !== null && <p className="apagado recluta-texto">{aviso}</p>}
-      <label htmlFor="nombre-peleon" className="etiqueta">
-        Nombre del peleón
-      </label>
-      <form
-        className="campo-nombre"
-        onSubmit={(e) => {
-          e.preventDefault();
-          create.mutate();
-        }}
-      >
-        {/* Es un nombre inventado y para siempre: sin autocorrector que lo cambie. */}
-        <input
-          id="nombre-peleon"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Chirlo de la Cava"
-          maxLength={NAME_MAX}
-          aria-describedby="nombre-ayuda"
-          aria-invalid={ayuda.tipo === 'error'}
-          autoCapitalize="words"
-          autoCorrect="off"
-          autoComplete="off"
-          spellCheck={false}
-          enterKeyHint="go"
-        />
-        <Boton type="submit" tipo="principal" disabled={!ayuda.valido || create.isPending}>
-          {create.isPending ? 'Creando…' : 'Crear'}
-        </Boton>
-      </form>
-      <div className="nombre-ayuda-fila">
-        <VistaPrevia name={name} ayuda={ayuda} />
-        {/* Dice por que el boton no se deja pulsar, en vez de dejarlo apagado sin mas. */}
-        <p
-          id="nombre-ayuda"
-          className={ayuda.tipo === 'error' ? 'ayuda error' : 'ayuda apagado'}
-          aria-live="polite"
-        >
-          {ayuda.texto}
-        </p>
-      </div>
-      {create.error && (
-        <p className="error" role="alert">
-          {create.error instanceof ApiError
-            ? create.error.message
-            : 'No se ha podido crear. Inténtalo otra vez.'}
-        </p>
-      )}
-    </Tarjeta>
-  );
+/** El peleon que el combate deja en el estado al navegar aqui, si lo hay. */
+function creadoEnOtraPantalla(estado: unknown): BruteProfile | null {
+  if (typeof estado !== 'object' || estado === null || !('creado' in estado)) return null;
+  return (estado as { creado: BruteProfile }).creado;
 }
 
 /**
@@ -301,13 +205,19 @@ export function Home() {
   });
 
   const me = useMe();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState('');
   // Se leen al montar: si se fue a pelear sin guardarlo, al volver sigue ahi.
   const [pendientes, setPendientes] = useState(() => leerPendientes());
-  const [creado, setCreado] = useState<BruteProfile | null>(null);
+  // Recien creado desde otra pantalla (el combate): llega en el estado de la
+  // navegacion, y se ensena igual que si se hubiera creado aqui.
+  const location = useLocation();
+  const [creado, setCreado] = useState<BruteProfile | null>(() =>
+    creadoEnOtraPantalla(location.state),
+  );
+  const { name, setName, ayuda, create } = useCrearPeleon(masterSlug, (brute, nuevos) => {
+    setCreado(brute);
+    setPendientes(nuevos);
+  });
 
-  const ayuda = ayudaNombre(name);
   const misPeleones = me.data?.brutes ?? [];
   const reclutamiento = recluta(
     masterSlug,
@@ -318,23 +228,6 @@ export function Home() {
   const escena = reclutamiento.tipo === 'valido' ? [reclutamiento.maestro] : MUESTRA;
   // Quien ya tiene peleones y no viene por un enlace de otro, viene a jugar.
   const veterano = misPeleones.length > 0 && reclutamiento.tipo === 'ninguno';
-
-  const create = useMutation({
-    mutationFn: () => api.createBrute(name, masterSlug),
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['me'] });
-      setName('');
-      setCreado(data.brute);
-      // Se ensena una sola vez: no hay endpoint para volver a pedirlo.
-      setPendientes(
-        anadirPendiente({
-          slug: data.brute.slug,
-          nombre: data.brute.name,
-          url: `${window.location.origin}${data.claimUrl}`,
-        }),
-      );
-    },
-  });
 
   const aviso =
     reclutamiento.tipo === 'cargando'
