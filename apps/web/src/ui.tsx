@@ -97,7 +97,7 @@ export function Chips({ nombres, vacio }: { nombres: string[]; vacio: string }) 
 export const ESTADISTICAS = [
   ['Aguante', 'endurance'],
   ['Fuerza', 'strength'],
-  ['Maña', 'agility'],
+  ['Reflejos', 'agility'],
   ['Brío', 'speed'],
 ] as const;
 

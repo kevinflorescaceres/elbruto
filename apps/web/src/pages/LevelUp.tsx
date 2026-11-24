@@ -1,15 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
-import { Pagina, TarjetaBoton } from '../ui.js';
+import { ESTADISTICAS, Pagina, TarjetaBoton } from '../ui.js';
 import { api } from '../api.js';
 
-const STAT_NAMES: Record<string, string> = {
-  endurance: 'Aguante',
-  strength: 'Fuerza',
-  agility: 'Maña',
-  speed: 'Brío',
-};
+// Los mismos nombres que la ficha: antes era una copia aparte y podian divergir.
+const STAT_NAMES: Record<string, string> = Object.fromEntries(
+  ESTADISTICAS.map(([etiqueta, campo]) => [campo, etiqueta]),
+);
 
 function describeOption(option: LevelUpOption): { title: string; detail: string } {
   switch (option.type) {
