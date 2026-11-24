@@ -8,6 +8,7 @@ import type { BruteProfile } from '@camorra/shared';
 import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
 import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
+import { CompartirEnlace } from '../CompartirEnlace.js';
 import { describeSkill } from '../skillText.js';
 
 function Denuncia({ slug }: { slug: string }) {
@@ -135,6 +136,7 @@ export function BrutePage() {
     );
 
   const b = brute.data;
+  const enlaceRecluta = `${window.location.origin}/reclutar/${slug}`;
 
   return (
     <Pagina volver={{ a: '/', texto: 'Mis peleones' }}>
@@ -230,22 +232,20 @@ export function BrutePage() {
             Cada peleón que entre con tu enlace te da <strong>una pelea diaria más</strong>, hasta
             seis. A quien recluta no le cuesta nada.
           </p>
-          <code style={{ wordBreak: 'break-all' }}>
-            {`${window.location.origin}/reclutar/${slug}`}
-          </code>
+          <code style={{ wordBreak: 'break-all' }}>{enlaceRecluta}</code>
           <div className="fila enlace-recluta">
-            <Boton
-              onClick={() =>
-                void navigator.clipboard.writeText(`${window.location.origin}/reclutar/${slug}`)
-              }
+            <CompartirEnlace
+              url={enlaceRecluta}
+              titulo="Camorra"
+              texto={`Hazte un peleón en Camorra y pelea contra ${b.name}:`}
+              dondeCopiar="de aquí arriba"
             >
-              Copiar enlace
-            </Boton>
-            <span className="apagado">
-              {b.pupils === 0
-                ? 'Todavía no has reclutado a nadie.'
-                : `${b.pupils} reclutado${b.pupils === 1 ? '' : 's'}.`}
-            </span>
+              <span className="apagado">
+                {b.pupils === 0
+                  ? 'Todavía no has reclutado a nadie.'
+                  : `${b.pupils} reclutado${b.pupils === 1 ? '' : 's'}.`}
+              </span>
+            </CompartirEnlace>
           </div>
         </Tarjeta>
       )}

@@ -1,64 +1,15 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { api, ApiError } from '../api.js';
 import { Boton, Pagina } from '../ui.js';
 import { FightLog } from '../FightLog.js';
 import { EscenaCombate } from '../EscenaCombate.js';
+import { CompartirEnlace } from '../CompartirEnlace.js';
 
 // Pixi y GSAP son la mitad del peso del bundle y solo se usan en esta pantalla.
 const cargarPlayer = () => import('../FightPlayer.js');
 const FightPlayer = lazy(() => cargarPlayer().then((m) => ({ default: m.FightPlayer })));
-
-/** En movil abre el menu de compartir (WhatsApp, notas...). En escritorio casi nunca existe. */
-const puedeCompartir = (): boolean => typeof navigator.share === 'function';
-
-/**
- * Compartir el combate es como crece el juego: en el movil va al menu de
- * compartir, y en escritorio copia. Las dos dicen que ha pasado; antes copiaba
- * en silencio y no se sabia si habia funcionado.
- */
-function CompartirCombate({ titulo, children }: { titulo: string; children: ReactNode }) {
-  const [aviso, setAviso] = useState<{ texto: string; error: boolean } | null>(null);
-  const url = window.location.href;
-
-  const copiar = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setAviso({ texto: 'Enlace copiado.', error: false });
-    } catch {
-      setAviso({
-        texto: 'No se ha podido copiar. Cópialo de la barra de direcciones.',
-        error: true,
-      });
-    }
-  };
-
-  const compartir = async (): Promise<void> => {
-    try {
-      await navigator.share({ title: titulo, url });
-    } catch (e) {
-      // Cerrar el menu de compartir no es un error: no se dice nada.
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-      await copiar();
-    }
-  };
-
-  return (
-    <>
-      {puedeCompartir() ? (
-        <Boton onClick={() => void compartir()}>Compartir</Boton>
-      ) : (
-        <Boton onClick={() => void copiar()}>Copiar enlace</Boton>
-      )}
-      {/* El aviso va al final de la fila: delante empujaria lo de al lado. */}
-      {children}
-      <span className={aviso?.error === true ? 'error' : 'apagado'} aria-live="polite">
-        {aviso?.texto ?? ''}
-      </span>
-    </>
-  );
-}
 
 export function FightPage() {
   const { id = '' } = useParams();
@@ -122,11 +73,15 @@ export function FightPage() {
       </details>
 
       <div className="fila" style={{ marginTop: '1rem' }}>
-        <CompartirCombate titulo={titulo}>
+        <CompartirEnlace
+          url={window.location.href}
+          titulo={titulo}
+          dondeCopiar="de la barra de direcciones"
+        >
           <Link to={`/b/${snapshotB.slug}`} className="apagado">
             Ver a {snapshotB.name}
           </Link>
-        </CompartirCombate>
+        </CompartirEnlace>
       </div>
     </Pagina>
   );
