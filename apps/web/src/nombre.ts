@@ -19,6 +19,10 @@ const IDENTIDAD = 'De él salen su cara y sus estadísticas, y no se puede cambi
 
 export function ayudaNombre(name: string): AyudaNombre {
   const limpio = name.trim();
+  // Solo espacios: ya ha escrito algo, asi que no basta con repetir la regla.
+  if (name.length > 0 && limpio.length === 0) {
+    return { texto: 'Un nombre de solo espacios no vale.', tipo: 'error', valido: false };
+  }
   if (limpio.length === 0) {
     return {
       texto: `De ${NAME_MIN} a ${NAME_MAX} letras. ${IDENTIDAD}`,
@@ -26,9 +30,11 @@ export function ayudaNombre(name: string): AyudaNombre {
       valido: false,
     };
   }
-  if (CARACTER_NO_VALIDO.test(limpio)) {
+  const malo = CARACTER_NO_VALIDO.exec(limpio)?.[0];
+  if (malo !== undefined) {
+    // Se dice cual: con "O'Brien" no se ve a simple vista que sobra el apostrofo.
     return {
-      texto: 'Solo letras, números, espacios, guiones y guiones bajos.',
+      texto: `«${malo}» no vale. Solo letras, números, espacios, guiones y guiones bajos.`,
       tipo: 'error',
       valido: false,
     };
@@ -42,5 +48,9 @@ export function ayudaNombre(name: string): AyudaNombre {
       valido: false,
     };
   }
-  return { texto: IDENTIDAD, tipo: 'info', valido: true };
+  return {
+    texto: 'Así saldrá. La cara y las estadísticas salen del nombre, y no se puede cambiar.',
+    tipo: 'info',
+    valido: true,
+  };
 }
