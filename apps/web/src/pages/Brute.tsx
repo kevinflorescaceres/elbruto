@@ -8,6 +8,7 @@ import type { BruteProfile } from '@camorra/shared';
 import {
   Barra,
   Boton,
+  BuscarPelea,
   Chips,
   ESTADISTICAS,
   Estadistica,
@@ -239,16 +240,7 @@ export function BrutePage() {
                   .
                 </p>
               )}
-              {/* Sin peleas no hay enlace: apagado, el boton seguia llevando a la arena. */}
-              {b.fightsLeftToday > 0 ? (
-                <Link to={`/b/${slug}/arena`} className="boton principal">
-                  Buscar pelea
-                </Link>
-              ) : (
-                <Boton tipo="principal" disabled>
-                  Buscar pelea
-                </Boton>
-              )}
+              <BuscarPelea slug={slug} quedan={b.fightsLeftToday} />
             </>
           )}
         </Tarjeta>

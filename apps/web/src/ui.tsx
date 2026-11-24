@@ -5,6 +5,8 @@
  */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { usePendientes } from './hooks.js';
+import { sinGuardar } from './enlacesPendientes.js';
 
 /**
  * El cartel de la pantalla: una franja de madera a todo lo ancho, con el titulo
@@ -204,5 +206,36 @@ export function Barra({ de, entre, etiqueta }: { de: number; entre: number; etiq
         <div style={{ width: `${parte * 100}%` }} />
       </div>
     </div>
+  );
+}
+
+/**
+ * "Buscar pelea", con sus dos candados: sin peleas hoy, apagado; y con el enlace
+ * de recuperacion sin guardar, apagado y diciendo por que. Perder el peleon es
+ * lo unico que no tiene arreglo, asi que se guarda antes de la primera pelea.
+ */
+export function BuscarPelea({ slug, quedan }: { slug: string; quedan: number }) {
+  const pendientes = usePendientes();
+  if (sinGuardar(slug, pendientes)) {
+    return (
+      <span className="buscar-bloqueado">
+        <Boton tipo="principal" disabled>
+          Buscar pelea
+        </Boton>
+        <span className="aviso">Antes, guarda su enlace.</span>
+      </span>
+    );
+  }
+  if (quedan <= 0) {
+    return (
+      <Boton tipo="principal" disabled>
+        Buscar pelea
+      </Boton>
+    );
+  }
+  return (
+    <Link to={`/b/${slug}/arena`} className="boton principal">
+      Buscar pelea
+    </Link>
   );
 }

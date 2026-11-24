@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { anadirPendiente, leerPendientes, quitarPendiente } from './enlacesPendientes.js';
+import {
+  anadirPendiente,
+  leerPendientes,
+  marcarGuardado,
+  quitarPendiente,
+  sinGuardar,
+} from './enlacesPendientes.js';
 
 function memoria() {
   const datos = new Map<string, string>();
@@ -14,6 +20,21 @@ const ana = { slug: 'ana', nombre: 'Ana', url: 'https://x/claim/1' };
 const leo = { slug: 'leo', nombre: 'Leo', url: 'https://x/claim/2' };
 
 describe('enlaces pendientes', () => {
+  it('copiarlo deja pelear a ese y solo a ese, sin quitarlo de la lista', () => {
+    const almacen = memoria();
+    anadirPendiente(ana, almacen);
+    anadirPendiente(leo, almacen);
+    expect(sinGuardar('ana', leerPendientes(almacen))).toBe(true);
+
+    const lista = marcarGuardado('ana', almacen);
+    expect(sinGuardar('ana', lista)).toBe(false);
+    expect(sinGuardar('leo', lista)).toBe(true);
+    // Sigue en la lista hasta que el jugador cierre la tarjeta.
+    expect(leerPendientes(almacen).map((e) => e.slug)).toEqual(['leo', 'ana']);
+    // Un peleon sin enlace pendiente (creado en otro navegador) no se bloquea.
+    expect(sinGuardar('otro', lista)).toBe(false);
+  });
+
   it('guarda varios, el ultimo primero, y no pierde el anterior al crear otro', () => {
     const m = memoria();
     anadirPendiente(ana, m);

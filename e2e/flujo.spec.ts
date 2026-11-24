@@ -10,6 +10,11 @@ async function crearPeleon(page: Page, prefijo: string): Promise<string> {
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Guarda este enlace')).toBeVisible();
   await expect(page.getByRole('heading', { name: `Aquí está ${suyo}` })).toBeVisible();
+  // Sin guardar el enlace de recuperacion no se pelea: es lo unico irreparable.
+  await expect(page.getByRole('button', { name: 'Buscar pelea' })).toBeDisabled();
+  await expect(page.getByRole('link', { name: 'Buscar pelea' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Copiar', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Buscar pelea' })).toBeVisible();
   return suyo;
 }
 
@@ -23,8 +28,10 @@ async function estadoFicha(page: Page): Promise<'pelear' | 'mejorar'> {
 
 test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   // Dos navegadores: peleones del mismo dueno no pueden enfrentarse.
-  const mio = await browser.newContext();
-  const suyo = await browser.newContext();
+  // Con portapapeles: copiar el enlace de recuperacion es lo que deja pelear.
+  const permisos = { permissions: ['clipboard-read', 'clipboard-write'] };
+  const mio = await browser.newContext(permisos);
+  const suyo = await browser.newContext(permisos);
   const paginaMia = await mio.newPage();
   const paginaSuya = await suyo.newPage();
 

@@ -4,15 +4,15 @@ import { Link, useLocation, useParams } from 'react-router';
 import { createBrute, getSkill } from '@camorra/engine';
 import type { BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
-import { Boton, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
+import { Boton, BuscarPelea, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
-import { useMe } from '../hooks.js';
+import { useMe, usePendientes } from '../hooks.js';
 import { FormularioNombre, useCrearPeleon } from '../CrearPeleon.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
 import { Escenario } from '../Escenario.js';
 import { describeSkill } from '../skillText.js';
-import { leerPendientes, quitarPendiente } from '../enlacesPendientes.js';
+import { quitarPendiente } from '../enlacesPendientes.js';
 
 /*
  * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
@@ -68,9 +68,7 @@ function RecienCreado({ brute, otro }: { brute: BruteProfile; otro: () => void }
               </p>
             )}
             <div className="fila recien-acciones">
-              <Link to={`/b/${brute.slug}/arena`} className="boton principal">
-                Buscar pelea
-              </Link>
+              <BuscarPelea slug={brute.slug} quedan={brute.fightsLeftToday} />
               <Boton onClick={otro}>Crear otro</Boton>
               <Link to={`/b/${brute.slug}`} className="apagado">
                 Ver su ficha
@@ -118,9 +116,7 @@ function TarjetaPeleon({ brute }: { brute: BruteProfile }) {
         ) : quedan > 0 ? (
           <>
             <span>{quedan === 1 ? 'Queda 1 pelea hoy' : `Quedan ${quedan} peleas hoy`}</span>
-            <Link to={`/b/${brute.slug}/arena`} className="boton principal">
-              Buscar pelea
-            </Link>
+            <BuscarPelea slug={brute.slug} quedan={quedan} />
           </>
         ) : (
           <span className="apagado">
@@ -206,17 +202,14 @@ export function Home() {
 
   const me = useMe();
   // Se leen al montar: si se fue a pelear sin guardarlo, al volver sigue ahi.
-  const [pendientes, setPendientes] = useState(() => leerPendientes());
+  const pendientes = usePendientes();
   // Recien creado desde otra pantalla (el combate): llega en el estado de la
   // navegacion, y se ensena igual que si se hubiera creado aqui.
   const location = useLocation();
   const [creado, setCreado] = useState<BruteProfile | null>(() =>
     creadoEnOtraPantalla(location.state),
   );
-  const { name, setName, ayuda, create } = useCrearPeleon(masterSlug, (brute, nuevos) => {
-    setCreado(brute);
-    setPendientes(nuevos);
-  });
+  const { name, setName, ayuda, create } = useCrearPeleon(masterSlug, (brute) => setCreado(brute));
 
   const misPeleones = me.data?.brutes ?? [];
   const reclutamiento = recluta(
@@ -250,9 +243,7 @@ export function Home() {
     <EnlaceRecuperacion
       key={enlace.slug}
       enlace={enlace}
-      // Con "Buscar pelea" en pantalla, un solo boton principal.
-      discreto={creado !== null || veterano}
-      onGuardado={() => setPendientes(quitarPendiente(enlace.slug))}
+      onGuardado={() => quitarPendiente(enlace.slug)}
     />
   ));
 

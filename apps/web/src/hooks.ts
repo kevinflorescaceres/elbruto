@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { EVENTO_PENDIENTES, leerPendientes, type EnlacePendiente } from './enlacesPendientes.js';
 import { api } from './api.js';
 
 export const useMe = () => useQuery({ queryKey: ['me'], queryFn: api.me });
@@ -20,3 +22,21 @@ export function useIsMine(slug: string): { mio: boolean; sabido: boolean } {
 
 export const useBrute = (slug: string) =>
   useQuery({ queryKey: ['brute', slug], queryFn: () => api.brute(slug) });
+
+/**
+ * Los enlaces de recuperacion sin guardar, al dia: los cambia una tarjeta y lo
+ * notan la ficha, la portada y cualquier otra pestana.
+ */
+export function usePendientes(): EnlacePendiente[] {
+  const [lista, setLista] = useState(() => leerPendientes());
+  useEffect(() => {
+    const leer = (): void => setLista(leerPendientes());
+    window.addEventListener(EVENTO_PENDIENTES, leer);
+    window.addEventListener('storage', leer);
+    return () => {
+      window.removeEventListener(EVENTO_PENDIENTES, leer);
+      window.removeEventListener('storage', leer);
+    };
+  }, []);
+  return lista;
+}

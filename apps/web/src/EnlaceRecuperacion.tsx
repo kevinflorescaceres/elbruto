@@ -5,7 +5,7 @@
  */
 import { useRef, useState } from 'react';
 import { Boton, Tarjeta } from './ui.js';
-import type { EnlacePendiente } from './enlacesPendientes.js';
+import { marcarGuardado, type EnlacePendiente } from './enlacesPendientes.js';
 
 type Aviso = { texto: string; error: boolean } | null;
 
@@ -15,14 +15,14 @@ const puedeCompartir = (): boolean => typeof navigator.share === 'function';
 export function EnlaceRecuperacion({
   enlace,
   onGuardado,
-  discreto = false,
 }: {
   enlace: EnlacePendiente;
   onGuardado: () => void;
-  /** Sin boton principal: cuando ya hay otro en pantalla ("Buscar pelea"). */
-  discreto?: boolean;
 }) {
-  const tipo = discreto ? 'secundario' : 'principal';
+  // Mientras no se ha guardado, guardarlo es lo principal de la pantalla: "Buscar
+  // pelea" espera apagado (BuscarPelea en ui.tsx). Despues, ya no grita.
+  const guardado = enlace.guardado === true;
+  const tipo = guardado ? 'secundario' : 'principal';
   const [aviso, setAviso] = useState<Aviso>(null);
   const [confirmando, setConfirmando] = useState(false);
   const texto = useRef<HTMLElement>(null);
@@ -41,11 +41,12 @@ export function EnlaceRecuperacion({
   const copiar = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(enlace.url);
-      setAviso({ texto: 'Copiado. Pégalo donde no se te pierda.', error: false });
+      marcarGuardado(enlace.slug);
+      setAviso({ texto: 'Copiado. Pégalo donde no se te pierda, y a pelear.', error: false });
     } catch {
       seleccionar();
       setAviso({
-        texto: 'No se ha podido copiar. Está seleccionado: cópialo a mano.',
+        texto: 'No se ha podido copiar. Está seleccionado: cópialo a mano y pulsa «Ya lo tengo».',
         error: true,
       });
     }
@@ -58,7 +59,8 @@ export function EnlaceRecuperacion({
         text: `Con este enlace recupero a ${enlace.nombre} en Camorra:`,
         url: enlace.url,
       });
-      setAviso({ texto: 'Enviado. Si lo tienes a mano, ya puedes cerrar esto.', error: false });
+      marcarGuardado(enlace.slug);
+      setAviso({ texto: 'Enviado. Ya puedes pelear, y cerrar esto cuando quieras.', error: false });
     } catch (e) {
       // Cerrar el menu de compartir no es un error: no se dice nada.
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -70,8 +72,9 @@ export function EnlaceRecuperacion({
     <Tarjeta hundida>
       <h2 className="enlace-titulo">Guarda este enlace</h2>
       <p className="apagado">
-        Es la única forma de recuperar a <strong>{enlace.nombre}</strong> en otro navegador. No se
-        vuelve a enseñar.
+        Es la única forma de recuperar a <strong>{enlace.nombre}</strong> si cambias de móvil o se
+        borra el navegador. No se vuelve a enseñar
+        {guardado ? '.' : ', así que se guarda antes de la primera pelea.'}
       </p>
       <code ref={texto} className="enlace-url">
         {enlace.url}
