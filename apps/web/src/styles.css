@@ -110,6 +110,11 @@ h3 {
   margin-bottom: 0;
 }
 
+/* Y el del primero, arriba: la tarjeta de solo un parrafo quedaba con un hueco encima. */
+.tarjeta > p:first-child {
+  margin-top: 0;
+}
+
 /* --- Marcador del combate --- */
 
 .marcador {
@@ -210,6 +215,13 @@ h3 {
   text-align: left;
 }
 
+/* El boton pone Alegreya en negrita a todo; el detalle es texto corrido y va en la
+   letra del cuerpo, o el titulo y la frase pesan lo mismo. */
+.tarjeta-boton .apagado {
+  font-family: 'Alegreya Sans', system-ui, sans-serif;
+  font-weight: 400;
+}
+
 @media (hover: hover) {
   /* El texto apagado se perdia sobre el acento. */
   .tarjeta-boton:hover:not(:disabled) .apagado {
@@ -234,6 +246,11 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: 0.75rem;
+}
+
+/* En la rejilla separa el gap: el margen de la tarjeta se sumaba y lo doblaba. */
+.rejilla > .tarjeta {
+  margin-bottom: 0;
 }
 
 .fila {
@@ -500,12 +517,34 @@ th {
   margin: 0;
 }
 
+/* Cada mania con su frase. En movil, la frase debajo de la etiqueta; a partir de 48rem,
+   dos columnas para que todas las frases empiecen a la misma altura. */
 .manas {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.3rem;
+  gap: 0.6rem;
+}
+
+.manas li {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+}
+
+@media (min-width: 48rem) {
+  .manas {
+    grid-template-columns: max-content 1fr;
+    column-gap: 0.6rem;
+    row-gap: 0.4rem;
+  }
+
+  .manas li {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+  }
 }
 
 .denuncia {
@@ -765,6 +804,12 @@ a.boton {
 
 .recien-inicial {
   margin: 0;
+}
+
+/* Lo que hace la mania, en su propia linea: pegado a la frase se leia como nota al pie. */
+.recien-inicial .apagado {
+  display: block;
+  margin-top: 0.25rem;
 }
 
 /* El enlace largo parte por cualquier sitio: es un token, no hay palabras. */

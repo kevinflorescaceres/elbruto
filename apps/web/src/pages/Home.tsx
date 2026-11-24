@@ -9,7 +9,7 @@ import { Link, useParams } from 'react-router';
 import { createBrute, getSkill } from '@camorra/engine';
 import { NAME_MAX, type BruteProfile } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
-import { Boton, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
+import { Boton, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import { useMe } from '../hooks.js';
@@ -24,13 +24,6 @@ import { anadirPendiente, leerPendientes, quitarPendiente } from '../enlacesPend
  * bien. No existen en la base; si alguien crea uno con ese nombre, sera este.
  */
 const MUESTRA = ['Rosca la Brava', 'Matías Puñetas'].map(createBrute);
-
-/** "1 victoria · 3 derrotas": la abreviatura "1V 3D" no la entendia nadie. */
-function record(wins: number, losses: number): string {
-  const v = wins === 1 ? '1 victoria' : `${wins} victorias`;
-  const d = losses === 1 ? '1 derrota' : `${losses} derrotas`;
-  return `${v} · ${d}`;
-}
 
 /**
  * Lo primero que se ve al crear: el peleon en grande y el siguiente paso. Antes

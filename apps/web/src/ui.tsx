@@ -80,6 +80,13 @@ export function Boton({
 }
 
 /** Un arma, una maña o un bicho. Si no hay nada, lo dice en vez de dejar hueco. */
+/** "1 victoria · 3 derrotas": la abreviatura "1V 3D" no la entendia nadie. */
+export function record(wins: number, losses: number): string {
+  const v = wins === 1 ? '1 victoria' : `${wins} victorias`;
+  const d = losses === 1 ? '1 derrota' : `${losses} derrotas`;
+  return `${v} · ${d}`;
+}
+
 export function Chips({ nombres, vacio }: { nombres: string[]; vacio: string }) {
   if (nombres.length === 0) return <span className="apagado">{vacio}</span>;
   return (

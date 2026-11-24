@@ -28,7 +28,12 @@ function describeOption(option: LevelUpOption): { title: string; detail: string 
     }
     case 'pet': {
       const pet = getPet(option.id);
-      return { title: pet.name, detail: `Bicho · ${pet.hp} de vida · ${pet.damage} de daño` };
+      // Lo que cuesta es lo que decide: sin esto se elegia a ciegas (COMBATE.md §4.8).
+      const aguante = STAT_NAMES.endurance ?? 'Aguante';
+      return {
+        title: pet.name,
+        detail: `Bicho · ${pet.hp} de vida · ${pet.damage} de daño · te quita ${pet.enduranceCost} de ${aguante}`,
+      };
     }
     case 'stat': {
       const parts = Object.entries(option.gains).map(

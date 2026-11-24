@@ -5,7 +5,7 @@ import { getPet, getSkill, getWeapon } from '@camorra/engine';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
-import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, Tarjeta } from '../ui.js';
+import { Barra, Boton, Chips, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta } from '../ui.js';
 import { api, ApiError } from '../api.js';
 import { useBrute, useIsMine, useMe } from '../hooks.js';
 import { describeSkill } from '../skillText.js';
@@ -140,8 +140,8 @@ export function BrutePage() {
     <Pagina volver={{ a: '/', texto: 'Mis peleones' }}>
       <h1>{b.name}</h1>
       <p className="apagado">
-        Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {b.wins} victorias, {b.losses}{' '}
-        derrotas{b.isBot && ' · peleón de la casa'}
+        Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {record(b.wins, b.losses)}
+        {b.isBot && ' · peleón de la casa'}
       </p>
 
       <Tarjeta>
@@ -258,7 +258,7 @@ export function BrutePage() {
             {fight.won ? 'Ganó' : 'Perdió'} contra {fight.opponent.name} (nivel{' '}
             {fight.opponent.level})
           </Link>{' '}
-          <span className="apagado">{new Date(fight.createdAt).toLocaleDateString()}</span>
+          <span className="apagado">{new Date(fight.createdAt).toLocaleDateString('es')}</span>
         </p>
       ))}
 
@@ -278,7 +278,7 @@ function Manas({ ids }: { ids: string[] }) {
         const skill = getSkill(id);
         return (
           <li key={id}>
-            <span className="chip">{skill.name}</span>{' '}
+            <span className="chip">{skill.name}</span>
             <span className="apagado">{describeSkill(skill)}</span>
           </li>
         );
