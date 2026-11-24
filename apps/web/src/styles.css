@@ -544,7 +544,68 @@ th {
 /* --- Portada --- */
 
 .portada-cabecera {
+  display: grid;
+  gap: 1.25rem;
   margin: 0.5rem 0 1.5rem;
+}
+
+.portada-vuelta {
+  margin: 0.75rem 0 0;
+  font-weight: 500;
+}
+
+/*
+ * El mismo escenario que el combate en pequeno: fondo hondo, trazo de tinta y
+ * una franja de suelo donde se plantan. Los nombres van en la madera de la
+ * barra superior, como carteles.
+ */
+.portada-escena {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: clamp(1.5rem, 8vw, 3.5rem);
+  padding: 1.25rem 1rem 0.75rem;
+  background: linear-gradient(to top, var(--linea) 0 1.4rem, var(--papel-hondo) 1.4rem);
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+}
+
+.portada-escena figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* El de la derecha mira hacia el otro. Solo la figura: el cartel se lee igual. */
+.portada-escena .rival .portada-figura {
+  transform: scaleX(-1);
+}
+
+.portada-escena figcaption {
+  position: relative;
+  margin-top: -0.3rem;
+  padding: 0.1rem 0.55rem;
+  background: var(--madera);
+  color: var(--oro);
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+  font-family: Alegreya, Georgia, serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (min-width: 48rem) {
+  .portada-cabecera {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .portada-escena {
+    padding-inline: 2rem;
+  }
 }
 
 .portada-cabecera h1 {

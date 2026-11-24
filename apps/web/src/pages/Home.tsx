@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
+import { createBrute } from '@camorra/engine';
 import { NAME_MAX, NAME_MIN } from '@camorra/shared';
 import { api, ApiError } from '../api.js';
 import { Boton, Pagina, Tarjeta, TarjetaBoton } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { useMe } from '../hooks.js';
+
+/*
+ * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
+ * sale del nombre. Elegidos porque los dos empiezan con arma y se distinguen
+ * bien. No existen en la base; si alguien crea uno con ese nombre, sera este.
+ */
+const MUESTRA = ['Rosca la Brava', 'Matías Puñetas'].map(createBrute);
 
 export function Home() {
   // Si se llega por un enlace de invitacion, el maestro viene en la ruta.
@@ -36,8 +44,29 @@ export function Home() {
     <Pagina>
       {/* La marca ya esta en la barra: el h1 dice lo que pasa aqui. */}
       <header className="portada-cabecera">
-        <h1>Pon un nombre y tendrás un peleón.</h1>
-        <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+        <div>
+          <h1>Pon un nombre y tendrás un peleón.</h1>
+          <p className="apagado">Lo demás lo deciden él y la mala suerte.</p>
+          <p className="portada-vuelta">
+            Cada día, unas cuantas peleas. Cada nivel, una mejora a elegir entre dos.
+          </p>
+        </div>
+        {/* Decorativa: los nombres son de muestra y no llevan a ninguna parte. */}
+        <div className="portada-escena" aria-hidden="true">
+          {MUESTRA.map((brute, i) => (
+            <figure key={brute.slug} className={i === 1 ? 'rival' : undefined}>
+              <div className="portada-figura">
+                <Fighter
+                  appearance={brute.appearance}
+                  slug={brute.slug}
+                  weapon={armaVisible(brute.weapons)}
+                  height={150}
+                />
+              </div>
+              <figcaption>{brute.name}</figcaption>
+            </figure>
+          ))}
+        </div>
       </header>
 
       {masterSlug !== undefined && (
