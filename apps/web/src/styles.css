@@ -190,6 +190,104 @@ time {
   margin-top: 0;
 }
 
+/* --- Cartel de la pantalla (Pagina con cabecera) --- */
+
+/*
+ * La madera de la barra superior baja y se hace cartel: el titulo de cada
+ * pantalla en oro y a tamano de cartel. Las tablas son las mismas lineas
+ * horizontales de la pared de la taberna del combate. Oro sobre madera, 8,1:1;
+ * papel hondo sobre madera, 9,6:1.
+ */
+.cabecera {
+  background-color: var(--madera);
+  background-image:
+    linear-gradient(to bottom, rgb(255 255 255 / 6%), transparent 40%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--e-12) - 2px),
+      rgb(0 0 0 / 24%) calc(var(--e-12) - 2px) var(--e-12)
+    );
+  border-bottom: var(--borde) solid var(--tinta);
+  color: var(--papel-hondo);
+}
+
+.cabecera-dentro {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: var(--e-8) var(--e-4);
+  display: grid;
+  gap: var(--e-6);
+}
+
+.cabecera h1 {
+  margin: 0;
+  color: var(--oro);
+  font-size: var(--t-cartel);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  /* Sombra blanda, no un bloque desplazado: la letra se despega de las tablas. */
+  text-shadow: 0 2px 8px rgb(0 0 0 / 45%);
+}
+
+.cabecera-bajada {
+  margin: var(--e-3) 0 0;
+  max-width: 36ch;
+  font-size: var(--t-entrada);
+  line-height: 1.4;
+}
+
+/* Una segunda frase, mas callada, dentro de la misma bajada. */
+.cabecera-nota {
+  display: block;
+  margin-top: var(--e-2);
+  font-size: var(--t-apoyo);
+  color: color-mix(in srgb, var(--papel-hondo) 80%, var(--madera));
+}
+
+.volver {
+  margin: 0 0 var(--e-4);
+  font-size: var(--t-apoyo);
+  color: var(--apagado);
+}
+
+.cabecera .volver {
+  margin-bottom: var(--e-3);
+}
+
+.cabecera .volver a {
+  color: var(--oro);
+}
+
+.cabecera a:focus-visible {
+  outline-color: var(--oro);
+}
+
+/* Con el cartel encima, la pagina empieza mas cerca: el cartel ya separa. */
+.cabecera + main {
+  padding-top: var(--e-6);
+}
+
+/* El combate: el marcador se pega al cartel y los dos son la misma tabla. */
+.cabecera + main.pegada {
+  padding-top: 0;
+}
+
+.pegada .marcador {
+  border-top: 0;
+}
+
+@media (min-width: 48rem) {
+  .cabecera-dentro {
+    padding-block: var(--e-10);
+  }
+
+  .cabecera.con-extra .cabecera-dentro {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--e-8);
+  }
+}
+
 /* --- Marcador del combate --- */
 
 .marcador {
@@ -983,6 +1081,10 @@ th {
   font-size: var(--t-apoyo);
 }
 
+.rk-marcador .apagado {
+  white-space: nowrap;
+}
+
 .rk-nivel {
   font-family: var(--letra-titulo);
   font-weight: 700;
@@ -1006,42 +1108,9 @@ th {
 
 /* --- Portada --- */
 
-/*
- * Texto, escena y formulario en una rejilla. En el movil van uno bajo otro; en
- * escritorio el formulario sube a la columna del texto y la escena ocupa la
- * otra: antes la tarjeta del formulario cruzaba la pagina con media vacia.
- */
-.portada-cabecera {
-  display: grid;
-  gap: var(--e-5);
-  grid-template-areas: 'texto' 'escena' 'form';
-  margin: var(--e-2) 0 var(--e-6);
-}
-
-.portada-texto {
-  grid-area: texto;
-}
-
-.portada-escena {
-  grid-area: escena;
-}
-
-.portada-form {
-  grid-area: form;
-}
-
+/* El titulo, la voz y la escena van en el cartel (Pagina); aqui queda el formulario. */
 .portada-form .tarjeta {
   margin-bottom: 0;
-}
-
-/* La voz del juego manda; la regla del bucle va debajo, mas callada. */
-.portada-voz {
-  margin: 0;
-  font-size: var(--t-entrada);
-}
-
-.portada-vuelta {
-  margin: var(--e-2) 0 0;
 }
 
 /*
@@ -1104,24 +1173,9 @@ th {
 }
 
 @media (min-width: 48rem) {
-  .portada-cabecera {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: 'texto escena' 'form escena';
-    align-items: start;
-    gap: var(--e-6) var(--e-8);
-  }
-
   .portada-escena {
-    align-self: center;
     padding-inline: var(--e-8);
   }
-}
-
-.portada-cabecera h1 {
-  font-size: var(--t-cartel);
-  line-height: 1.05;
-  text-wrap: balance;
-  margin-bottom: var(--e-2);
 }
 
 /*
@@ -1343,7 +1397,8 @@ a.boton {
   /* Cuatro columnas de siempre: nivel y record dejan de ir apilados. */
   .rk-cabecera,
   .rk-fila {
-    grid-template-columns: 44px 1fr 6rem 6rem;
+    /* El record va entero ("5 victorias · 1 derrota"): en 6rem partia en dos. */
+    grid-template-columns: 44px 1fr 6rem auto;
   }
 
   .rk-marcador {

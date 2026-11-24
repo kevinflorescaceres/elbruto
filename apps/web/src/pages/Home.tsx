@@ -138,11 +138,11 @@ function TarjetaPeleon({ brute }: { brute: BruteProfile }) {
 }
 
 function MisPeleones({ brutes, principal }: { brutes: BruteProfile[]; principal: boolean }) {
-  // Quien ya juega llega aqui primero: entonces es el titulo de la pagina.
-  const Titulo = principal ? 'h1' : 'h2';
+  // Quien ya juega llega aqui primero: entonces el titulo va en el cartel de la
+  // pagina y aqui no se repite.
   return (
     <section className={principal ? 'mis-peleones' : 'mis-peleones portada-seccion'}>
-      <Titulo>Mis peleones</Titulo>
+      {!principal && <h2>Mis peleones</h2>}
       <div className="lista-peleones">
         {brutes.map((brute) => (
           <TarjetaPeleon key={brute.slug} brute={brute} />
@@ -373,8 +373,45 @@ export function Home() {
     );
   }
 
+  // Quien llega por primera vez ve el cartel grande con la escena; quien ya
+  // juega, el de sus peleones. Recien creado, la tarjeta del nuevo manda.
+  const cabecera =
+    creado !== null
+      ? undefined
+      : veterano
+        ? { titulo: 'Mis peleones' }
+        : {
+            // Si te recluta alguien, la cabecera habla de el: es por quien has venido.
+            titulo:
+              reclutamiento.tipo === 'valido'
+                ? `Te recluta ${reclutamiento.maestro.name}`
+                : 'Pon un nombre y tendrás un peleón.',
+            bajada: (
+              <>
+                {reclutamiento.tipo === 'valido'
+                  ? `Crea tu peleón y ${reclutamiento.maestro.name} se lleva una pelea diaria más. Tú empiezas igual que todos: eso no te quita nada.`
+                  : 'Lo demás lo deciden él y la mala suerte.'}
+                <span className="cabecera-nota">
+                  Cada día, unas cuantas peleas. Cada nivel, una mejora a elegir entre dos.
+                </span>
+              </>
+            ),
+            // Decorativa: el nombre ya va en el texto, o son de muestra.
+            extra: (
+              <Escenario
+                className="portada-escena"
+                figuras={escena.map((brute) => ({
+                  appearance: brute.appearance,
+                  slug: brute.slug,
+                  weapon: armaVisible(brute.weapons),
+                  nombre: brute.name,
+                }))}
+              />
+            ),
+          };
+
   return (
-    <Pagina>
+    <Pagina cabecera={cabecera}>
       {creado !== null ? (
         <>
           <RecienCreado
@@ -394,39 +431,7 @@ export function Home() {
         </>
       ) : (
         <>
-          <section className="portada-cabecera">
-            <div className="portada-texto">
-              {/* Si te recluta alguien, la cabecera habla de el: es por quien has venido. */}
-              {reclutamiento.tipo === 'valido' ? (
-                <>
-                  <h1>Te recluta {reclutamiento.maestro.name}</h1>
-                  <p className="portada-voz">
-                    Crea tu peleón y {reclutamiento.maestro.name} se lleva una pelea diaria más. Tú
-                    empiezas igual que todos: eso no te quita nada.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h1>Pon un nombre y tendrás un peleón.</h1>
-                  <p className="portada-voz">Lo demás lo deciden él y la mala suerte.</p>
-                </>
-              )}
-              <p className="apagado portada-vuelta">
-                Cada día, unas cuantas peleas. Cada nivel, una mejora a elegir entre dos.
-              </p>
-            </div>
-            {/* Decorativa: el nombre ya va en el texto, o son de muestra. */}
-            <Escenario
-              className="portada-escena"
-              figuras={escena.map((brute) => ({
-                appearance: brute.appearance,
-                slug: brute.slug,
-                weapon: armaVisible(brute.weapons),
-                nombre: brute.name,
-              }))}
-            />
-            <div className="portada-form">{formulario('Nuevo peleón')}</div>
-          </section>
+          <div className="portada-form">{formulario('Nuevo peleón')}</div>
           {enlaces}
           {/* Tiene peleones pero viene por el enlace de otro: abajo, por si acaso. */}
           {misPeleones.length > 0 && <MisPeleones brutes={misPeleones} principal={false} />}

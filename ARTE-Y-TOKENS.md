@@ -232,7 +232,14 @@ Ritmo: un título lleva más aire encima que debajo (`* + h2` a `--e-10`, `* + h
 `--e-6`). Títulos con `text-wrap: balance`, párrafos con `pretty`, y cifras que se comparan
 en columna con `tabular-nums`.
 
-Dos usos del color con significado, y solo esos:
+**El cartel de la pantalla.** Cada pantalla abre con una franja de madera a todo lo ancho bajo
+la barra superior (`Pagina` con `cabecera`): el título en oro a `--t-cartel`, una bajada en
+`--papel-hondo` y las tablas de la pared de la taberna del combate. Es la región que se lleva
+el color fuerte; lo de debajo, papel y tinta, se queda callado. En el combate, el marcador se
+pega al cartel (`pegada`) y los dos son la misma tabla. Fuera quedan, a propósito, la subida de
+nivel (su cartel cuelga sobre el escenario) y las páginas de error.
+
+Dos usos más del color con significado, y solo esos:
 
 - **Ganó / Perdió** (`Resultado`): `--gana` y `--pierde`, siempre con la palabra y con un
   fondo tintado del mismo tono. Es el único verde y rojo de la interfaz.
@@ -266,6 +273,7 @@ Además, en uso desde 2026-11-24:
 
 | Componente | Dónde | Para qué |
 | --- | --- | --- |
+| `Pagina` con `cabecera` (`ui.tsx`) | portada, ficha, arena, ranking, combate, legal | El cartel de madera con el título de la pantalla |
 | `Escenario` (`Escenario.tsx`) | portada, subida de nivel, páginas vacías | El escenario del combate en pequeño, con un cartel por peleón |
 | `NadieAqui` (`Escenario.tsx`) | 404, peleón o combate que no existe | En escena está **Nadie**, un peleón sacado del motor con ese nombre |
 | `EscenaCombate` | reproductor y su espera | Marcador, lienzo, pie y controles, sin Pixi: la espera ocupa lo mismo |

@@ -68,12 +68,13 @@ export function RankingPage() {
   const yo = propio.data;
 
   return (
-    <Pagina volver={{ a: '/', texto: 'Mis peleones' }}>
-      <h1>Los más temidos</h1>
-      <p className="apagado">
-        {ranking.data.total} peleones en la calle. Los bots de la casa no cuentan.
-      </p>
-
+    <Pagina
+      volver={{ a: '/', texto: 'Mis peleones' }}
+      cabecera={{
+        titulo: 'Los más temidos',
+        bajada: `${ranking.data.total} peleones en la calle. Los bots de la casa no cuentan.`,
+      }}
+    >
       {ranking.data.brutes.length === 0 ? (
         <p className="apagado">Todavía no hay nadie. Sé el primero.</p>
       ) : (

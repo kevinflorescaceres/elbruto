@@ -36,13 +36,13 @@ export function ArenaPage() {
     );
 
   return (
-    <Pagina>
-      <p className="apagado">
-        <Link to={`/b/${slug}`}>← Volver a la ficha</Link>
-      </p>
-      <h1>Elige rival</h1>
-      <p className="apagado">Gente de tu nivel, más o menos. Elige y ya no hay vuelta atrás.</p>
-
+    <Pagina
+      volver={{ a: `/b/${slug}`, texto: 'Volver a la ficha' }}
+      cabecera={{
+        titulo: 'Elige rival',
+        bajada: 'Gente de tu nivel, más o menos. Elige y ya no hay vuelta atrás.',
+      }}
+    >
       {fight.error && (
         <p className="error">
           {fight.error instanceof ApiError ? fight.error.message : 'No se ha podido pelear'}

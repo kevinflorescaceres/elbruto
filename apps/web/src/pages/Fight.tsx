@@ -62,12 +62,11 @@ export function FightPage() {
   const titulo = `${snapshotA.name} contra ${snapshotB.name}`;
 
   return (
-    <Pagina>
-      <p className="apagado">
-        <Link to={`/b/${snapshotA.slug}`}>← {snapshotA.name}</Link>
-      </p>
-      <h1>{titulo}</h1>
-
+    <Pagina
+      volver={{ a: `/b/${snapshotA.slug}`, texto: snapshotA.name }}
+      cabecera={{ titulo }}
+      pegada
+    >
       <Suspense
         fallback={
           <EscenaCombate nombres={[snapshotA.name, snapshotB.name]} pie="Montando la escena…" />

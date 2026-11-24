@@ -1,16 +1,9 @@
-import { Link } from 'react-router';
 import { Pagina } from '../ui.js';
 
 /** Textos exigidos por plan.md §11 antes de publicar. */
 export function LegalPage() {
   return (
-    <Pagina>
-      <p className="apagado">
-        <Link to="/">← Volver</Link>
-      </p>
-
-      <h1>Condiciones y privacidad</h1>
-
+    <Pagina volver={{ a: '/', texto: 'Volver' }} cabecera={{ titulo: 'Condiciones y privacidad' }}>
       <h2>Qué es esto</h2>
       <p>
         Un juego de peleas automáticas. Escribes un nombre, se genera un peleón y se enfrenta solo a

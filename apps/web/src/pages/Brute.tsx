@@ -155,13 +155,18 @@ export function BrutePage() {
   const enlaceRecluta = `${window.location.origin}/reclutar/${slug}`;
 
   return (
-    <Pagina volver={{ a: '/', texto: 'Mis peleones' }}>
-      <h1>{b.name}</h1>
-      <p className="apagado">
-        Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {record(b.wins, b.losses)}
-        {b.isBot && ' · peleón de la casa'}
-      </p>
-
+    <Pagina
+      volver={{ a: '/', texto: 'Mis peleones' }}
+      cabecera={{
+        titulo: b.name,
+        bajada: (
+          <>
+            Nivel {b.level} · {b.xp}/{b.xpToNextLevel} de experiencia · {record(b.wins, b.losses)}
+            {b.isBot && ' · peleón de la casa'}
+          </>
+        ),
+      }}
+    >
       <Tarjeta>
         <div className="ficha-cuerpo">
           <div className="retrato">

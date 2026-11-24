@@ -6,14 +6,38 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 
+/**
+ * El cartel de la pantalla: una franja de madera a todo lo ancho, con el titulo
+ * en oro a tamano de cartel. Es el recurso mas fuerte que ya tenia el juego (la
+ * barra superior, los rotulos del combate) puesto donde se abre cada pantalla;
+ * antes los titulos iban sueltos sobre el papel y todo pesaba lo mismo.
+ */
+export interface Cabecera {
+  titulo: ReactNode;
+  /** Una frase debajo, en papel. */
+  bajada?: ReactNode;
+  /** Lo que va al lado o debajo del titulo: el escenario de la portada, cifras... */
+  extra?: ReactNode;
+}
+
 /** Barra superior de madera y contenedor. Envuelve cada pantalla. */
 export function Pagina({
   children,
   volver,
+  cabecera,
+  pegada,
 }: {
   children: ReactNode;
   volver?: { a: string; texto: string };
+  cabecera?: Cabecera;
+  /** Sin aire entre el cartel y lo primero: el marcador del combate se le une. */
+  pegada?: boolean;
 }) {
+  const enlaceVolver = volver !== undefined && (
+    <p className="volver">
+      <Link to={volver.a}>← {volver.texto}</Link>
+    </p>
+  );
   return (
     <>
       <header className="barra-superior">
@@ -24,12 +48,22 @@ export function Pagina({
           <Link to="/ranking">Ranking</Link>
         </nav>
       </header>
-      <main>
-        {volver !== undefined && (
-          <p className="apagado">
-            <Link to={volver.a}>← {volver.texto}</Link>
-          </p>
-        )}
+      {cabecera !== undefined && (
+        <section className={cabecera.extra === undefined ? 'cabecera' : 'cabecera con-extra'}>
+          <div className="cabecera-dentro">
+            <div className="cabecera-texto">
+              {enlaceVolver}
+              <h1>{cabecera.titulo}</h1>
+              {cabecera.bajada !== undefined && (
+                <p className="cabecera-bajada">{cabecera.bajada}</p>
+              )}
+            </div>
+            {cabecera.extra !== undefined && <div className="cabecera-extra">{cabecera.extra}</div>}
+          </div>
+        </section>
+      )}
+      <main className={pegada === true ? 'pegada' : undefined}>
+        {cabecera === undefined && enlaceVolver}
         {children}
       </main>
     </>
