@@ -60,7 +60,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "Report", "Fight", "LevelUpChoice", "Brute", "Keeper" RESTART IDENTITY CASCADE',
+    'TRUNCATE "Feedback", "Report", "Fight", "LevelUpChoice", "Brute", "Keeper" RESTART IDENTITY CASCADE',
   );
 });
 
@@ -579,6 +579,37 @@ describe('moderacion', () => {
       reason: 'lo que sea',
     });
     expect(missing.status).toBe(404);
+  });
+});
+
+describe('reportes de la beta', () => {
+  it('guarda el reporte con su contexto y quien lo envia', async () => {
+    const { browser } = await newFighter('reportero');
+    const res = await browser.call('POST', '/api/feedback', {
+      message: '  El botón de pelear no hace nada  ',
+      page: '/b/reportero/arena',
+      viewport: '390x844',
+    });
+    expect(res.status).toBe(201);
+
+    const [guardado] = await prisma.feedback.findMany();
+    expect(guardado?.message).toBe('El botón de pelear no hace nada');
+    expect(guardado?.page).toBe('/b/reportero/arena');
+    expect(guardado?.keeperId).not.toBeNull();
+  });
+
+  it('no guarda el token de recuperacion de la URL', async () => {
+    await new Browser().call('POST', '/api/feedback', {
+      message: 'No me deja recuperar',
+      page: '/claim/secreto123?x=1',
+    });
+    const [guardado] = await prisma.feedback.findMany();
+    expect(guardado?.page).toBe('/claim/…?x=1');
+  });
+
+  it('rechaza un reporte vacio', async () => {
+    const res = await new Browser().call('POST', '/api/feedback', { message: ' ', page: '/' });
+    expect(res.status).toBe(400);
   });
 });
 

@@ -752,6 +752,7 @@ th {
   text-underline-offset: 0.25em;
 }
 
+.barra-superior .boton:focus-visible,
 .barra-superior a:focus-visible {
   outline-color: var(--oro);
 }
@@ -774,6 +775,156 @@ th {
   font-size: var(--t-h2);
   font-weight: 800;
   letter-spacing: 0.04em;
+}
+
+/* "Beta" junto a la marca: lo que antes decia la franja, sin ocupar una fila. */
+.marca-con-sello {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+.sello-beta {
+  padding: 1px var(--e-1);
+  border: var(--borde) solid var(--oro);
+  border-radius: var(--radio);
+  color: var(--oro);
+  font-size: var(--t-meta);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.barra-nav {
+  align-items: center;
+  gap: var(--e-4);
+}
+
+/*
+ * El boton de reportar va dentro de la barra: se ve de 34 px para no llenarla,
+ * y el ::after lleva la zona de toque a los 44 px de todos los botones.
+ */
+.boton.reportar {
+  position: relative;
+  min-height: 34px;
+  padding: 0 var(--e-3);
+  font-size: var(--t-apoyo);
+  /* Oro sobre madera: lo mas brillante de la barra, sin crecer. */
+  background: var(--oro);
+  color: var(--madera);
+  border-color: var(--tinta);
+  box-shadow: 0 2px 0 var(--tinta);
+  /* Tres latidos al cargar para que se vea, y quieto despues: no distrae del combate. */
+  animation: latido-reportar 1.6s ease-out 0.8s 3;
+  transition:
+    background-color 180ms ease-out,
+    color 180ms ease-out,
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+@keyframes latido-reportar {
+  0% {
+    box-shadow:
+      0 2px 0 var(--tinta),
+      0 0 0 0 rgb(228 192 122 / 70%);
+  }
+  100% {
+    box-shadow:
+      0 2px 0 var(--tinta),
+      0 0 0 10px rgb(228 192 122 / 0%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boton.reportar {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (hover: hover) {
+  /* Se levanta un poco al virar a rojo: la sombra crece con el. */
+  .boton.reportar:hover:not(:disabled) {
+    background: var(--acento);
+    color: var(--papel-claro);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 0 var(--tinta);
+  }
+}
+
+/* Al pulsarlo se hunde sobre su sombra, como un boton de verdad. Va tras el hover
+   para ganarle: se pulsa con el raton encima. */
+.boton.reportar:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--tinta);
+  transition-duration: 60ms;
+}
+
+.boton.reportar::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
+/* En el movil, "Reportar" a secas: la barra no da para mas. */
+@media (max-width: 47.99rem) {
+  .solo-ancho {
+    display: none;
+  }
+}
+
+.reporte {
+  width: calc(100% - 2 * var(--e-4));
+  max-width: 32rem;
+  padding: var(--e-6);
+  border: var(--borde) solid var(--tinta);
+  border-radius: var(--radio);
+  background: var(--papel-claro);
+  color: var(--tinta);
+  box-sizing: border-box;
+}
+
+.reporte::backdrop {
+  background: rgb(36 31 28 / 60%);
+}
+
+.reporte h2 {
+  margin: 0 0 var(--e-4);
+}
+
+.reporte form {
+  display: grid;
+  gap: var(--e-2);
+}
+
+.reporte label {
+  font-weight: 700;
+  margin-top: var(--e-2);
+}
+
+.reporte textarea {
+  resize: vertical;
+}
+
+.reporte-nota {
+  margin: var(--e-1) 0 0;
+  font-size: var(--t-meta);
+}
+
+.reporte-error {
+  margin: 0;
+  color: var(--pierde);
+  font-weight: 700;
+}
+
+.reporte-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e-3);
+  margin-top: var(--e-4);
 }
 
 .tarjeta.hundida {

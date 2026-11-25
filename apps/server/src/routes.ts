@@ -17,6 +17,7 @@ import {
 import {
   claimBody,
   createBruteBody,
+  feedbackBody,
   levelUpBody,
   levelUpOptionSchema,
   reportBody,
@@ -34,6 +35,7 @@ import {
 } from './db.js';
 import { currentKeeperId, hashToken, newToken, requireKeeperId } from './keeper.js';
 import { checkName } from './names.js';
+import { avisarReporte } from './notify.js';
 
 const slugParams = z.object({ slug: z.string().min(1) });
 const idParams = z.object({ id: z.string().min(1) });
@@ -452,6 +454,27 @@ export function registerRoutes(
     const { slug, reason } = reportBody.parse(request.body);
     const row = await loadBrute(slug);
     await prisma.report.create({ data: { bruteId: row.id, reason, ip: request.ip } });
+    return reply.code(201).send({ ok: true });
+  });
+
+  // --- Reportes de la beta ---
+
+  app.post('/api/feedback', strictLimit, async (request, reply) => {
+    const parsed = feedbackBody.parse(request.body);
+    // /claim/<token> lleva la llave de recuperacion: no se guarda ni viaja a ntfy.
+    const body = { ...parsed, page: parsed.page.replace(/^\/claim\/[^/?#]+/, '/claim/…') };
+    await prisma.feedback.create({
+      data: {
+        ...body,
+        userAgent: request.headers['user-agent']?.slice(0, 300) ?? null,
+        keeperId: await currentKeeperId(request),
+        ip: request.ip,
+      },
+    });
+    // Sin esperar: el reporte ya esta guardado y ntfy no debe frenar la respuesta.
+    avisarReporte(body).catch((err: unknown) => {
+      request.log.warn({ err }, 'no se pudo avisar del reporte por ntfy');
+    });
     return reply.code(201).send({ ok: true });
   });
 }

@@ -152,6 +152,24 @@ export const reportBody = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
+// --- POST /api/feedback: reportes de la beta ---
+export const feedbackBody = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(5, 'Cuéntanos un poco más qué ha pasado')
+    .max(2000, 'El texto es demasiado largo: máximo 2000 caracteres'),
+  /** La ruta donde estaba el jugador al reportar, para reproducirlo. */
+  page: z.string().max(300),
+  /** "390x844": la mitad de los fallos de maqueta son de un ancho concreto. */
+  viewport: z.string().max(20).optional(),
+  /** Opcional: un correo o usuario para responderle. */
+  contact: z.string().trim().max(200, 'El contacto es demasiado largo').optional(),
+});
+
+export const okResponse = z.object({ ok: z.literal(true) });
+export type FeedbackBody = z.input<typeof feedbackBody>;
+
 export type BruteProfile = z.infer<typeof bruteProfileSchema>;
 export type FightReplay = z.infer<typeof fightReplaySchema>;
 export type Me = z.infer<typeof meSchema>;

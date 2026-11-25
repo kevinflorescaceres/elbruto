@@ -7,6 +7,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router';
 import { usePendientes } from './hooks.js';
 import { sinGuardar } from './enlacesPendientes.js';
+import { ReportarProblema } from './ReportarProblema.js';
 
 /**
  * El cartel de la pantalla: una franja de madera a todo lo ancho, con el titulo
@@ -49,12 +50,16 @@ export function Pagina({
   return (
     <>
       <header className="barra-superior">
-        <Link to="/" className="marca">
-          Camorra
-        </Link>
-        <nav className="fila">
+        <span className="marca-con-sello">
+          <Link to="/" className="marca">
+            Camorra
+          </Link>
+          <span className="sello-beta">Beta</span>
+        </span>
+        <nav className="fila barra-nav">
           {/* NavLink marca la pagina actual con aria-current="page". */}
           <NavLink to="/ranking">Ranking</NavLink>
+          <ReportarProblema />
         </nav>
       </header>
       {cabecera !== undefined && (

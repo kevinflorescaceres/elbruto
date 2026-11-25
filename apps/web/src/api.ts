@@ -4,6 +4,7 @@
  */
 import type { z } from 'zod';
 import {
+  type FeedbackBody,
   bruteProfileSchema,
   claimResponse,
   createBruteResponse,
@@ -12,6 +13,7 @@ import {
   levelUpResponse,
   levelUpSchema,
   meSchema,
+  okResponse,
   opponentsSchema,
   rankingSchema,
   startFightResponse,
@@ -68,6 +70,7 @@ export const api = {
     call(levelUpResponse, `/brutes/${slug}/level-up`, post({ choiceIndex })),
 
   fight: (id: string) => call(fightReplaySchema, `/fights/${id}`),
+  feedback: (body: FeedbackBody) => call(okResponse, '/feedback', post(body)),
   report: (slug: string, reason: string) =>
     fetch('/api/reports', {
       method: 'POST',

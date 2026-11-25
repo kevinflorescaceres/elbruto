@@ -37,6 +37,8 @@ env:
   secret:
     - DATABASE_URL
     - DIRECT_URL
+    # Aviso al movil de los reportes de la beta. Vacio: no se avisa.
+    - NTFY_URL
 
 accessories:
   db:

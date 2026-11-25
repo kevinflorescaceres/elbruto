@@ -160,6 +160,11 @@ paso aparte. Sin pooler de por medio, `DATABASE_URL` y `DIRECT_URL` apuntan a lo
 Cloudflare va sin proxy). Si se activa el proxy de Cloudflare pasa a 2, o el rate limit
 veria la IP del borde de Cloudflare en vez de la del jugador.
 
+**Reportes de la beta:** la franja de `ReportarProblema.tsx` (en cada `Pagina`) guarda en la
+tabla `Feedback` y avisa al movil por ntfy si existe `NTFY_URL` (secreto, leido de
+`~/.config/camorra/ntfy-url`; el tema de ntfy.sh lo lee cualquiera que lo sepa). Sin la
+variable no avisa, pero el reporte queda guardado. Leerlos: `pnpm admin list-feedback`.
+
 **El rate limit vive en memoria del proceso** y se reinicia en cada deploy. Con una sola
 maquina basta; con varias, haria falta un almacen compartido.
 

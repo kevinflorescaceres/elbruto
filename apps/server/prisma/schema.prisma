@@ -107,13 +107,30 @@ model Fight {
 
 /// Denuncia de un luchador (PLAN.md §11).
 model Report {
-  id      String @id @default(cuid())
-  bruteId String
-  brute   Brute  @relation(fields: [bruteId], references: [id], onDelete: Cascade)
-  reason  String
+  id        String   @id @default(cuid())
+  bruteId   String
+  brute     Brute    @relation(fields: [bruteId], references: [id], onDelete: Cascade)
+  reason    String
   /// Solo para limitar el abuso, no se muestra.
   ip        String?
   createdAt DateTime @default(now())
 
   @@index([bruteId])
+}
+
+/// Reporte de un problema desde el boton de la beta.
+model Feedback {
+  id        String   @id @default(cuid())
+  message   String
+  page      String
+  viewport  String?
+  contact   String?
+  userAgent String?
+  /// Quien lo envia, si tiene cookie; sin relacion para no perderlo al borrar.
+  keeperId  String?
+  /// Solo para limitar el abuso, no se muestra.
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

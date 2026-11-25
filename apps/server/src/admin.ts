@@ -2,6 +2,7 @@
  * Comandos de retirada (PLAN.md §11): renombrar o borrar un luchador a peticion.
  *
  *   pnpm admin list-reports
+ *   pnpm admin list-feedback
  *   pnpm admin rename <slug> <nombre nuevo>
  *   pnpm admin delete <slug>
  */
@@ -23,6 +24,17 @@ async function main(): Promise<void> {
         console.log(`${r.createdAt.toISOString()}  ${r.brute.slug.padEnd(24)} ${r.reason}`);
       }
       console.log(`${reports.length} denuncias`);
+      break;
+    }
+
+    case 'list-feedback': {
+      const reportes = await prisma.feedback.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+      for (const r of reportes) {
+        const contacto = r.contact === null ? '' : `  (${r.contact})`;
+        console.log(`${r.createdAt.toISOString()}  ${r.page}  ${r.viewport ?? ''}${contacto}`);
+        console.log(`  ${r.message.replaceAll('\n', '\n  ')}\n`);
+      }
+      console.log(`${reportes.length} reportes`);
       break;
     }
 
@@ -57,7 +69,9 @@ async function main(): Promise<void> {
     }
 
     default:
-      console.log('comandos: list-reports | rename <slug> <nombre> | delete <slug>');
+      console.log(
+        'comandos: list-reports | list-feedback | rename <slug> <nombre> | delete <slug>',
+      );
       process.exitCode = 1;
   }
 }
