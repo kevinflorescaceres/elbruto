@@ -193,6 +193,20 @@ export function registerRoutes(
     });
   });
 
+  // Solo ensena el peleon. Antes la pagina reclamaba al abrirse, y abrir el
+  // enlace en otro navegador (otro movil, el navegador de WhatsApp) se lo
+  // llevaba alli sin preguntar: desaparecia de donde se jugaba.
+  app.get('/api/claim/:token', async (request) => {
+    const { token } = claimBody.parse(request.params);
+    const row = await prisma.brute.findUnique({
+      where: { claimTokenHash: hashToken(token) },
+      include: bruteInclude,
+    });
+    if (row === null) throw new HttpError(404, 'Ese enlace no vale');
+    const keeperId = await currentKeeperId(request);
+    return { brute: rowToProfile(row), tuyo: keeperId !== null && row.keeperId === keeperId };
+  });
+
   app.post('/api/claim', async (request, reply) => {
     const { token } = claimBody.parse(request.body);
     const row = await prisma.brute.findUnique({

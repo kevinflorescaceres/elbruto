@@ -7,6 +7,7 @@ import {
   type FeedbackBody,
   bruteProfileSchema,
   claimResponse,
+  claimPreviewResponse,
   createBruteResponse,
   fightListSchema,
   fightReplaySchema,
@@ -57,6 +58,8 @@ export const api = {
   ranking: () => call(rankingSchema, '/ranking'),
   createBrute: (name: string, masterSlug?: string) =>
     call(createBruteResponse, '/brutes', post({ name, masterSlug })),
+  claimPreview: (token: string) =>
+    call(claimPreviewResponse, `/claim/${encodeURIComponent(token)}`),
   claim: (token: string) => call(claimResponse, '/claim', post({ token })),
 
   brute: (slug: string) => call(bruteProfileSchema, `/brutes/${slug}`),

@@ -83,6 +83,14 @@ export const createBruteResponse = z.object({
   claimUrl: z.string(),
 });
 
+// --- GET /api/claim/:token ---
+/** Lo que se ensena antes de mover el peleon: abrir el enlace no lo mueve. */
+export const claimPreviewResponse = z.object({
+  brute: bruteProfileSchema,
+  /** Ya cuelga de la cookie de este navegador: no hay nada que mover. */
+  tuyo: z.boolean(),
+});
+
 // --- POST /api/claim ---
 export const claimBody = z.object({ token: z.string().min(1) });
 export const claimResponse = z.object({ brute: bruteProfileSchema });

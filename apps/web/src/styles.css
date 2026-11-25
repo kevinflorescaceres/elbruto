@@ -1426,7 +1426,7 @@ th {
   font-variant-numeric: tabular-nums;
 }
 
-/* Sin esto, un nombre de 20 caracteres empuja el nivel fuera de la pantalla. */
+/* Sin esto, un nombre largo empuja el nivel fuera de la pantalla. */
 .rk-nombre {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1781,4 +1781,17 @@ a.boton {
   .rk-panel {
     margin-bottom: var(--e-6);
   }
+}
+
+/* Recuperar: el peleon al lado de la pregunta, para saber cual se mueve. */
+.recuperar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.recuperar h2 {
+  margin-top: 0;
 }

@@ -119,6 +119,21 @@ describe('creacion de luchadores', () => {
     expect(res.body.brute.slug).toBe(slug);
     expect((await otro.call('GET', '/api/me')).body.brutes).toHaveLength(1);
   });
+
+  it('abrir el enlace de recuperacion no mueve el luchador: solo lo ensena', async () => {
+    const { browser, claim, slug } = await newFighter('quieto');
+
+    const otro = new Browser();
+    const vista = await otro.call('GET', `/api/claim/${claim}`);
+    expect(vista.status).toBe(200);
+    expect(vista.body.brute.slug).toBe(slug);
+    expect(vista.body.tuyo).toBe(false);
+    expect((await otro.call('GET', '/api/me')).body.brutes).toHaveLength(0);
+    expect((await browser.call('GET', '/api/me')).body.brutes).toHaveLength(1);
+
+    expect((await browser.call('GET', `/api/claim/${claim}`)).body.tuyo).toBe(true);
+    expect((await otro.call('GET', '/api/claim/noexiste')).status).toBe(404);
+  });
 });
 
 describe('ciclo completo', () => {
