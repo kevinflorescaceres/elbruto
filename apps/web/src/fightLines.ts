@@ -15,16 +15,49 @@ export interface Step {
 export const weaponName = (id: string): string =>
   id.startsWith('pet:') ? 'los dientes' : getWeapon(id).name;
 
-export function describe(event: FightEvent, nameOf: (id: string) => string): string | null {
+export interface Contexto {
+  /**
+   * El evento anterior, sin contar el acercamiento (`move`). El motor cuenta
+   * algunas acciones en dos eventos y, sin esto, el texto las decia dos veces.
+   */
+  previo?: FightEvent | null;
+  /**
+   * Para la linea bajo el lienzo: al rival no se le nombra, que se ve a quien
+   * se pega. A un bicho si, porque podria ser cualquiera de los de la arena.
+   */
+  corto?: boolean;
+}
+
+/** Solo los dos peleones se llaman `A` y `B`; los bichos son `A-pet-0`... */
+const esPeleon = (id: string): boolean => id === 'A' || id === 'B';
+
+/** El evento que hace de `previo` para el siguiente: todos menos acercarse. */
+export const cuentaComoPrevio = (event: FightEvent): boolean => event.type !== 'move';
+
+export function describe(
+  event: FightEvent,
+  nameOf: (id: string) => string,
+  { previo = null, corto = false }: Contexto = {},
+): string | null {
+  // " a Pepa", o nada si el rival se sobreentiende.
+  const a = (id: string): string => (corto && esPeleon(id) ? '' : ` a ${nameOf(id)}`);
+
   switch (event.type) {
     case 'attack':
-      return `${nameOf(event.id)} ataca a ${nameOf(event.target)} con ${weaponName(event.weapon)}.`;
+      // Lanzar es `throwWeapon` y luego el `attack` con esa misma arma.
+      if (previo?.type === 'throwWeapon' && previo.id === event.id) return null;
+      // Contraatacar es `counter` y luego su `attack`: se cuenta con el golpe.
+      if (previo?.type === 'counter' && previo.id === event.id) {
+        return `${nameOf(event.id)} responde${a(event.target)} con ${weaponName(event.weapon)}.`;
+      }
+      return `${nameOf(event.id)} ataca${a(event.target)} con ${weaponName(event.weapon)}.`;
     case 'evade':
       return `${nameOf(event.id)} se aparta a tiempo.`;
     case 'block':
       return `${nameOf(event.id)} para el golpe.`;
+    // Lo dice el `attack` que viene detras, que ya sabe con que responde.
     case 'counter':
-      return `${nameOf(event.id)} responde en el acto.`;
+      return null;
     case 'damage':
       return `${nameOf(event.id)} encaja ${event.amount} y se queda en ${event.hp}.`;
     case 'heal':
@@ -32,9 +65,13 @@ export function describe(event: FightEvent, nameOf: (id: string) => string): str
     case 'drawWeapon':
       return `${nameOf(event.id)} echa mano de ${weaponName(event.weapon)}.`;
     case 'throwWeapon':
-      return `${nameOf(event.id)} le tira ${weaponName(event.weapon)} a ${nameOf(event.target)}.`;
+      return corto && esPeleon(event.target)
+        ? `${nameOf(event.id)} lanza ${weaponName(event.weapon)}.`
+        : `${nameOf(event.id)} le tira ${weaponName(event.weapon)} a ${nameOf(event.target)}.`;
     case 'disarm':
-      return `${nameOf(event.id)} desarma a ${nameOf(event.target)}: ${weaponName(event.weapon)} al suelo.`;
+      return corto && esPeleon(event.target)
+        ? `${nameOf(event.id)} le quita ${weaponName(event.weapon)}.`
+        : `${nameOf(event.id)} desarma a ${nameOf(event.target)}: ${weaponName(event.weapon)} al suelo.`;
     case 'skill':
       return `${nameOf(event.id)} tira de ${getSkill(event.skill).name}.`;
     case 'death':
@@ -53,6 +90,7 @@ export function buildSteps(replay: Pick<FightReplay, 'log'>): Step[] {
   const names = new Map<string, string>();
   const hp = new Map<string, number>();
   const steps: Step[] = [];
+  let previo: FightEvent | null = null;
 
   for (const event of replay.log as FightEvent[]) {
     if (event.type === 'spawn') {
@@ -62,7 +100,8 @@ export function buildSteps(replay: Pick<FightReplay, 'log'>): Step[] {
     }
     if (event.type === 'damage' || event.type === 'heal') hp.set(event.id, event.hp);
 
-    const text = describe(event, (id) => names.get(id) ?? id);
+    const text = describe(event, (id) => names.get(id) ?? id, { previo });
+    if (cuentaComoPrevio(event)) previo = event;
     if (text !== null) {
       steps.push({ text, hpA: hp.get('A') ?? 0, hpB: hp.get('B') ?? 0 });
     }

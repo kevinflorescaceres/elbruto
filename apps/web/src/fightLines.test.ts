@@ -1,6 +1,6 @@
 import { describe as group, expect, it } from 'vitest';
-import { createBrute, growTo, mulberry32, simulate } from '@camorra/engine';
-import { buildSteps } from './fightLines.js';
+import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
+import { buildSteps, describe } from './fightLines.js';
 
 const replay = (seed: number) => {
   const rng = mulberry32(seed);
@@ -42,6 +42,53 @@ group('buildSteps', () => {
       // Quien pierde acaba a 0; el log siempre termina con el evento `end`.
       const perdedorA = fight.winner === 'B';
       expect(perdedorA ? last?.hpA : last?.hpB).toBe(0);
+    }
+  });
+});
+
+group('describe', () => {
+  const nombres: Record<string, string> = { A: 'Rufo', B: 'Pepa', 'B-pet-0': 'Chucho' };
+  const nameOf = (id: string): string => nombres[id] ?? id;
+  const lanza: FightEvent = { type: 'throwWeapon', id: 'A', target: 'B', weapon: 'cascote' };
+  const contra: FightEvent = { type: 'counter', id: 'B', target: 'A' };
+  const ataque = (id: string, target: string): FightEvent => ({
+    type: 'attack',
+    id,
+    target,
+    weapon: 'cascote',
+  });
+
+  it('un lanzamiento se cuenta una vez, no como lanzamiento y luego ataque', () => {
+    expect(describe(ataque('A', 'B'), nameOf, { previo: lanza })).toBeNull();
+  });
+
+  it('el contraataque y su golpe son una sola frase', () => {
+    expect(describe(contra, nameOf)).toBeNull();
+    expect(describe(ataque('B', 'A'), nameOf, { previo: contra })).toBe(
+      'Pepa responde a Rufo con Cascote.',
+    );
+    expect(describe(ataque('B', 'A'), nameOf, { previo: contra, corto: true })).toBe(
+      'Pepa responde con Cascote.',
+    );
+  });
+
+  it('la forma corta no nombra al rival, que se ve en el lienzo, pero si a un bicho', () => {
+    expect(describe(ataque('A', 'B'), nameOf, { corto: true })).toBe('Rufo ataca con Cascote.');
+    expect(describe(lanza, nameOf, { corto: true })).toBe('Rufo lanza Cascote.');
+    expect(describe(ataque('A', 'B-pet-0'), nameOf, { corto: true })).toBe(
+      'Rufo ataca a Chucho con Cascote.',
+    );
+  });
+
+  it('la transcripcion no repite ninguna accion', () => {
+    for (let seed = 0; seed < 50; seed++) {
+      const texto = buildSteps(replay(seed)).map((s) => s.text);
+      for (let i = 1; i < texto.length; i++) {
+        const lanzo = /^(.+) le tira (.+) a (.+)\.$/.exec(texto[i - 1] ?? '');
+        if (lanzo !== null)
+          expect(texto[i]).not.toBe(`${lanzo[1]} ataca a ${lanzo[3]} con ${lanzo[2]}.`);
+        expect(texto[i]).not.toMatch(/responde en el acto/);
+      }
     }
   });
 });

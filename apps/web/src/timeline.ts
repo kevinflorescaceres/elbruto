@@ -8,7 +8,7 @@ import { gsap } from 'gsap';
 import { Container } from 'pixi.js';
 import type { PartName } from './art/parts.js';
 import { animacion, type AnimName } from './art/poses.js';
-import { TIME_SCALE, type Move, type Scene } from './fightScene.js';
+import { TIME_SCALE, type Move, type Pie, type Scene } from './fightScene.js';
 import {
   changeWeapon,
   drawActor,
@@ -452,7 +452,7 @@ export interface Marcador {
 export function buildTimeline(
   stage: Container,
   scene: Scene,
-  onCaption: (text: string | null) => void,
+  onPie: (pie: Pie) => void,
   marcador: Marcador,
   opciones: { menosMovimiento?: boolean } = {},
 ): gsap.core.Timeline {
@@ -483,9 +483,11 @@ export function buildTimeline(
 
   const timeline = gsap.timeline();
   for (const beat of scene.beats) {
-    const caption = beat.caption;
-    // Al saltar o repetir, GSAP vuelve a disparar estas llamadas: el pie sigue al dia.
-    if (caption !== null) timeline.call(() => onCaption(caption), undefined, beat.at);
+    const pie = beat.pie;
+    // Al saltar al final, GSAP dispara las llamadas que cruza, y cada pie va
+    // entero: basta el ultimo para que el pie siga al dia. Al repetir no las
+    // dispara: de eso se encarga el reproductor.
+    if (pie !== null) timeline.call(() => onPie(pie), undefined, beat.at);
     for (const move of beat.moves) addMove(timeline, views, escena, move, beat.at, beat.duration);
   }
 

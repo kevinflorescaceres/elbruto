@@ -1,6 +1,6 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
-import { planFight, SEGUNDOS_POR_ACCION, type Move } from './fightScene.js';
+import { planFight, SEGUNDOS_POR_ACCION, type Move, type Pie } from './fightScene.js';
 
 /** Combates variados: con mascotas, de todos los niveles. */
 function fight(seed: number) {
@@ -164,12 +164,74 @@ group('planFight', () => {
 
   it('el pie de escena usa nombres y no ids', () => {
     const scene = planFight(fight(3));
-    const captions = scene.beats.map((b) => b.caption).filter((c) => c !== null);
+    const textos = scene.beats.flatMap((b) =>
+      b.pie === null ? [] : [...b.pie.linea, ...b.pie.narracion],
+    );
 
-    expect(captions.length).toBeGreaterThan(0);
-    for (const caption of captions) {
-      expect(caption).not.toMatch(/\b[AB]-pet-\d\b/);
+    expect(textos.length).toBeGreaterThan(0);
+    for (const texto of textos) {
+      expect(texto).not.toMatch(/\b[AB]-pet-\d\b/);
     }
+  });
+
+  it('la linea del pie solo crece dentro de una accion: nada se borra antes de tiempo', () => {
+    for (let seed = 0; seed < 300; seed++) {
+      let previo: Pie | null = null;
+      for (const beat of planFight(fight(seed)).beats) {
+        const pie = beat.pie;
+        if (pie === null) continue;
+        if (previo !== null && previo.accion === pie.accion) {
+          expect(pie.linea.slice(0, previo.linea.length)).toEqual(previo.linea);
+          expect(pie.narracion.slice(0, previo.narracion.length)).toEqual(previo.narracion);
+        }
+        previo = pie;
+      }
+    }
+  });
+
+  it('la linea no repite lo que el lienzo ya ensena; la narracion lo cuenta todo', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const pies = planFight(fight(seed)).beats.flatMap((b) => (b.pie === null ? [] : [b.pie]));
+      const linea = pies.flatMap((p) => p.linea);
+      const narracion = pies.flatMap((p) => p.narracion);
+
+      // Dano, esquivas y paradas ya se ven: numero flotante, pose y chispa.
+      for (const frase of linea) expect(frase).not.toMatch(/encaja|se aparta|para el golpe/);
+      expect(narracion.some((f) => f.includes('encaja'))).toBe(true);
+    }
+  });
+
+  it('la linea no nombra al rival, que se ve en el lienzo; la narracion si', () => {
+    // Los peleones de `fight` se llaman escena-<semilla>-a y escena-<semilla>-b.
+    const alRival = / a escena-\d+-[ab]\b/;
+    for (let seed = 0; seed < 100; seed++) {
+      const pies = planFight(fight(seed)).beats.flatMap((b) => (b.pie === null ? [] : [b.pie]));
+      for (const frase of pies.flatMap((p) => p.linea)) expect(frase).not.toMatch(alRival);
+      expect(pies.flatMap((p) => p.narracion).some((f) => alRival.test(f))).toBe(true);
+    }
+  });
+
+  it('la linea visible dura lo que una accion, no lo que un evento', () => {
+    const duraciones: number[] = [];
+    for (let seed = 0; seed < 300; seed++) {
+      let texto: string | null = null;
+      let desde = 0;
+      for (const beat of planFight(fight(seed)).beats) {
+        if (beat.pie === null) continue;
+        const nuevo = beat.pie.linea.join(' ');
+        if (nuevo === texto) continue;
+        // Lo que crece no se pierde de vista: solo cuenta lo que se reemplaza.
+        const crece = texto !== null && nuevo.startsWith(texto);
+        if (texto !== null && !crece) duraciones.push(beat.at - desde);
+        if (!crece) desde = beat.at;
+        texto = nuevo;
+      }
+    }
+    duraciones.sort((x, y) => x - y);
+    // Antes la mediana era 0,36 s: un golpe con su dano y el siguiente en la misma accion.
+    expect(duraciones[Math.floor(duraciones.length / 2)]).toBeGreaterThanOrEqual(
+      SEGUNDOS_POR_ACCION * 0.9,
+    );
   });
 });
 

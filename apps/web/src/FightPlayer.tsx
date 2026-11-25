@@ -10,7 +10,7 @@ import { Application } from 'pixi.js';
 // por su cuenta al arrancar, otro viaje de red despues de bajar este fichero.
 import 'pixi.js/browser';
 import { aEntero, LIENZO, type FightReplay } from '@camorra/shared';
-import { planFight } from './fightScene.js';
+import { planFight, type Pie } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
 import { buildTimeline } from './timeline.js';
 import { EscenaCombate } from './EscenaCombate.js';
@@ -47,7 +47,7 @@ export function FightPlayer({
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [reproduciendo, setReproduciendo] = useState(!sinMovimiento);
   const [velocidad, setVelocidad] = useState(1);
-  const [pie, setPie] = useState<string | null>(null);
+  const [pie, setPie] = useState<Pie | null>(null);
   const [terminado, setTerminado] = useState(false);
 
   useEffect(() => {
@@ -140,6 +140,7 @@ export function FightPlayer({
   }, [velocidad, listo]);
 
   const tl = timeline.current;
+  const linea = pie !== null && pie.linea.length > 0 ? pie.linea.join(' ') : null;
 
   return (
     <EscenaCombate
@@ -147,7 +148,8 @@ export function FightPlayer({
       barras={[barraA, barraB]}
       lienzo={host}
       terminado={terminado}
-      pie={pie ?? (listo ? 'Preparados…' : 'Montando la escena…')}
+      pie={linea ?? (listo ? 'Preparados…' : 'Montando la escena…')}
+      narracion={pie}
       aviso={
         fallo !== null && (
           <p className="error">
@@ -163,8 +165,10 @@ export function FightPlayer({
               velocidad,
               pausa: () => {
                 if (reproduciendo) tl.pause();
-                else if (tl.progress() === 1) tl.restart();
-                else tl.resume();
+                else if (tl.progress() === 1) {
+                  setPie(null);
+                  tl.restart();
+                } else tl.resume();
                 setReproduciendo(!reproduciendo);
               },
               acelerar: () => setVelocidad((v) => (v === 1 ? 2 : v === 2 ? 4 : 1)),
@@ -174,6 +178,8 @@ export function FightPlayer({
                 setTerminado(true);
               },
               repetir: () => {
+                // restart() no dispara las llamadas: sin esto quedaria el pie del final.
+                setPie(null);
                 tl.restart();
                 setReproduciendo(true);
                 setTerminado(false);

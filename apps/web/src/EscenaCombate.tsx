@@ -5,6 +5,7 @@
  * llegar el reproductor todo lo de debajo daba un salto.
  */
 import type { ReactNode, Ref } from 'react';
+import type { Pie } from './fightScene.js';
 
 /**
  * Marcador en HTML, no dentro del lienzo. En pantalla estrecha el lienzo se
@@ -43,6 +44,7 @@ export interface Controles {
 export function EscenaCombate({
   nombres,
   pie,
+  narracion,
   controles,
   barras,
   lienzo,
@@ -50,7 +52,10 @@ export function EscenaCombate({
   terminado = false,
 }: {
   nombres: [string, string];
+  /** Lo que se ve bajo el lienzo. */
   pie: string;
+  /** El combate contado entero; sin el, se lee `pie`. */
+  narracion?: Pie | null;
   /** Sin controles, los botones salen apagados: la escena aun no esta. */
   controles?: Controles;
   barras?: [Ref<HTMLDivElement>, Ref<HTMLDivElement>];
@@ -72,9 +77,25 @@ export function EscenaCombate({
 
       {aviso}
 
-      {/* Se anuncia sola mientras pasa: la narracion es el combate para quien no lo ve. */}
-      <p className="combate-pie" aria-live="polite">
-        {pie}
+      {/* La linea visible se salta lo que ya ensena el lienzo: no es para el lector. */}
+      {/* El span es el unico hijo flex: el texto entero se alinea abajo de una pieza. */}
+      <p className="combate-pie" aria-hidden="true">
+        <span>{pie}</span>
+      </p>
+
+      {/*
+       * Se anuncia sola mientras pasa: la narracion es el combate para quien no lo
+       * ve. Cada frase es un nodo con su clave, asi que dentro de una accion solo
+       * se lee lo que se anade, y vaciarla al cambiar de accion no se anuncia.
+       */}
+      <p className="solo-lector" aria-live="polite" aria-relevant="additions">
+        {narracion != null && narracion.narracion.length > 0 ? (
+          narracion.narracion.map((frase, i) => (
+            <span key={`${narracion.accion}-${i}`}>{frase} </span>
+          ))
+        ) : (
+          <span key={`espera-${pie}`}>{pie}</span>
+        )}
       </p>
 
       {terminado && c !== undefined ? (

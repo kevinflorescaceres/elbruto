@@ -12,7 +12,7 @@ import { getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
 import type { FightReplay } from '@camorra/shared';
 import type { AnimName } from './art/poses.js';
 import { escenarioDe } from './art/escenarios.js';
-import { describe } from './fightLines.js';
+import { cuentaComoPrevio, describe } from './fightLines.js';
 
 export interface Actor {
   id: string;
@@ -76,14 +76,48 @@ export type Move =
    */
   | { kind: 'announce'; text: string; grande: boolean; queda: boolean };
 
+/**
+ * El pie de escena entero en un instante, no un cambio respecto al anterior:
+ * al saltar o repetir, el ultimo pie que dispare GSAP basta para dejarlo bien.
+ *
+ * Antes cada evento cambiaba el pie, y una accion traia hasta cuatro frases en
+ * poco mas de un segundo: la mediana de lo que duraba cada una era 0,36 s.
+ */
+export interface Pie {
+  /**
+   * Lo que se ve: las frases de la accion en curso, que van sumandose hasta que
+   * empieza la siguiente. Solo lo que el lienzo no cuenta por si solo.
+   */
+  linea: string[];
+  /** La accion en curso entera, para quien no ve el lienzo. Reutiliza la fase 3. */
+  narracion: string[];
+  /** Que accion es. Al cambiar, el lector de pantalla empieza de cero. */
+  accion: number;
+}
+
 export interface Beat {
   /** Segundos desde el principio. */
   at: number;
   duration: number;
-  /** Linea de texto para el pie de escena. Reutiliza la de la fase 3. */
-  caption: string | null;
+  /** El pie desde este momento, o null si no cambia. */
+  pie: Pie | null;
   moves: Move[];
 }
+
+/**
+ * Lo que va en la linea visible. Fuera: el dano (numero flotante y barra), la
+ * esquiva y la parada (su pose y su chispa) y la curacion (numero verde). El
+ * contraataque no falta: lo cuenta el `attack` que lo sigue.
+ */
+const EN_LA_LINEA: ReadonlySet<FightEvent['type']> = new Set([
+  'attack',
+  'drawWeapon',
+  'throwWeapon',
+  'disarm',
+  'skill',
+  'death',
+  'end',
+]);
 
 export interface Scene {
   actors: Actor[];
@@ -97,7 +131,10 @@ export interface Scene {
 interface Crudo {
   type: FightEvent['type'];
   weight: number;
+  /** La frase entera, para la narracion. */
   caption: string | null;
+  /** La forma corta, para la linea visible. */
+  linea: string | null;
   moves: Move[];
 }
 
@@ -124,6 +161,7 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
         type: 'turn',
         weight: PESO_RETIRADA,
         caption: null,
+        linea: null,
         moves: [
           { kind: 'retreat', id: embestida.id },
           { kind: 'pose', id: embestida.id, anim: 'walk' },
@@ -145,8 +183,10 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
 
   const beats: Beat[] = [];
   let at = 0;
+  // Si una accion no trae nada para la linea, se queda la de la anterior.
+  let lineaAnterior: string[] = [];
 
-  for (const grupo of grupos) {
+  for (const [accion, grupo] of grupos.entries()) {
     const esTurno = grupo.some((c) => c.type === 'turn');
     const esCierre = grupo.some((c) => c.type === 'end');
     const esApertura = grupo.some((c) => c.type === 'start');
@@ -164,15 +204,28 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
     const util = esTurno ? Math.max(0, total - RESPIRO) : total;
     const peso = grupo.reduce((suma, c) => suma + c.weight, 0);
     let usado = 0;
+    const linea: string[] = [];
+    const narracion: string[] = [];
 
     for (const crudo of grupo) {
       // Si todo el grupo pesa 0, se reparte a partes iguales.
       const parte = peso > 0 ? crudo.weight / peso : 1 / grupo.length;
       const duration = util * parte;
-      beats.push({ at, duration, caption: crudo.caption, moves: crudo.moves });
+      let pie: Pie | null = null;
+      if (crudo.caption !== null) {
+        narracion.push(crudo.caption);
+        if (EN_LA_LINEA.has(crudo.type) && crudo.linea !== null) linea.push(crudo.linea);
+        pie = {
+          linea: linea.length > 0 ? [...linea] : lineaAnterior,
+          narracion: [...narracion],
+          accion,
+        };
+      }
+      beats.push({ at, duration, pie, moves: crudo.moves });
       at += duration;
       usado += duration;
     }
+    if (linea.length > 0) lineaAnterior = linea;
     // Lo que sobra es la quietud antes de que actue el otro.
     at += total - usado;
   }
@@ -281,12 +334,19 @@ export function planFight(replay: Replayable): Scene {
   const byId = new Map<string, Actor>();
   const petCount = { A: 0, B: 0 };
   const crudos: Crudo[] = [];
+  let eventoPrevio: FightEvent | null = null;
 
   const push = (event: FightEvent, moves: Move[]): void => {
     const weight = WEIGHT[event.type];
     if (moves.length === 0 && weight === 0) return;
     const names = (id: string): string => byId.get(id)?.name ?? id;
-    crudos.push({ type: event.type, weight, caption: describe(event, names), moves });
+    crudos.push({
+      type: event.type,
+      weight,
+      caption: describe(event, names, { previo: eventoPrevio }),
+      linea: describe(event, names, { previo: eventoPrevio, corto: true }),
+      moves,
+    });
   };
 
   for (const event of replay.log as FightEvent[]) {
@@ -460,6 +520,8 @@ export function planFight(replay: Replayable): Scene {
         break;
       }
     }
+    // `push` lo lee mientras se describe el evento; aqui ya cuenta para el siguiente.
+    if (cuentaComoPrevio(event)) eventoPrevio = event;
   }
 
   // El cartel de apertura va DESPUES de que entren los dos, no antes: si no,
@@ -470,6 +532,7 @@ export function planFight(replay: Replayable): Scene {
       type: 'start',
       weight: 1,
       caption: null,
+      linea: null,
       moves: [{ kind: 'announce', text: '¡Camorra!', grande: true, queda: false }],
     });
   }
