@@ -211,6 +211,32 @@ group('planFight', () => {
     }
   });
 
+  it('el final no tapa la ultima accion: la linea se queda y la narracion lo suma', () => {
+    for (let seed = 0; seed < 300; seed++) {
+      const pies = planFight(fight(seed)).beats.flatMap((b) => (b.pie === null ? [] : [b.pie]));
+      const ultimo = pies.at(-1);
+      // El ultimo pie de la ultima accion de verdad, antes del cierre.
+      const accion = pies.filter((p) => !p.narracion.at(-1)?.startsWith('Se acabó')).at(-1);
+
+      expect(ultimo?.narracion.at(-1)).toMatch(/^Se acabó en \d+ turnos\.$/);
+      expect(ultimo?.linea).toEqual(accion?.linea);
+      expect(ultimo?.linea.join(' ')).not.toMatch(/Se acabó/);
+      // Misma accion: el lector de pantalla oye "Se acabó" como una frase mas.
+      expect(ultimo?.accion).toBe(accion?.accion);
+    }
+  });
+
+  it('la esquiva y la parada se ven sobre quien las hace, como el dano', () => {
+    const letreros = new Set<string>();
+    for (let seed = 0; seed < 50; seed++) {
+      for (const beat of planFight(fight(seed)).beats) {
+        for (const m of beat.moves) if (m.kind === 'float') letreros.add(m.text);
+      }
+    }
+    expect(letreros).toContain('¡Esquiva!');
+    expect(letreros).toContain('¡Parada!');
+  });
+
   it('la linea visible dura lo que una accion, no lo que un evento', () => {
     const duraciones: number[] = [];
     for (let seed = 0; seed < 300; seed++) {

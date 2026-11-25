@@ -48,6 +48,9 @@ export function FinCombate({
   const mio = useBrute(slugMio ?? '', slugMio !== undefined);
   const b = slugMio === undefined ? undefined : mio.data;
   const gano = slugMio === undefined ? undefined : ganador.slug === slugMio;
+  // El replay no trae los turnos aparte: los dice el evento con que acaba el log.
+  const fin = replay.log.at(-1);
+  const turnos = fin?.type === 'end' ? fin.turns : null;
 
   return (
     <section className="tarjeta fin" aria-labelledby="fin-titulo">
@@ -56,6 +59,12 @@ export function FinCombate({
         <h2 id="fin-titulo" className="fin-titulo">
           Gana {ganador.name}
         </h2>
+        {/* Antes era la ultima linea del pie y tapaba la caida. Aqui es un dato, no la noticia. */}
+        {turnos !== null && (
+          <p className="apagado fin-turnos">
+            Tras {turnos} {turnos === 1 ? 'turno' : 'turnos'}.
+          </p>
+        )}
         {gano !== undefined && (
           <p className="fin-resumen">
             <Resultado gano={gano} />

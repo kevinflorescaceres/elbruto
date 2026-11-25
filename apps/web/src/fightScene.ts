@@ -106,8 +106,10 @@ export interface Beat {
 
 /**
  * Lo que va en la linea visible. Fuera: el dano (numero flotante y barra), la
- * esquiva y la parada (su pose y su chispa) y la curacion (numero verde). El
- * contraataque no falta: lo cuenta el `attack` que lo sigue.
+ * esquiva y la parada (su pose y un letrero flotante, como el del dano) y la
+ * curacion (numero verde). El contraataque no falta: lo cuenta el `attack` que
+ * lo sigue. Y el final tampoco: "Se acabó en N turnos" tapaba la caida, que es
+ * lo que de verdad cierra el combate. El ganador ya lo dice el cartel.
  */
 const EN_LA_LINEA: ReadonlySet<FightEvent['type']> = new Set([
   'attack',
@@ -116,7 +118,6 @@ const EN_LA_LINEA: ReadonlySet<FightEvent['type']> = new Set([
   'disarm',
   'skill',
   'death',
-  'end',
 ]);
 
 export interface Scene {
@@ -185,10 +186,15 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
   let at = 0;
   // Si una accion no trae nada para la linea, se queda la de la anterior.
   let lineaAnterior: string[] = [];
+  let narracionAnterior: string[] = [];
+  let accionAnterior = -1;
 
-  for (const [accion, grupo] of grupos.entries()) {
+  for (const [indice, grupo] of grupos.entries()) {
     const esTurno = grupo.some((c) => c.type === 'turn');
     const esCierre = grupo.some((c) => c.type === 'end');
+    // El cierre sigue la ultima accion en vez de empezar otra: para el lector
+    // de pantalla, "Se acabó" se suma a la caida en lugar de borrarla.
+    const accion = esCierre ? accionAnterior : indice;
     const esApertura = grupo.some((c) => c.type === 'start');
     const contras = grupo.filter((c) => c.type === 'counter').length;
 
@@ -205,7 +211,7 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
     const peso = grupo.reduce((suma, c) => suma + c.weight, 0);
     let usado = 0;
     const linea: string[] = [];
-    const narracion: string[] = [];
+    const narracion: string[] = esCierre ? [...narracionAnterior] : [];
 
     for (const crudo of grupo) {
       // Si todo el grupo pesa 0, se reparte a partes iguales.
@@ -226,6 +232,10 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
       usado += duration;
     }
     if (linea.length > 0) lineaAnterior = linea;
+    if (narracion.length > 0) {
+      narracionAnterior = narracion;
+      accionAnterior = accion;
+    }
     // Lo que sobra es la quietud antes de que actue el otro.
     at += total - usado;
   }
@@ -237,6 +247,7 @@ const COLOR = {
   dano: 0xcc3333,
   cura: 0x44aa77,
   parada: 0x4477cc,
+  esquiva: 0xf4efe4,
   maña: 0xccaa33,
 } as const;
 
@@ -420,8 +431,13 @@ export function planFight(replay: Replayable): Scene {
         ]);
         break;
 
+      // Un golpe sin numero no se distinguia de uno que te perdiste: el fallo se
+      // dice donde se diria el dano. Un tercio de las acciones acaba asi.
       case 'evade':
-        push(event, [{ kind: 'pose', id: event.id, anim: 'evade' }]);
+        push(event, [
+          { kind: 'pose', id: event.id, anim: 'evade' },
+          { kind: 'float', id: event.id, text: '¡Esquiva!', color: COLOR.esquiva },
+        ]);
         break;
 
       case 'block': {
@@ -440,6 +456,7 @@ export function planFight(replay: Replayable): Scene {
           // parada que oscurece al que para se lee como un golpe encajado.
           { kind: 'pose', id: event.id, anim: 'block' },
           { kind: 'impact', id: event.id, fuerza: 0, parada: true },
+          { kind: 'float', id: event.id, text: '¡Parada!', color: COLOR.parada },
         ]);
         break;
       }

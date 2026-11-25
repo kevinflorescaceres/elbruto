@@ -1174,8 +1174,12 @@ th {
 }
 
 .fin-titulo {
-  margin: 0 0 var(--e-2);
+  margin: 0;
   font-size: var(--t-h2);
+}
+
+.fin-turnos {
+  margin: 0 0 var(--e-2);
 }
 
 .fin-resumen {

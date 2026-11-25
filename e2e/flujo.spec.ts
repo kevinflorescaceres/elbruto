@@ -60,8 +60,9 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
     await expect(paginaMia).toHaveURL(/\/fight\//);
     await expect(paginaMia.locator('canvas')).toBeVisible();
     await paginaMia.getByRole('button', { name: 'Ir al final' }).click();
-    // La narracion del player. El log de texto tiene la misma linea, plegado.
-    await expect(paginaMia.locator('.combate-pie')).toHaveText(/Se acabó en \d+ turnos/);
+    // El pie se queda con la ultima accion; los turnos van en la tarjeta final.
+    await expect(paginaMia.locator('.fin-turnos')).toHaveText(/^Tras \d+ turnos?\.$/);
+    await expect(paginaMia.locator('.combate-pie')).not.toHaveText(/Se acabó/);
     peleas += 1;
 
     await paginaMia
