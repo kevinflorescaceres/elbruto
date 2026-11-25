@@ -21,6 +21,8 @@ export interface Cabecera {
   bajada?: ReactNode;
   /** Lo que va al lado o debajo del titulo: el escenario de la portada, cifras... */
   extra?: ReactNode;
+  /** Cartel bajo y titulo menor: donde lo importante va debajo (el combate). */
+  compacta?: boolean;
 }
 
 /** Barra superior de madera y contenedor. Envuelve cada pantalla. */
@@ -63,7 +65,15 @@ export function Pagina({
         </nav>
       </header>
       {cabecera !== undefined && (
-        <section className={cabecera.extra === undefined ? 'cabecera' : 'cabecera con-extra'}>
+        <section
+          className={[
+            'cabecera',
+            cabecera.extra === undefined ? '' : 'con-extra',
+            cabecera.compacta === true ? 'compacta' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="cabecera-dentro">
             <div className="cabecera-texto">
               {enlaceVolver}

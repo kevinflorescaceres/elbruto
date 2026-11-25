@@ -72,8 +72,12 @@ export function FightPage() {
       volver={{ a: `/b/${snapshotA.slug}`, texto: snapshotA.name }}
       cabecera={{
         titulo,
-        // Quien llega por un enlace no sabe donde esta: una linea basta.
-        bajada: 'En Camorra cada peleón sale de un nombre y pelea solo. Esto es lo que pasó.',
+        compacta: true,
+        // Quien llega por un enlace sin peleon no sabe donde esta: una linea basta.
+        // Al que ya juega le sobra, y empujaba la arena hacia abajo.
+        ...(me.data?.brutes.length === 0 && {
+          bajada: 'En Camorra cada peleón sale de un nombre y pelea solo. Esto es lo que pasó.',
+        }),
       }}
       pegada
     >

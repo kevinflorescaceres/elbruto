@@ -294,6 +294,31 @@ time {
   }
 }
 
+/* El combate: cartel bajo para que la arena entre en pantalla. */
+.cabecera.compacta .cabecera-dentro {
+  padding-block: var(--e-4);
+}
+
+.cabecera.compacta h1 {
+  font-size: var(--t-h2);
+}
+
+.cabecera.compacta .cabecera-bajada {
+  margin-top: var(--e-1);
+  font-size: var(--t-apoyo);
+  max-width: none;
+}
+
+@media (min-width: 48rem) {
+  .cabecera.compacta .cabecera-dentro {
+    padding-block: var(--e-5);
+  }
+
+  .cabecera.compacta h1 {
+    font-size: var(--t-h1);
+  }
+}
+
 /* --- Marcador del combate --- */
 
 .marcador {
