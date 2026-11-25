@@ -39,7 +39,8 @@ export type Tinte =
   | 'oscuro'
   | 'pantalon'
   | 'cuero'
-  | 'trapo';
+  | 'trapo'
+  | 'lengua';
 
 export interface Shape {
   d: string;
@@ -60,6 +61,9 @@ export const PALETA = {
   pantalon: '#3f3833',
   cuero: '#5b3a22',
   trapo: '#d8c9a8',
+  // Solo para el fondo de las bocas abiertas: oscuras del todo se leian como
+  // una perilla en las caras sin barba.
+  lengua: '#a8443c',
 } as const;
 
 // Viven en los tokens compartidos; se reexportan para no romper imports.
@@ -270,6 +274,129 @@ const OJOS: Shape[] = [
   { d: circulo(7, -24, 2.4), fill: 'oscuro', stroke: false },
 ];
 
+/** El ojo izquierdo dibujado una vez y el derecho por espejo. Sin arcos (ver `scalePath`). */
+const parDeOjos = (izquierdo: Shape[]): Shape[] => [
+  ...izquierdo,
+  ...izquierdo.map((s) => ({ ...s, d: scalePath(s.d, -1) })),
+];
+
+/**
+ * Lo que pone cara a cada momento del combate. Los ojos y la boca son lo unico
+ * que cambia: cejas, barba y marcas son del personaje y se quedan, asi que con
+ * cualquier gesto se le sigue reconociendo.
+ *
+ * Todo es trazo grueso o mancha llena, como el resto de la cara: en el lienzo la
+ * cabeza mide unos 25 px en un movil y un detalle fino no se ve.
+ */
+export type Expresion =
+  'neutral' | 'parpadeo' | 'dolor' | 'alegria' | 'derrotado' | 'esfuerzo' | 'socarrona';
+
+export const EXPRESIONES: readonly Expresion[] = [
+  'neutral',
+  'parpadeo',
+  'dolor',
+  'alegria',
+  'derrotado',
+  'esfuerzo',
+  'socarrona',
+];
+
+/** Parpado caido, curvado hacia abajo: relajado, no apretado. */
+const OJOS_CERRADOS = parDeOjos([
+  { d: 'M -9.8 -23.8 Q -7 -21.6 -4.2 -23.8', fill: 'oscuro', trazo: 2.4 },
+]);
+
+/**
+ * `> <`: el golpe entra y se aprietan. Las puntas miran al centro. Son los
+ * UNICOS ojos apretados: si el esfuerzo tambien entornaba, a 25 px atacante y
+ * victima se confundian.
+ */
+const OJOS_APRETADOS = parDeOjos([
+  { d: 'M -9.6 -26.8 L -4.6 -24 L -9.6 -21.2', fill: 'oscuro', trazo: 2.4 },
+]);
+
+/** `^ ^`: la risa entera. Curvan al reves que el parpadeo, asi no se confunden. */
+const OJOS_RISUENOS = parDeOjos([
+  { d: 'M -9.8 -23 Q -7 -26.8 -4.2 -23', fill: 'oscuro', trazo: 2.4 },
+]);
+
+/** `x x`: fuera de combate. */
+const OJOS_EN_X = parDeOjos([
+  { d: 'M -9.6 -26.6 L -4.4 -21.4 M -4.4 -26.6 L -9.6 -21.4', fill: 'oscuro', trazo: 2.3 },
+]);
+
+/** Medio cerrados por arriba: la mirada de suficiencia del que se ha librado. */
+const OJOS_DE_VUELTA = parDeOjos([
+  {
+    d: 'M -9.2 -24.6 L -4.8 -24.6 Q -4.8 -21.6 -7 -21.6 Q -9.2 -21.6 -9.2 -24.6 Z',
+    fill: 'oscuro',
+    stroke: false,
+  },
+  { d: 'M -10 -24.6 L -4 -24.6', fill: 'oscuro', trazo: 2.4 },
+]);
+
+/**
+ * Cejas en V, mas cerradas que cualquiera de las del personaje: el esfuerzo se
+ * dice con ellas y con los dientes, y los ojos se quedan abiertos. La punta de
+ * dentro no baja de -28.8: mas abajo se fundia con la correa del parche, que
+ * cruza por -25.5 en ese punto.
+ */
+const CEJAS_EN_V = parDeOjos([{ d: 'M -10.8 -33.2 L -4.2 -28.8', fill: 'oscuro', trazo: 3 }]);
+
+/**
+ * La ceja del lado del rival, enarcada: la suficiencia se dice con ella. Sin
+ * ella la socarrona dependia de la media sonrisa, y con bigote no se veia y el
+ * peleon parecia dormido. Va en el ojo derecho, el que el parche no tapa.
+ */
+const CEJA_ENARCADA: Shape[] = [
+  { d: 'M 3.8 -29.6 Q 7.2 -34.6 11 -31', fill: 'oscuro', trazo: 2.6 },
+];
+
+/*
+ * Las bocas abiertas van sin contorno: con el trazo de 3 sumaban tanta mancha
+ * bajo la nariz que en las caras lampinas parecian una perilla.
+ */
+
+/** `:D`, con la fila de dientes de arriba y la lengua. */
+const BOCA_RISA: Shape[] = [
+  { d: 'M -8 -16 L 8 -16 Q 8 -5.5 0 -5.5 Q -8 -5.5 -8 -16 Z', fill: 'oscuro', stroke: false },
+  { d: 'M -6.4 -15 L 6.4 -15 L 6.1 -13 L -6.1 -13 Z', fill: 'trapo', stroke: false },
+  { d: 'M -4.6 -6.8 Q 0 -10.8 4.6 -6.8 Q 0 -6.2 -4.6 -6.8 Z', fill: 'lengua', stroke: false },
+];
+
+/** Abierta y mas ancha abajo: el quejido, con dientes arriba y lengua. */
+const BOCA_QUEJIDO: Shape[] = [
+  { d: 'M -4.4 -16 L 4.4 -16 L 7.8 -8.2 L -7.8 -8.2 Z', fill: 'oscuro', stroke: false },
+  { d: 'M -3.6 -15 L 3.6 -15 L 4.3 -13.2 L -4.3 -13.2 Z', fill: 'trapo', stroke: false },
+  { d: 'M -5.6 -9 Q 0 -12.2 5.6 -9 Z', fill: 'lengua', stroke: false },
+];
+
+/** Linea temblona: KO. */
+const BOCA_ONDA: Shape[] = [
+  { d: 'M -5.5 -12 Q -2.75 -14.6 0 -12 Q 2.75 -9.4 5.5 -12', fill: 'oscuro', trazo: 2.4 },
+];
+
+/** Dientes apretados: franja clara dentro de la boca oscura. */
+const BOCA_DIENTES: Shape[] = [
+  { d: 'M -6.6 -15.6 L 6.6 -15.6 L 6.6 -10 L -6.6 -10 Z', fill: 'oscuro', stroke: false },
+  { d: 'M -5.2 -14.2 L 5.2 -14.2 L 5.2 -11.6 L -5.2 -11.6 Z', fill: 'trapo', stroke: false },
+];
+
+/**
+ * Media sonrisa hacia el rival (+x), con el hoyuelo en la punta: el que esquiva
+ * no se asusta, se rie del que ha fallado.
+ */
+const BOCA_DE_LADO: Shape[] = [
+  { d: 'M -5 -12 Q 1 -10.4 5.6 -14.6', fill: 'oscuro', trazo: 2.6 },
+  { d: 'M 4.6 -15.8 L 6.8 -13.6', fill: 'oscuro', trazo: 2.2 },
+];
+
+/**
+ * Piel bajo el ojo derecho para las marcas que lo cruzan (el chirlo): sin ella,
+ * la cicatriz se enredaba con la `x`, el `<` o el anillo y no se leia ninguno.
+ */
+const CLARO_DEL_OJO: Shape[] = [{ d: circulo(7, -24, 3.4), fill: 'piel', stroke: false }];
+
 /**
  * Nariz: solo la linea de abajo, como las cejas y la boca. Rellena y con
  * contorno se comia la cara y se leia como un hocico.
@@ -472,26 +599,71 @@ export interface Rasgos {
  * lo que asoma bajo el ala y el sombrero va encima de todo menos de la marca
  * (una venda o un parche se llevan por debajo... salvo que el ala los tape).
  */
-export function montarCabeza(r: Rasgos, sombrero?: Shape[]): Shape[] {
+export function montarCabeza(
+  r: Rasgos,
+  sombrero?: Shape[],
+  expresion: Expresion = 'neutral',
+): Shape[] {
+  const capas = cabezaPorCapas(r, sombrero);
+  return [...capas.debajo, ...capas.caras[expresion], ...capas.encima];
+}
+
+/**
+ * La cabeza partida en tres para poder cambiarle la cara sin rehacerla: el rig
+ * de Pixi monta todas las caras de antemano y solo enciende una.
+ */
+export interface CabezaPorCapas {
+  /** Del cuello al pelo. */
+  debajo: Shape[];
+  /** Cejas (en las que las llevan), ojos y boca de cada expresion. */
+  caras: Record<Expresion, Shape[]>;
+  /** Lo que se lleva puesto: tapa la cara, sea cual sea. */
+  encima: Shape[];
+}
+
+export function cabezaPorCapas(r: Rasgos, sombrero?: Shape[]): CabezaPorCapas {
   const pelo = pickFrom(PELOS, r.hair);
   const marca = pickFrom(MARCAS, r.mark);
-  return [
-    ...CUELLO,
-    ...pelo.detras,
-    ...OREJAS,
-    ...pickFrom(CABEZAS, r.head),
-    // La barba antes que el pelo para que las patillas queden bajo la melena.
-    ...pickFrom(BARBAS, r.beard),
-    ...NARIZ,
-    ...marca.enLaPiel,
-    ...(sombrero === undefined ? pelo.encima : pelo.bajoSombrero),
-    ...pickFrom(CEJAS, r.brow),
-    ...OJOS,
-    ...pickFrom(BOCAS, r.mouth),
+  const boca = pickFrom(BOCAS, r.mouth);
+  const cejas = pickFrom(CEJAS, r.brow);
+  const claro = marca.enLaPiel.length > 0 ? CLARO_DEL_OJO : [];
+  return {
+    debajo: [
+      ...CUELLO,
+      ...pelo.detras,
+      ...OREJAS,
+      ...pickFrom(CABEZAS, r.head),
+      // La barba antes que el pelo para que las patillas queden bajo la melena.
+      ...pickFrom(BARBAS, r.beard),
+      ...NARIZ,
+      ...marca.enLaPiel,
+      ...(sombrero === undefined ? pelo.encima : pelo.bajoSombrero),
+    ],
+    // Con el gesto tranquilo la boca es la suya; los demas la cambian.
+    //
+    // Las cejas van con la cara y no con la cabeza porque algunos gestos no las
+    // llevan: en `> <`, `x x` y `^ ^` los ojos ya lo dicen todo, y las cejas del
+    // personaje les llevaban la contraria (con las caidas, el ganador sonreia
+    // con cara de enfado). El esfuerzo cambia las suyas por unas en V.
+    caras: {
+      neutral: [...claro, ...cejas, ...OJOS, ...boca],
+      parpadeo: [...claro, ...cejas, ...OJOS_CERRADOS, ...boca],
+      dolor: [...claro, ...OJOS_APRETADOS, ...BOCA_QUEJIDO],
+      alegria: [...claro, ...OJOS_RISUENOS, ...BOCA_RISA],
+      derrotado: [...claro, ...OJOS_EN_X, ...BOCA_ONDA],
+      esfuerzo: [...claro, ...CEJAS_EN_V, ...OJOS, ...BOCA_DIENTES],
+      // La ceja izquierda es la suya; la derecha, enarcada.
+      socarrona: [
+        ...claro,
+        ...cejas.slice(0, 1),
+        ...CEJA_ENARCADA,
+        ...OJOS_DE_VUELTA,
+        ...BOCA_DE_LADO,
+      ],
+    },
     // Tras los ojos, para que el parche tape el ojo y no al reves.
-    ...marca.puesta,
-    ...(sombrero ?? []),
-  ];
+    encima: [...marca.puesta, ...(sombrero ?? [])],
+  };
 }
 
 // --- Armas: una silueta por categoria, con variacion segun las stats ---
@@ -573,7 +745,9 @@ export const MASCOTAS: Record<string, Shape[]> = {
 // --- Resolucion desde la apariencia ---
 
 export interface Look {
+  /** La cabeza de `parts` lleva la cara neutral; `cabeza` trae todas. */
   parts: Partial<Record<PartName, Shape[]>>;
+  cabeza: CabezaPorCapas;
   /** El rig con los hombros de esta complexion. */
   rig: Joint[];
   colors: { piel: string; pelo: string; ropa: string; ropa2: string };
@@ -607,18 +781,21 @@ export function lookFrom(appearance: Appearance, slug: string): Look {
     return joint;
   });
 
+  const cabeza = cabezaPorCapas({
+    head: appearance.head,
+    hair: appearance.hair,
+    beard: appearance.beard ?? campoDeApariencia(slug, 'beard'),
+    brow: appearance.brow ?? campoDeApariencia(slug, 'brow'),
+    mouth: appearance.mouth ?? campoDeApariencia(slug, 'mouth'),
+    mark: appearance.mark ?? campoDeApariencia(slug, 'mark'),
+  });
+
   return {
     rig,
+    cabeza,
     parts: {
       torso: pickFrom(TORSOS, appearance.body),
-      head: montarCabeza({
-        head: appearance.head,
-        hair: appearance.hair,
-        beard: appearance.beard ?? campoDeApariencia(slug, 'beard'),
-        brow: appearance.brow ?? campoDeApariencia(slug, 'brow'),
-        mouth: appearance.mouth ?? campoDeApariencia(slug, 'mouth'),
-        mark: appearance.mark ?? campoDeApariencia(slug, 'mark'),
-      }),
+      head: [...cabeza.debajo, ...cabeza.caras.neutral, ...cabeza.encima],
       legBack: pierna('izq'),
       legFront: pierna('der'),
       armBack: BRAZO,

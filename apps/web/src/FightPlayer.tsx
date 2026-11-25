@@ -12,7 +12,7 @@ import 'pixi.js/browser';
 import { aEntero, LIENZO, type FightReplay } from '@camorra/shared';
 import { planFight, type Pie } from './fightScene.js';
 import { SIZE } from './pixiScene.js';
-import { buildTimeline } from './timeline.js';
+import { ajustarVelocidad, buildTimeline } from './timeline.js';
 import { EscenaCombate } from './EscenaCombate.js';
 
 /**
@@ -136,7 +136,7 @@ export function FightPlayer({
   }, [replay, sinMovimiento]);
 
   useEffect(() => {
-    timeline.current?.timeScale(velocidad);
+    if (timeline.current !== null) ajustarVelocidad(timeline.current, velocidad);
   }, [velocidad, listo]);
 
   const tl = timeline.current;

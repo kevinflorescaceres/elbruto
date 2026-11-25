@@ -136,7 +136,10 @@ export function LevelUpPage() {
             <Escenario
               className="subida-escena"
               alto={140}
-              figuras={[{ appearance: b.appearance, slug: b.slug, weapon: enLaMano }]}
+              // Ha subido de nivel: la sonrisa de la victoria, no la cara de espera.
+              figuras={[
+                { appearance: b.appearance, slug: b.slug, weapon: enLaMano, expresion: 'alegria' },
+              ]}
             />
           )}
           {/* El cartel cuelga sobre el escenario, como los rotulos del combate. */}

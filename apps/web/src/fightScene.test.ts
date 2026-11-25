@@ -1,6 +1,13 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute, growTo, mulberry32, simulate, type FightEvent } from '@camorra/engine';
-import { planFight, SEGUNDOS_POR_ACCION, type Move, type Pie } from './fightScene.js';
+import {
+  PARPADEO,
+  pistaDeCaras,
+  planFight,
+  SEGUNDOS_POR_ACCION,
+  type Move,
+  type Pie,
+} from './fightScene.js';
 
 /** Combates variados: con mascotas, de todos los niveles. */
 function fight(seed: number) {
@@ -258,6 +265,130 @@ group('planFight', () => {
     expect(duraciones[Math.floor(duraciones.length / 2)]).toBeGreaterThanOrEqual(
       SEGUNDOS_POR_ACCION * 0.9,
     );
+  });
+});
+
+group('pistaDeCaras', () => {
+  it('ordenada, solo para peleones, y acaba en KO para el que cae y en risa para el que gana', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const scene = planFight(fight(seed));
+      const pistas = pistaDeCaras(scene);
+      const peleones = scene.actors.filter((a) => a.appearance !== null);
+      expect([...pistas.keys()].sort()).toEqual(peleones.map((a) => a.id).sort());
+
+      for (const [id, cambios] of pistas) {
+        for (let i = 1; i < cambios.length; i++) {
+          expect(cambios[i]?.at ?? 0).toBeGreaterThanOrEqual(cambios[i - 1]?.at ?? 0);
+        }
+        const final = cambios.at(-1)?.cara;
+        const muere = scene.beats.some((b) =>
+          b.moves.some((m) => m.kind === 'face' && m.id === id && m.cara === 'derrotado'),
+        );
+        expect(final).toBe(muere ? 'derrotado' : 'alegria');
+      }
+    }
+  });
+
+  it('parpadea en los ratos tranquilos, cada pocos segundos y nunca encima de un gesto', () => {
+    const scene = planFight(fight(7));
+    for (const cambios of pistaDeCaras(scene).values()) {
+      const parpadeos = cambios.filter((c) => c.cara === 'parpadeo');
+      expect(parpadeos.length).toBeGreaterThan(0);
+      for (const p of parpadeos) {
+        const i = cambios.indexOf(p);
+        // Lo que viene justo despues de cerrar los ojos es abrirlos, a su hora.
+        expect(cambios[i + 1]).toEqual({ at: p.at + PARPADEO, cara: 'neutral' });
+        // Se cierran desde la cara tranquila o al soltar un gesto, nunca a otro parpadeo.
+        expect(cambios[i - 1]?.cara).not.toBe('parpadeo');
+      }
+      for (let i = 1; i < parpadeos.length; i++) {
+        expect((parpadeos[i]?.at ?? 0) - (parpadeos[i - 1]?.at ?? 0)).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it('el parpadeo deja aire antes de un gesto: nada de cerrar, abrir y > < seguidos', () => {
+    for (let seed = 0; seed < 60; seed++) {
+      for (const cambios of pistaDeCaras(planFight(fight(seed))).values()) {
+        for (const [i, c] of cambios.entries()) {
+          if (c.cara !== 'parpadeo') continue;
+          const gesto = cambios
+            .slice(i + 2)
+            .find((d) => d.cara !== 'neutral' && d.cara !== 'parpadeo');
+          if (gesto !== undefined)
+            expect(gesto.at - (c.at + PARPADEO)).toBeGreaterThanOrEqual(0.35 - 1e-9);
+        }
+      }
+    }
+  });
+
+  it('la esquiva se lleva media sonrisa, y el ganador rie en el mismo instante en que cae el otro', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const scene = planFight(fight(seed));
+      const caras = scene.beats.flatMap((b) =>
+        b.moves.flatMap((m) => (m.kind === 'face' ? [{ at: b.at, m }] : [])),
+      );
+      const esquivas = scene.beats.filter((b) =>
+        b.moves.some((m) => m.kind === 'pose' && m.anim === 'evade'),
+      );
+      for (const b of esquivas) {
+        expect(b.moves.some((m) => m.kind === 'face' && m.cara === 'socarrona')).toBe(true);
+      }
+      // La ultima caida es la que decide; antes pueden caer mascotas.
+      const ko = [...caras].reverse().find((c) => c.m.cara === 'derrotado');
+      const risa = caras.find((c) => c.m.cara === 'alegria');
+      if (ko !== undefined && risa !== undefined) expect(risa.at).toBe(ko.at);
+    }
+  });
+
+  it('a x4 los gestos y los parpadeos duran lo mismo en tiempo real', () => {
+    const scene = planFight(fight(7));
+    for (const cambios of pistaDeCaras(scene, { parpadeo: true, escala: 4 }).values()) {
+      const p = cambios.find((c) => c.cara === 'parpadeo');
+      if (p === undefined) continue;
+      const i = cambios.indexOf(p);
+      expect((cambios[i + 1]?.at ?? 0) - p.at).toBeCloseTo(PARPADEO * 4, 9);
+    }
+  });
+
+  it('entre dos gestos nunca asoma un destello de cara tranquila de menos de 0,3 s reales', () => {
+    for (const escala of [1, 2, 4]) {
+      for (let seed = 0; seed < 40; seed++) {
+        for (const cambios of pistaDeCaras(planFight(fight(seed)), {
+          parpadeo: true,
+          escala,
+        }).values()) {
+          for (let i = 1; i < cambios.length - 1; i++) {
+            const c = cambios[i];
+            const antes = cambios[i - 1];
+            const despues = cambios[i + 1];
+            if (c?.cara !== 'neutral' || antes === undefined || despues === undefined) continue;
+            if (antes.cara === 'parpadeo' || despues.cara === 'parpadeo') continue;
+            expect(despues.at - c.at).toBeGreaterThanOrEqual(0.3 * escala - 1e-9);
+          }
+        }
+      }
+    }
+  });
+
+  it('a x2 los ojos siguen cerrandose de vez en cuando', () => {
+    const scene = planFight(fight(7));
+    for (const cambios of pistaDeCaras(scene, { parpadeo: true, escala: 2 }).values()) {
+      expect(cambios.filter((c) => c.cara === 'parpadeo').length).toBeGreaterThan(1);
+    }
+  });
+
+  it('con menos movimiento no parpadea, pero los gestos se quedan', () => {
+    const scene = planFight(fight(7));
+    for (const cambios of pistaDeCaras(scene, { parpadeo: false }).values()) {
+      expect(cambios.some((c) => c.cara === 'parpadeo')).toBe(false);
+      expect(cambios.some((c) => c.cara !== 'neutral')).toBe(true);
+    }
+  });
+
+  it('el mismo combate parpadea siempre igual', () => {
+    const scene = planFight(fight(11));
+    expect([...pistaDeCaras(scene)]).toEqual([...pistaDeCaras(planFight(fight(11)))]);
   });
 });
 

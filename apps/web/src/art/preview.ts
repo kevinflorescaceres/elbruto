@@ -11,6 +11,7 @@ import {
   MASCOTAS,
   PALETA,
   lookFrom,
+  EXPRESIONES,
   montarCabeza,
   type Rasgos,
   PUNO,
@@ -219,6 +220,48 @@ writeFileSync(
       .join('') +
     '</svg>',
 );
+
+const colorHojaCaras: Look['colors'] = {
+  piel: PALETA.piel[1],
+  pelo: PALETA.pelo[2],
+  ropa: PALETA.ropa[0],
+  ropa2: PALETA.ropa[1],
+};
+
+// 5a. Expresiones: cada gesto sobre varias caras, con parche y bigote incluidos,
+// que son lo que mas se pisa con los ojos y la boca.
+{
+  const muestras: { rasgos: Rasgos; label: string }[] = [
+    { rasgos: { head: 0, hair: 0, beard: 0, brow: 0, mouth: 0, mark: 0 }, label: 'lisa' },
+    { rasgos: { head: 1, hair: 3, beard: 2, brow: 1, mouth: 3, mark: 4 }, label: 'parche' },
+    { rasgos: { head: 2, hair: 1, beard: 5, brow: 2, mouth: 1, mark: 5 }, label: 'barba' },
+    { rasgos: { head: 3, hair: 2, beard: 4, brow: 3, mouth: 2, mark: 3 }, label: 'chirlo' },
+  ];
+  const ancho = 110;
+  const alto = 130;
+  const celdas = muestras.flatMap(({ rasgos, label }) =>
+    EXPRESIONES.map((e) => ({
+      label: `${label} ${e}`,
+      body: `<g transform="translate(0 40) scale(1.6)">${shapesToSvg(montarCabeza(rasgos, undefined, e), colorHojaCaras)}</g>`,
+    })),
+  );
+  const porFila = EXPRESIONES.length;
+  writeFileSync(
+    `${salida}/expresiones.svg`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${porFila * ancho}" height="${muestras.length * alto}" viewBox="0 0 ${porFila * ancho} ${muestras.length * alto}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
+      celdas
+        .map((c, i) => {
+          const cx = (i % porFila) * ancho + ancho / 2;
+          const cy = Math.floor(i / porFila) * alto + 75;
+          return (
+            `<g transform="translate(${cx} ${cy})">${c.body}</g>` +
+            `<text x="${cx}" y="${cy + 50}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`
+          );
+        })
+        .join('') +
+      '</svg>',
+  );
+}
 
 // 5b. Cabezas: cada pelo sobre las cuatro mandibulas, y con dos sombreros de
 // prueba. Los sombreros son un galibo, no arte del juego: comprueban que la

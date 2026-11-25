@@ -1,6 +1,8 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute } from '@camorra/engine';
 import {
+  cabezaPorCapas,
+  EXPRESIONES,
   lookFrom,
   PALETA,
   RIG,
@@ -220,5 +222,47 @@ group('scalePath', () => {
     expect(() => weaponShapes('rapida', 3)).not.toThrow();
     const conArco: Shape[] = [{ d: 'M 0 0 a 5 5 0 1 0 0.1 0 Z', fill: 'metal' }];
     expect(() => scaleForTest(conArco[0]?.d ?? '')).toThrow(/arcos/);
+  });
+});
+
+group('expresiones', () => {
+  const rasgos = { head: 1, hair: 3, beard: 2, brow: 1, mouth: 3, mark: 4 };
+
+  it('cada expresion tiene una cara propia, y la neutral es la de siempre', () => {
+    const { debajo, caras, encima } = cabezaPorCapas(rasgos);
+    const vistas = new Set(EXPRESIONES.map((e) => JSON.stringify(caras[e])));
+    expect(vistas.size).toBe(EXPRESIONES.length);
+    for (const e of EXPRESIONES) expect(caras[e].length).toBeGreaterThan(0);
+
+    const peleon = createBrute('Tuerto del Arrabal');
+    const look = lookFrom(peleon.appearance, peleon.slug);
+    expect(look.parts.head).toEqual([
+      ...look.cabeza.debajo,
+      ...look.cabeza.caras.neutral,
+      ...look.cabeza.encima,
+    ]);
+    // El parche va encima de la cara: tapa el ojo con cualquier gesto.
+    expect(encima.length).toBeGreaterThan(0);
+    expect(debajo.length).toBeGreaterThan(0);
+  });
+
+  it('parpadear solo cierra los ojos: la boca es la del personaje', () => {
+    const { caras } = cabezaPorCapas(rasgos);
+    const sinOjos = (shapes: Shape[]) => shapes.slice(-2);
+    expect(sinOjos(caras.parpadeo)).toEqual(sinOjos(caras.neutral));
+  });
+
+  it('sin las cejas del personaje en los gestos que las contradicen; con las suyas en los demas', () => {
+    const { caras } = cabezaPorCapas(rasgos);
+    // Las dos primeras formas de la cara tranquila son las cejas (ceja 1).
+    const cejas = JSON.stringify(caras.neutral.slice(0, 2));
+    const lleva = (shapes: Shape[]) => JSON.stringify(shapes.slice(0, 2)) === cejas;
+    for (const e of ['dolor', 'derrotado', 'alegria', 'esfuerzo'] as const) {
+      expect(lleva(caras[e])).toBe(false);
+    }
+    for (const e of ['parpadeo'] as const) expect(lleva(caras[e])).toBe(true);
+    // La socarrona conserva la izquierda y enarca la derecha.
+    expect(JSON.stringify(caras.socarrona[0])).toBe(JSON.stringify(caras.neutral[0]));
+    expect(JSON.stringify(caras.socarrona[1])).not.toBe(JSON.stringify(caras.neutral[1]));
   });
 });

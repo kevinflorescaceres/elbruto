@@ -8,12 +8,14 @@ import { Container, Graphics } from 'pixi.js';
 import type { Appearance } from '@camorra/engine';
 import {
   colorOf,
+  EXPRESIONES,
   GROSOR,
   lookFrom,
   PUNO,
   TRAZO,
   weaponShapes,
   Z_ORDER,
+  type Expresion,
   type Look,
   type PartName,
   type Shape,
@@ -44,6 +46,12 @@ export interface Rig {
   colors: Look['colors'];
   /** Reposo de cada articulacion: las animaciones suman sus x/y sobre esto. */
   base: Map<PartName, { x: number; y: number }>;
+  /**
+   * Una Graphics por expresion, todas ya montadas en la cabeza y solo una a la
+   * vista (`alpha` 1). Cambiar de cara es apagar una y encender otra: crearlas
+   * sobre la marcha dejaria la escena a medias al saltar o repetir.
+   */
+  caras: Map<Expresion, Graphics>;
 }
 
 export function buildRig(
@@ -53,6 +61,7 @@ export function buildRig(
 ): Rig {
   const look = lookFrom(appearance, slug);
   const parts = new Map<PartName, Container>();
+  const caras = new Map<Expresion, Graphics>();
   const root = new Container();
 
   // Z_ORDER da la profundidad, y la forma propia de una parte usa la suya: asi
@@ -71,8 +80,26 @@ export function buildRig(
     node.zIndex = depth(spec.name);
     node.sortableChildren = true;
 
-    const shapes = look.parts[spec.name];
-    if (shapes !== undefined) {
+    // La cabeza va en capas para poder cambiarle la cara (ver `cabezaPorCapas`).
+    const shapes = spec.name === 'head' ? undefined : look.parts[spec.name];
+    if (spec.name === 'head') {
+      const capas = [
+        drawShapes(look.cabeza.debajo, look.colors),
+        ...EXPRESIONES.map((e) => {
+          const cara = drawShapes(look.cabeza.caras[e], look.colors);
+          cara.alpha = e === 'neutral' ? 1 : 0;
+          caras.set(e, cara);
+          return cara;
+        }),
+        drawShapes(look.cabeza.encima, look.colors),
+      ];
+      // Todas a la misma profundidad: con `sortableChildren` el orden de alta
+      // decide, y es el de pintado.
+      for (const capa of capas) {
+        capa.zIndex = depth(spec.name);
+        node.addChild(capa);
+      }
+    } else if (shapes !== undefined) {
       const graphics = node.addChild(drawShapes(shapes, look.colors));
       graphics.zIndex = depth(spec.name);
     }
@@ -94,7 +121,7 @@ export function buildRig(
   parts.get('forearmFront')?.addChild(hand);
 
   const base = new Map(look.rig.map((spec) => [spec.name, { x: spec.at[0], y: spec.at[1] }]));
-  const rig: Rig = { root, parts, hand, colors: look.colors, base };
+  const rig: Rig = { root, parts, hand, colors: look.colors, base, caras };
   setWeapon(rig, weapon);
   return rig;
 }

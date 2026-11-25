@@ -13,6 +13,7 @@ import {
   TRAZO,
   weaponShapes,
   Z_ORDER,
+  type Expresion,
   type Joint,
   type Look,
   type PartName,
@@ -45,6 +46,40 @@ function Piezas({ shapes, colors }: { shapes: Shape[]; colors: Look['colors'] })
   );
 }
 
+/**
+ * La cabeza en sus capas. Con el gesto neutral lleva dos caras, ojos abiertos y
+ * cerrados, que la animacion de `styles.css` alterna: el parpadeo es solo eso.
+ */
+function Cabeza({
+  look,
+  expresion,
+  ritmo,
+}: {
+  look: Look;
+  expresion: Expresion;
+  ritmo: React.CSSProperties;
+}) {
+  const { debajo, caras, encima } = look.cabeza;
+  return (
+    <>
+      <Piezas shapes={debajo} colors={look.colors} />
+      {expresion === 'neutral' ? (
+        <>
+          <g className="ojos-abiertos" style={ritmo}>
+            <Piezas shapes={caras.neutral} colors={look.colors} />
+          </g>
+          <g className="ojos-cerrados" style={ritmo}>
+            <Piezas shapes={caras.parpadeo} colors={look.colors} />
+          </g>
+        </>
+      ) : (
+        <Piezas shapes={caras[expresion]} colors={look.colors} />
+      )}
+      <Piezas shapes={encima} colors={look.colors} />
+    </>
+  );
+}
+
 interface Props {
   appearance: Appearance;
   /** Necesario para derivar los campos que no esten guardados (§1.3). */
@@ -52,6 +87,25 @@ interface Props {
   /** Categoria y alcance del arma en la mano. Sin arma, los punos. */
   weapon?: { category: WeaponCategory; reach: number };
   height?: number;
+  /**
+   * El gesto. Con `neutral` (por defecto) parpadea de vez en cuando, salvo con
+   * menos movimiento (lo corta `styles.css`).
+   */
+  expresion?: Expresion;
+}
+
+/**
+ * Ritmo del parpadeo segun el nombre: si todos parpadearan a la vez, una fila
+ * de peleones en la arena se veria como un solo muneco repetido.
+ */
+function ritmoDeParpadeo(slug: string): React.CSSProperties {
+  let h = 0;
+  for (const c of slug) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const duracion = 4.2 + (h % 13) / 10;
+  return {
+    animationDuration: `${duracion}s`,
+    animationDelay: `-${((h >>> 4) % 40) / 10}s`,
+  };
 }
 
 /**
@@ -66,7 +120,7 @@ export function armaVisible(
   return arma === undefined ? undefined : { category: arma.category, reach: arma.reach };
 }
 
-export function Fighter({ appearance, slug, weapon, height = 150 }: Props) {
+export function Fighter({ appearance, slug, weapon, height = 150, expresion = 'neutral' }: Props) {
   const look = lookFrom(appearance, slug);
   const hijos = new Map<PartName | null, Joint[]>();
   for (const part of look.rig) {
@@ -90,7 +144,11 @@ export function Fighter({ appearance, slug, weapon, height = 150 }: Props) {
 
     return (
       <g key={name} transform={`translate(${x} ${y}) rotate(${((pose.rot ?? 0) * 180) / Math.PI})`}>
-        {shapes !== undefined && <Piezas shapes={shapes} colors={look.colors} />}
+        {name === 'head' ? (
+          <Cabeza look={look} expresion={expresion} ritmo={ritmoDeParpadeo(slug)} />
+        ) : (
+          shapes !== undefined && <Piezas shapes={shapes} colors={look.colors} />
+        )}
         {name === 'forearmFront' && (
           <g transform="translate(0 16) rotate(-20)">
             <Piezas shapes={arma} colors={look.colors} />

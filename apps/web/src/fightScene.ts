@@ -10,6 +10,7 @@
  */
 import { getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
 import type { FightReplay } from '@camorra/shared';
+import type { Expresion } from './art/parts.js';
 import type { AnimName } from './art/poses.js';
 import { escenarioDe } from './art/escenarios.js';
 import { cuentaComoPrevio, describe } from './fightLines.js';
@@ -69,6 +70,11 @@ export type Move =
   | { kind: 'pulse'; id: string }
   /** Se apaga al morir. */
   | { kind: 'fall'; id: string }
+  /**
+   * Cambia la cara mientras dura el beat; con `queda`, hasta el final. Las
+   * mascotas no tienen cara y la ignoran. La pista entera la arma `pistaDeCaras`.
+   */
+  | { kind: 'face'; id: string; cara: Expresion; queda?: boolean }
   /**
    * Cartel de apertura o de cierre. `queda` lo deja fijo en vez de
    * desvanecerlo: el de cierre dice quien gano y es el remate de la pelea, asi
@@ -408,6 +414,7 @@ export function planFight(replay: Replayable): Scene {
         push(event, [
           { kind: 'lunge', id: event.id, toward: event.target, weapon: event.weapon },
           { kind: 'pose', id: event.id, anim: attackAnim(event.weapon) },
+          { kind: 'face', id: event.id, cara: 'esfuerzo' },
         ]);
         break;
 
@@ -421,6 +428,7 @@ export function planFight(replay: Replayable): Scene {
             weapon: byId.get(event.id)?.weapon ?? 'punos',
           },
           { kind: 'pose', id: event.id, anim: attackAnim(byId.get(event.id)?.weapon ?? 'punos') },
+          { kind: 'face', id: event.id, cara: 'esfuerzo' },
         ]);
         break;
 
@@ -428,6 +436,7 @@ export function planFight(replay: Replayable): Scene {
         push(event, [
           { kind: 'pose', id: event.target, anim: 'hit' },
           { kind: 'impact', id: event.target, fuerza: 0, parada: false },
+          { kind: 'face', id: event.target, cara: 'dolor' },
         ]);
         break;
 
@@ -436,6 +445,8 @@ export function planFight(replay: Replayable): Scene {
       case 'evade':
         push(event, [
           { kind: 'pose', id: event.id, anim: 'evade' },
+          // El que esquiva se ha salido con la suya: media sonrisa.
+          { kind: 'face', id: event.id, cara: 'socarrona' },
           { kind: 'float', id: event.id, text: '¡Esquiva!', color: COLOR.esquiva },
         ]);
         break;
@@ -455,6 +466,7 @@ export function planFight(replay: Replayable): Scene {
           // Sin destello: cualquier tinte oscurece (Pixi multiplica) y una
           // parada que oscurece al que para se lee como un golpe encajado.
           { kind: 'pose', id: event.id, anim: 'block' },
+          { kind: 'face', id: event.id, cara: 'esfuerzo' },
           { kind: 'impact', id: event.id, fuerza: 0, parada: true },
           { kind: 'float', id: event.id, text: '¡Parada!', color: COLOR.parada },
         ]);
@@ -502,6 +514,7 @@ export function planFight(replay: Replayable): Scene {
       case 'throwWeapon':
         push(event, [
           { kind: 'pose', id: event.id, anim: 'throw' },
+          { kind: 'face', id: event.id, cara: 'esfuerzo' },
           { kind: 'projectile', from: event.id, to: event.target, weapon: event.weapon },
           { kind: 'weapon', id: event.id, weapon: 'punos' },
         ]);
@@ -525,13 +538,20 @@ export function planFight(replay: Replayable): Scene {
         push(event, [
           { kind: 'pose', id: event.id, anim: 'death' },
           { kind: 'fall', id: event.id },
+          { kind: 'face', id: event.id, cara: 'derrotado', queda: true },
         ]);
         break;
 
       case 'end': {
         const ganador = byId.get(event.winner)?.name ?? event.winner;
+        // La risa va con la caida del otro, no con el cartel: esperar al cierre
+        // dejaba al ganador con cara de nada casi un segundo justo en el remate.
+        const risa: Move = { kind: 'face', id: event.winner, cara: 'alegria', queda: true };
+        const caida = [...crudos].reverse().find((c) => c.type === 'death');
+        if (caida !== undefined) caida.moves.push(risa);
         push(event, [
           { kind: 'pose', id: event.winner, anim: 'victory' },
+          ...(caida === undefined ? [risa] : []),
           { kind: 'announce', text: `Gana ${ganador}`, grande: false, queda: true },
         ]);
         break;
@@ -556,4 +576,136 @@ export function planFight(replay: Replayable): Scene {
 
   const { beats, duration } = repartirTiempo(crudos);
   return { actors, beats, duration, escenario: escenarioDe(replay.seed) };
+}
+
+/** Un cambio de cara en la pista de un peleon. */
+export interface CambioDeCara {
+  at: number;
+  cara: Expresion;
+}
+
+/**
+ * Lo minimo que dura un gesto. En un combo el beat del golpe es corto, y un
+ * `> <` de 0,1 s no llega a verse.
+ */
+const GESTO_MINIMO = 0.35 * TIME_SCALE;
+/** Lo que dura un parpadeo: lo justo para notarlo sin que parezca un guino. */
+export const PARPADEO = 0.13;
+/** Entre parpadeo y parpadeo, de ESPERA_MIN a ESPERA_MIN + ESPERA_VARIA segundos. */
+const ESPERA_MIN = 2.2;
+const ESPERA_VARIA = 2.4;
+/**
+ * Aire antes de un gesto: cerrar, abrir y `> <` en menos de medio segundo se
+ * veia como un chispazo, no como dos cosas. Va en tiempo de la escena y no
+ * crece con la velocidad: si creciera, a x2 se comia todos los ratos
+ * tranquilos y los ojos no volvian a cerrarse.
+ */
+const AIRE_ANTES_DE_GESTO = 0.35;
+/**
+ * Un parpadeo que toca poco despues de soltar un gesto sale del propio gesto
+ * (gesto, ojos cerrados, neutral) en vez de dejar antes un respiro neutral:
+ * gesto, neutral, cerrar y abrir en 0,85 s era un tic.
+ */
+const PEGADO_AL_GESTO = 0.6;
+/**
+ * Hueco minimo de cara tranquila entre dos gestos, en tiempo real. Por debajo
+ * el gesto anterior se alarga hasta el siguiente: a x2 asomaban destellos de
+ * neutral de 0,2 s que se leian como parpadeos rotos.
+ */
+const PUENTE = 0.3;
+
+/**
+ * La cara de cada peleon a lo largo del combate, como lista de cambios
+ * ordenada. Empieza en `neutral` sin decirlo.
+ *
+ * Cada gesto dura su beat (o `GESTO_MINIMO`), y el siguiente lo corta si llega
+ * antes. Los de `queda` (KO y victoria) ya no se cambian. Con `parpadeo`, en
+ * los ratos tranquilos se cierran los ojos de vez en cuando: a destiempo entre
+ * los dos peleones, y siempre igual para el mismo combate. Un parpadeo que no
+ * cabe en su rato tranquilo no se pierde: espera al siguiente.
+ *
+ * `escala` es la velocidad de reproduccion. Los tiempos de la cara se
+ * multiplican por ella para que, vistos a x2 o x4, un gesto y un parpadeo
+ * duren lo mismo en el reloj de quien mira.
+ */
+export function pistaDeCaras(
+  scene: Scene,
+  opciones: { parpadeo: boolean; escala?: number } = { parpadeo: true },
+): Map<string, CambioDeCara[]> {
+  const pistas = new Map<string, CambioDeCara[]>();
+  const e = opciones.escala ?? 1;
+
+  for (const actor of scene.actors) {
+    if (actor.appearance === null) continue;
+
+    // Tramos de gesto, en orden y sin solaparse.
+    const tramos: { desde: number; hasta: number; cara: Expresion }[] = [];
+    for (const beat of scene.beats) {
+      for (const move of beat.moves) {
+        if (move.kind !== 'face' || move.id !== actor.id) continue;
+        const ultimo = tramos.at(-1);
+        if (ultimo !== undefined && ultimo.hasta === Infinity) continue;
+        if (ultimo !== undefined && ultimo.hasta > beat.at) ultimo.hasta = beat.at;
+        if (ultimo !== undefined && beat.at - ultimo.hasta < PUENTE * e) ultimo.hasta = beat.at;
+        tramos.push({
+          desde: beat.at,
+          hasta:
+            move.queda === true ? Infinity : beat.at + Math.max(beat.duration, GESTO_MINIMO * e),
+          cara: move.cara,
+        });
+      }
+    }
+
+    const cambios: CambioDeCara[] = [];
+    let semilla = semillaDe(actor.id) ^ scene.escenario;
+    let proximo = (1 + aleatorio(semilla) * ESPERA_VARIA) * e;
+    // El rato tranquilo de `desde` a `hasta`, con sus parpadeos. `alFinal`: no
+    // viene ningun gesto detras, asi que no hace falta dejarle aire.
+    const tranquilo = (desde: number, hasta: number, alFinal: boolean): void => {
+      if (!opciones.parpadeo) return;
+      const tope = alFinal ? hasta : hasta - AIRE_ANTES_DE_GESTO;
+      for (;;) {
+        // Pendiente o a punto de tocar al soltar un gesto: sale de el.
+        const at = desde > 0 && proximo < desde + PEGADO_AL_GESTO * e ? desde : proximo;
+        if (at + PARPADEO * e > tope) return;
+        // Si justo ahi se volvia a neutral, ese paso sobra: del gesto a cerrar.
+        const previo = cambios.at(-1);
+        if (previo !== undefined && previo.at === at && previo.cara === 'neutral') cambios.pop();
+        cambios.push({ at, cara: 'parpadeo' }, { at: at + PARPADEO * e, cara: 'neutral' });
+        semilla = siguiente(semilla);
+        proximo = at + (ESPERA_MIN + aleatorio(semilla) * ESPERA_VARIA) * e;
+      }
+    };
+
+    let libreDesde = 0;
+    for (const [i, tramo] of tramos.entries()) {
+      tranquilo(libreDesde, tramo.desde, false);
+      cambios.push({ at: tramo.desde, cara: tramo.cara });
+      libreDesde = tramo.hasta;
+      // Si el siguiente gesto empieza justo al acabar este, se pasa sin volver a neutral.
+      if (tramo.hasta !== Infinity && (tramos[i + 1]?.desde ?? Infinity) > tramo.hasta) {
+        cambios.push({ at: tramo.hasta, cara: 'neutral' });
+      }
+    }
+    if (libreDesde !== Infinity) tranquilo(libreDesde, scene.duration, true);
+
+    pistas.set(actor.id, cambios);
+  }
+  return pistas;
+}
+
+/** Azar sin `Math.random`: el mismo combate parpadea siempre igual. */
+function semillaDe(texto: string): number {
+  let h = 2166136261;
+  for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+
+function siguiente(semilla: number): number {
+  return (Math.imul(semilla, 1664525) + 1013904223) >>> 0;
+}
+
+/** De 0 a 1. */
+function aleatorio(semilla: number): number {
+  return siguiente(semilla) / 2 ** 32;
 }

@@ -1818,3 +1818,49 @@ a.boton {
   white-space: nowrap;
   border: 0;
 }
+
+/*
+ * Parpadeo de los retratos: dos caras superpuestas, ojos abiertos y cerrados, y
+ * un 3% del ciclo con los ojos cerrados: unos 0,15 s con los 4,2-5,4 s que pone
+ * `Fighter.tsx` (los 4,6 s de aqui son solo el valor por defecto). Sin interpolar: un
+ * parpado a medias se ve como un fundido raro. El ritmo y el desfase de cada
+ * peleon los pone `Fighter.tsx`. Con menos movimiento no parpadean: es un
+ * bucle de adorno, y se quedan con los ojos abiertos.
+ */
+.ojos-cerrados {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ojos-abiertos {
+    animation: ojos-abiertos 4.6s steps(1, end) infinite;
+  }
+
+  .ojos-cerrados {
+    animation: ojos-cerrados 4.6s steps(1, end) infinite;
+  }
+
+  @keyframes ojos-abiertos {
+    0%,
+    97% {
+      opacity: 1;
+    }
+
+    97.01%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ojos-cerrados {
+    0%,
+    97% {
+      opacity: 0;
+    }
+
+    97.01%,
+    100% {
+      opacity: 1;
+    }
+  }
+}

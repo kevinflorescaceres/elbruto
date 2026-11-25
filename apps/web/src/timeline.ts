@@ -8,7 +8,7 @@ import { gsap } from 'gsap';
 import { Container } from 'pixi.js';
 import type { PartName } from './art/parts.js';
 import { animacion, type AnimName } from './art/poses.js';
-import { TIME_SCALE, type Move, type Pie, type Scene } from './fightScene.js';
+import { pistaDeCaras, TIME_SCALE, type Move, type Pie, type Scene } from './fightScene.js';
 import {
   changeWeapon,
   drawActor,
@@ -433,6 +433,11 @@ function addMove(
       else tl.to(root, { x: homeX, duration, ease: 'power1.out' }, at);
       break;
 
+    // Las caras van por su propia pista (ver `ponerCaras`): un gesto suelto no
+    // sabe si el siguiente lo corta.
+    case 'face':
+      break;
+
     case 'fall':
       // 0.4 lo dejaba en una mancha sobre el suelo: se ve que esta fuera de
       // combate, pero se sigue reconociendo a quien perdio.
@@ -441,6 +446,52 @@ function addMove(
       if (!menosMovimiento && view.rig !== null) temblor(tl, mundo, at + duration * 0.78, 10);
       break;
   }
+}
+
+/**
+ * Cada cambio de cara apaga la que hubiera y enciende la nueva. Con `set`, no
+ * con llamadas: GSAP guarda lo que habia y al repetir o saltar hacia atras lo
+ * deja como estaba. Con menos movimiento no parpadean, que es un bucle de
+ * adorno; los gestos se quedan, porque cuentan lo que pasa.
+ *
+ * Van en una linea de tiempo aparte, hija de la principal, porque dependen de
+ * la velocidad (ver `pistaDeCaras`): al cambiarla se tira y se monta otra.
+ */
+function lineaDeCaras(
+  views: Map<string, ActorView>,
+  scene: Scene,
+  menosMovimiento: boolean,
+  velocidad: number,
+): gsap.core.Timeline {
+  const linea = gsap.timeline();
+  const pistas = pistaDeCaras(scene, { parpadeo: !menosMovimiento, escala: velocidad });
+  for (const [id, cambios] of pistas) {
+    const caras = views.get(id)?.rig?.caras;
+    if (caras === undefined) continue;
+    // Se parte de la neutral: es lo que los `set` apuntan como estado de antes.
+    for (const [nombre, cara] of caras) cara.alpha = nombre === 'neutral' ? 1 : 0;
+    let actual = caras.get('neutral');
+    for (const { at, cara } of cambios) {
+      const nueva = caras.get(cara);
+      if (nueva === undefined || nueva === actual) continue;
+      if (actual !== undefined) linea.set(actual, { alpha: 0 }, at);
+      linea.set(nueva, { alpha: 1 }, at);
+      actual = nueva;
+    }
+  }
+  return linea;
+}
+
+/** Como rehacer las caras de cada linea de tiempo a otra velocidad. */
+const rehacerCaras = new WeakMap<gsap.core.Timeline, (velocidad: number) => void>();
+
+/**
+ * Cambia la velocidad del combate. Usar esto y no `timeScale` a pelo: las
+ * caras tienen que rehacerse para seguir durando lo mismo en tiempo real.
+ */
+export function ajustarVelocidad(tl: gsap.core.Timeline, velocidad: number): void {
+  tl.timeScale(velocidad);
+  rehacerCaras.get(tl)?.(velocidad);
 }
 
 /** Las barras del marcador, que vive en el DOM y no en el lienzo. */
@@ -490,6 +541,20 @@ export function buildTimeline(
     if (pie !== null) timeline.call(() => onPie(pie), undefined, beat.at);
     for (const move of beat.moves) addMove(timeline, views, escena, move, beat.at, beat.duration);
   }
+  let caras = lineaDeCaras(views, scene, escena.menosMovimiento, 1);
+  timeline.add(caras, 0);
+  let velocidadDeCaras = 1;
+  rehacerCaras.set(timeline, (velocidad) => {
+    if (velocidad === velocidadDeCaras) return;
+    velocidadDeCaras = velocidad;
+    timeline.remove(caras);
+    caras.kill();
+    caras = lineaDeCaras(views, scene, escena.menosMovimiento, velocidad);
+    timeline.add(caras, 0);
+    // Pausada o acabada, la principal no vuelve a pintar sola: se lleva la
+    // nueva al punto donde va, o el ganador perderia la risa al cambiar.
+    caras.totalTime(Math.min(timeline.time(), caras.duration()));
+  });
 
   return timeline;
 }

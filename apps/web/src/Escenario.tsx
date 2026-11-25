@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import { createBrute, type Appearance } from '@camorra/engine';
 import { Fighter } from './art/Fighter.js';
-import type { WeaponCategory } from './art/parts.js';
+import type { Expresion, WeaponCategory } from './art/parts.js';
 
 export interface Figura {
   appearance: Appearance;
@@ -15,6 +15,7 @@ export interface Figura {
   weapon?: { category: WeaponCategory; reach: number };
   /** Sin nombre no hay cartel. */
   nombre?: string;
+  expresion?: Expresion;
 }
 
 export function Escenario({
@@ -33,7 +34,13 @@ export function Escenario({
         // El segundo mira hacia el primero. Solo la figura: el cartel se lee igual.
         <figure key={f.slug} className={i === 1 ? 'rival' : undefined}>
           <div className="escenario-figura">
-            <Fighter appearance={f.appearance} slug={f.slug} weapon={f.weapon} height={alto} />
+            <Fighter
+              appearance={f.appearance}
+              slug={f.slug}
+              weapon={f.weapon}
+              height={alto}
+              expresion={f.expresion}
+            />
           </div>
           {f.nombre !== undefined && <figcaption className="cartel">{f.nombre}</figcaption>}
         </figure>
