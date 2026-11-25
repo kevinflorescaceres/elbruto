@@ -610,6 +610,11 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
     ],
   },
 
+  /**
+   * Los dos brazos arriba en V. El de atras sube hacia ATRAS (rot positiva): si
+   * subia hacia delante como el otro, quedaba entero detras del torso y la
+   * cabeza, y solo se veia un brazo.
+   */
   victory: {
     frames: [
       { t: 0, parts: { armFront: { rot: 0 }, armBack: { rot: 0 }, hips: { y: 0 } } },
@@ -617,19 +622,19 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         t: 0.3,
         parts: {
           armFront: { rot: -2.6 },
-          armBack: { rot: -2.4 },
+          armBack: { rot: 2.4 },
           hips: { y: -22 },
           torso: { rot: -0.1 },
         },
       },
       { t: 0.55, parts: { hips: { y: 0 } } },
-      { t: 0.8, parts: { hips: { y: -14 }, armFront: { rot: -2.8 }, armBack: { rot: -2.6 } } },
+      { t: 0.8, parts: { hips: { y: -14 }, armFront: { rot: -2.8 }, armBack: { rot: 2.6 } } },
       {
         t: 1,
         parts: {
           hips: { y: 0 },
           armFront: { rot: -2.5 },
-          armBack: { rot: -2.3 },
+          armBack: { rot: 2.3 },
           torso: { rot: 0 },
         },
       },
