@@ -8,7 +8,7 @@ import { appearanceSchema, fightEventSchema } from './fight.js';
  * servidor y el formulario de la web. Cambiarlos aqui los cambia en los tres.
  */
 export const NAME_MIN = 3;
-export const NAME_MAX = 30;
+export const NAME_MAX = 24;
 
 /** Letras, numeros, espacio, guion y guion bajo. */
 export const NAME_PATTERN = new RegExp(`^[\\p{L}\\p{N} _-]{${NAME_MIN},${NAME_MAX}}$`, 'u');
