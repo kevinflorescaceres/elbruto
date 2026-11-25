@@ -7,6 +7,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Appearance } from '@camorra/engine';
 import {
+  brazoAtrasDelante,
   colorOf,
   EXPRESIONES,
   GROSOR,
@@ -15,6 +16,7 @@ import {
   TRAZO,
   weaponShapes,
   profundidad,
+  Z_DELANTE,
   Z_ORDER,
   type Expresion,
   type Look,
@@ -117,7 +119,24 @@ export function buildRig(
   const base = new Map(look.rig.map((spec) => [spec.name, { x: spec.at[0], y: spec.at[1] }]));
   const rig: Rig = { root, parts, hand, colors: look.colors, base, caras };
   setWeapon(rig, weapon);
+  root.onRender = () => ordenarBrazoAtras(rig);
   return rig;
+}
+
+/**
+ * Pone el brazo de atras delante o detras del torso segun la pose que tenga
+ * en este fotograma (ver `brazoAtrasDelante`). Corre antes de cada pintado,
+ * asi que da igual que animacion, o cuantas a la vez, movieron el brazo.
+ */
+export function ordenarBrazoAtras(rig: Rig): void {
+  const brazo = rig.parts.get('armBack');
+  const antebrazo = rig.parts.get('forearmBack');
+  const base = rig.base.get('armBack');
+  if (brazo === undefined || antebrazo === undefined || base === undefined) return;
+  const delante = brazoAtrasDelante(brazo.x - base.x, brazo.rotation, antebrazo.rotation);
+  const z = delante ? Z_DELANTE : profundidad('armBack');
+  // Cambiar el zIndex reordena el padre: solo cuando cambia de verdad.
+  if (brazo.zIndex !== z) brazo.zIndex = z;
 }
 
 /** Cambia el arma sin rehacer el rig. El puno se queda siempre debajo. */

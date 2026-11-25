@@ -1,8 +1,12 @@
 import { describe as group, expect, it } from 'vitest';
 import { createBrute } from '@camorra/engine';
 import {
+  ANTEBRAZO_HASTA_PUNO,
+  brazoAtrasDelante,
   cabezaPorCapas,
   EXPRESIONES,
+  girar,
+  LARGO_BRAZO,
   lookFrom,
   PALETA,
   RIG,
@@ -12,7 +16,7 @@ import {
   type PartName,
   type Shape,
 } from './parts.js';
-import { animacion, ANIMATIONS, REST, type AnimName } from './poses.js';
+import { animacion, ANIMATIONS, REST, type AnimName, type Frame, type Pose } from './poses.js';
 
 const PARTES = new Set<PartName>(RIG.map((p) => p.name));
 
@@ -84,7 +88,7 @@ group('animaciones', () => {
   it('un ataque parado apunta a la guardia y rebota, y acaba en reposo', () => {
     for (const name of nombres) {
       const base = ANIMATIONS[name];
-      const parado = animacion(name, true);
+      const parado = animacion(name, { parada: true });
       if (base.contacto === undefined) {
         expect(parado).toBe(base);
         continue;
@@ -119,7 +123,7 @@ group('animaciones', () => {
     for (const name of nombres) {
       const base = ANIMATIONS[name];
       if (base.contacto === undefined) continue;
-      const seguido = animacion(name, false, true);
+      const seguido = animacion(name, { encadena: true });
       // Sin frame de partida: fijar los brazos a 0 los hacia saltar entre impactos.
       expect(seguido.frames[0]?.parts).toEqual({});
       // La carga no empieza en el contacto anterior, o se come su hit-stop.
@@ -142,8 +146,83 @@ group('animaciones', () => {
       expect(base.frames[i]?.parts[libre]?.rot ?? 0).toBeLessThan(0);
       // ...y al acabar, otra vez colgando y detras del torso.
       expect(base.frames.at(-1)?.parts[libre]?.rot).toBe(0);
-      if (libre === 'armBack') expect(base.frames.at(-1)?.parts.armBack?.delante).toBe(false);
+      if (libre !== 'armBack') continue;
+      const enGuardia = base.frames[i]?.parts;
+      expect(
+        brazoAtrasDelante(0, enGuardia?.armBack?.rot ?? 0, enGuardia?.forearmBack?.rot ?? 0),
+      ).toBe(true);
     }
+  });
+
+  it('la capa del brazo de atras sale de su pose: delante en guardia, detras colgando', () => {
+    // Guardia y recogida: el puno sube por delante del pecho.
+    expect(brazoAtrasDelante(0, -0.45, -1.75)).toBe(true);
+    expect(brazoAtrasDelante(0, -0.15, -2.05)).toBe(true);
+    // El cruzado adelanta el hombro: delante aunque el brazo vaya estirado.
+    expect(brazoAtrasDelante(30, -1.3, -0.05)).toBe(true);
+    // Colgando, al andar (brazo estirado hacia delante), cargando el cruzado
+    // (echado atras) o en la V de la victoria: detras.
+    expect(brazoAtrasDelante(0, 0, 0)).toBe(false);
+    expect(brazoAtrasDelante(0, -0.35, 0)).toBe(false);
+    expect(brazoAtrasDelante(-3, 0.35, -1.7)).toBe(false);
+    expect(brazoAtrasDelante(0, 2.4, 0)).toBe(false);
+  });
+
+  it('el remate pega mas alto y se queda clavado mas que un golpe encadenado', () => {
+    for (const name of nombres) {
+      const base = ANIMATIONS[name];
+      if (base.contacto === undefined) continue;
+      const pega = base.brazo ?? 'armFront';
+      const seguido = animacion(name, { encadena: true });
+      const remate = animacion(name, { encadena: true, remata: true });
+      const i = seguido.frames.findIndex((f) => f.t === base.contacto);
+      const j = remate.frames.findIndex((f) => f.t === base.contacto);
+      expect(remate.frames[j]?.parts[pega]?.rot ?? 0).toBeLessThan(
+        seguido.frames[i]?.parts[pega]?.rot ?? 0,
+      );
+      const sosten = (a: typeof base, k: number) => (a.frames[k + 1]?.t ?? 0) - base.contacto!;
+      expect(sosten(remate, j)).toBeGreaterThan(sosten(seguido, i));
+      // Sin encadenar no hay remate: es el final de un combo.
+      expect(animacion(name, { remata: true })).toBe(base);
+    }
+  });
+
+  it('las pesadas y largas se cogen a dos manos: el puno de atras cae en el mango', () => {
+    const hombros = { delante: { x: 17, y: -25 }, atras: { x: -15, y: -25 } };
+    const puno = (h: { x: number; y: number }, b: Pose | undefined, rotAntebrazo: number) => {
+      const [cx, cy] = girar(0, LARGO_BRAZO, b?.rot ?? 0);
+      const [px, py] = girar(0, ANTEBRAZO_HASTA_PUNO, (b?.rot ?? 0) + rotAntebrazo);
+      return [h.x + (b?.x ?? 0) + cx + px, h.y + (b?.y ?? 0) + cy + py] as const;
+    };
+    for (const name of ['attackPesada', 'attackLarga'] as const) {
+      for (const variante of [{}, { encadena: true }, { encadena: true, remata: true }]) {
+        const anim = animacion(name, { ...variante, hombros });
+        let delante: Frame['parts'] = {};
+        let atras: Frame['parts'] = {};
+        for (const [k, frame] of anim.frames.entries()) {
+          delante = { ...delante, ...frame.parts };
+          atras = { ...atras, ...frame.parts };
+          if (k === 0 || k === anim.frames.length - 1 || frame.parts.armBack === undefined)
+            continue;
+          const [fx, fy] = puno(hombros.delante, delante.armFront, delante.forearmFront?.rot ?? 0);
+          const [bx, by] = puno(hombros.atras, atras.armBack, atras.forearmBack?.rot ?? 0);
+          // Un puno mas alla del otro sobre el mango, ni pegados ni sueltos.
+          expect(Math.hypot(bx - fx, by - fy)).toBeGreaterThan(8);
+          expect(Math.hypot(bx - fx, by - fy)).toBeLessThan(14);
+          expect(
+            brazoAtrasDelante(
+              atras.armBack?.x ?? 0,
+              atras.armBack?.rot ?? 0,
+              atras.forearmBack?.rot ?? 0,
+            ),
+          ).toBe(true);
+        }
+        // Al volver, cada brazo a su sitio.
+        expect(anim.frames.at(-1)?.parts.armBack).toEqual({ rot: 0, x: 0, y: 0 });
+      }
+    }
+    // Sin hombros (la ficha, las hojas viejas) se queda la guardia de siempre.
+    expect(animacion('attackPesada')).toBe(ANIMATIONS.attackPesada);
   });
 
   it('el reposo define todas las partes', () => {

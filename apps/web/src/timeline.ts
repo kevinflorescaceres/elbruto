@@ -6,8 +6,8 @@
  */
 import { gsap } from 'gsap';
 import { Container } from 'pixi.js';
-import { profundidad, Z_DELANTE, type PartName } from './art/parts.js';
-import { animacion, type AnimName } from './art/poses.js';
+import { type PartName } from './art/parts.js';
+import { animacion, type AnimName, type Variante } from './art/poses.js';
 import { pistaDeCaras, TIME_SCALE, type Move, type Pie, type Scene } from './fightScene.js';
 import {
   changeWeapon,
@@ -172,12 +172,14 @@ function playAnimation(
   at: number,
   duration: number,
   facing: 1 | -1,
-  parada = false,
-  encadena = false,
+  variante: Pick<Variante, 'parada' | 'encadena' | 'remata'> = {},
 ): void {
   if (view.rig === null) return playFallback(tl, view, anim, at, duration, facing);
 
-  const { frames, contacto, adelanto } = animacion(anim, parada, encadena);
+  const delante = view.rig.base.get('armFront');
+  const atras = view.rig.base.get('armBack');
+  const hombros = delante && atras ? { delante, atras } : undefined;
+  const { frames, contacto, adelanto } = animacion(anim, { ...variante, hombros });
   // Un gesto que tiene que estar hecho al llegar el golpe empieza antes de su turno.
   if (adelanto !== undefined) at -= duration * adelanto;
   // Con impacto, la animacion se estira para que el contacto caiga al final del
@@ -196,11 +198,6 @@ function playAnimation(
       const base = view.rig.base.get(name as PartName);
       if (node === undefined || base === undefined) continue;
 
-      if (pose.delante !== undefined) {
-        // Pixi reordena solo al cambiar `zIndex` (el padre es `sortableChildren`).
-        const z = pose.delante ? Z_DELANTE : profundidad(name as PartName);
-        tl.set(node, { zIndex: z }, pose.delante ? desde : desde + tramo);
-      }
       const destino: Record<string, number> = {};
       if (pose.rot !== undefined) destino['rotation'] = pose.rot;
       if (pose.x !== undefined) destino['x'] = base.x + pose.x;
@@ -318,7 +315,7 @@ function addMove(
     case 'pose':
       // Andar sin desplazarse (ver `cortar`) seria andar en el sitio.
       if (menosMovimiento && move.anim === 'walk') break;
-      playAnimation(tl, view, move.anim, at, duration, sitio.facing, move.parada, move.encadena);
+      playAnimation(tl, view, move.anim, at, duration, sitio.facing, move);
       break;
 
     case 'flash':

@@ -46,7 +46,15 @@ export type Move =
   /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
   /** `parada`: el golpe acaba contra una guardia (ver `animacion`). */
   /** `encadena`: sigue a otro golpe del mismo turno, sin volver a reposo. */
-  | { kind: 'pose'; id: string; anim: AnimName; parada?: boolean; encadena?: boolean }
+  /** `remata`: el ultimo golpe de un combo, que se carga y se sostiene mas. */
+  | {
+      kind: 'pose';
+      id: string;
+      anim: AnimName;
+      parada?: boolean;
+      encadena?: boolean;
+      remata?: boolean;
+    }
   /** Destello de color (parada, maña, curacion). */
   | { kind: 'flash'; id: string; color: number }
   /** Mueve la barra de vida a su nuevo valor. */
@@ -376,6 +384,13 @@ export function planFight(replay: Replayable): Scene {
         : { id, arma, golpes: 0, impactos: 0 };
     return serie.golpes;
   };
+  // El golpe del ultimo impacto de la serie: el remate. Solo se sabe que era
+  // el ultimo cuando llega otra cosa, asi que se marca al cerrar la serie.
+  let ultimoGolpe: (Move & { kind: 'pose' }) | null = null;
+  const rematar = (): void => {
+    if (ultimoGolpe !== null) ultimoGolpe.remata = true;
+    ultimoGolpe = null;
+  };
 
   const push = (event: FightEvent, moves: Move[]): void => {
     const weight = WEIGHT[event.type];
@@ -419,6 +434,7 @@ export function planFight(replay: Replayable): Scene {
       }
 
       case 'turn':
+        rematar();
         serie = { id: '', arma: 'punos', golpes: 0, impactos: 0 };
         push(event, [{ kind: 'pulse', id: event.id }]);
         break;
@@ -436,6 +452,7 @@ export function planFight(replay: Replayable): Scene {
         break;
 
       case 'attack': {
+        rematar();
         const n = golpe(event.id, event.weapon);
         push(event, [
           { kind: 'lunge', id: event.id, toward: event.target, weapon: event.weapon },
@@ -452,6 +469,7 @@ export function planFight(replay: Replayable): Scene {
 
       // El contraataque no dice con que: es con lo que se tenga en la mano.
       case 'counter':
+        rematar();
         push(event, [
           {
             kind: 'lunge',
@@ -471,12 +489,14 @@ export function planFight(replay: Replayable): Scene {
         // donde se estira para que su contacto caiga justo al empezar este.
         if (serie.id === event.id && ++serie.impactos > 1) {
           serie.golpes++;
-          crudos.at(-1)?.moves.push({
+          const siguiente: Move & { kind: 'pose' } = {
             kind: 'pose',
             id: event.id,
             anim: attackAnim(serie.arma, serie.golpes),
             encadena: true,
-          });
+          };
+          crudos.at(-1)?.moves.push(siguiente);
+          ultimoGolpe = siguiente;
         }
         push(event, [
           { kind: 'pose', id: event.target, anim: 'hit' },
@@ -606,6 +626,7 @@ export function planFight(replay: Replayable): Scene {
     // `push` lo lee mientras se describe el evento; aqui ya cuenta para el siguiente.
     if (cuentaComoPrevio(event)) eventoPrevio = event;
   }
+  rematar();
 
   // El cartel de apertura va DESPUES de que entren los dos, no antes: si no,
   // saluda a un escenario vacio.

@@ -63,6 +63,10 @@ tests, asi que nunca pisan la base de desarrollo.
   para abajo. Pelos y sombreros se dibujan una vez contra ella. Un peinado tiene tres capas
   (`detras`, `encima`, `bajoSombrero`) y `montarCabeza(rasgos, sombrero?)` ya sabe ponerle un
   sombrero, aunque `Appearance` aun no tenga el campo. La hoja `cabezas.svg` lo comprueba.
+- **Las animaciones se solapan** (la vuelta de un golpe suena encima del siguiente), y las hojas
+  de contacto las pintan sueltas. Nada que dependa de "cuando acaba esta animacion" vale: la capa
+  del brazo de atras sale de su pose en cada fotograma (`brazoAtrasDelante`). Lo que pase entre
+  golpes se prueba en `timeline.test.ts`, que monta el combate y lo muestrea.
 - La apariencia sale de `Appearance`, que se genera en el motor y **se guarda en la BD**:
   cambiar el arte no debe cambiar la cara de un peleon ya creado.
 

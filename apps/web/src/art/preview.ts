@@ -6,6 +6,7 @@ import { writeFileSync } from 'node:fs';
 import { createBrute, WEAPONS, type Appearance } from '@camorra/engine';
 import { ESCENARIOS } from './escenarios.js';
 import {
+  brazoAtrasDelante,
   colorOf,
   GROSOR,
   MASCOTAS,
@@ -24,7 +25,7 @@ import {
   type Shape,
   type WeaponCategory,
 } from './parts.js';
-import { animacion, ANIMATIONS, REST, type AnimName, type Frame } from './poses.js';
+import { animacion, ANIMATIONS, REST, type AnimName, type Frame, type Variante } from './poses.js';
 
 const shapesToSvg = (shapes: Shape[], colors: Look['colors']): string =>
   shapes
@@ -38,6 +39,13 @@ const shapesToSvg = (shapes: Shape[], colors: Look['colors']): string =>
         '/>',
     )
     .join('');
+
+/** La misma regla de capa que el rig de Pixi, sobre la pose del frame. */
+function atrasDelante(frame: Frame): boolean {
+  const brazo = { ...REST.parts.armBack, ...frame.parts.armBack };
+  const antebrazo = { ...REST.parts.forearmBack, ...frame.parts.forearmBack };
+  return brazoAtrasDelante(brazo.x ?? 0, brazo.rot ?? 0, antebrazo.rot ?? 0);
+}
 
 /** Dibuja el rig en una pose concreta. */
 function figure(
@@ -66,7 +74,7 @@ function figure(
       ...look.rig
         .filter((p) => p.parent === part)
         .map((h) => ({
-          z: frame.parts[h.name]?.delante === true ? Z_DELANTE : profundidad(h.name),
+          z: h.name === 'armBack' && atrasDelante(frame) ? Z_DELANTE : profundidad(h.name),
           svg: render(h.name),
         })),
     ].sort((a, b) => a.z - b.z);
@@ -169,10 +177,17 @@ sheet(
     return out;
   };
   /** Los frames de una animacion que mueven algo, ya apilados sobre `desde`. */
-  const recorrer = (desde: Estado, anim: AnimName, encadena: boolean, etiqueta: string) => {
+  const chirlo = createBrute('Chirlo de la Cava');
+  const rig = lookFrom(chirlo.appearance, chirlo.slug).rig;
+  const hombro = (name: PartName) => {
+    const at = rig.find((j) => j.name === name)?.at ?? [0, 0];
+    return { x: at[0], y: at[1] };
+  };
+  const hombros = { delante: hombro('armFront'), atras: hombro('armBack') };
+  const recorrer = (desde: Estado, anim: AnimName, variante: Variante, etiqueta: string) => {
     const celdas: { label: string; estado: Estado }[] = [];
     let estado = desde;
-    const { frames, contacto } = animacion(anim, false, encadena);
+    const { frames, contacto } = animacion(anim, { ...variante, hombros });
     for (const frame of frames) {
       if (Object.keys(frame.parts).length === 0) continue;
       estado = tras(estado, frame);
@@ -191,11 +206,11 @@ sheet(
     return celdas;
   };
   /** Un combo: cada golpe arranca en el contacto del anterior, sin su vuelta. */
-  const combo = (golpes: [AnimName, boolean, string][]) => {
+  const combo = (golpes: [AnimName, Variante, string][]) => {
     const celdas: { label: string; estado: Estado }[] = [];
     let estado: Estado = REST.parts;
-    for (const [i, [anim, encadena, etiqueta]] of golpes.entries()) {
-      const pasos = recorrer(estado, anim, encadena, etiqueta);
+    for (const [i, [anim, variante, etiqueta]] of golpes.entries()) {
+      const pasos = recorrer(estado, anim, variante, etiqueta);
       const ultimo = i === golpes.length - 1;
       const hasta = pasos.findIndex((p) => p.label.endsWith('pega'));
       celdas.push(...(ultimo ? pasos : pasos.slice(0, hasta + 1)));
@@ -206,33 +221,34 @@ sheet(
   const filas: { celdas: { label: string; estado: Estado }[]; arma?: string }[] = [
     {
       celdas: combo([
-        ['attackRapida', false, '1'],
-        ['attackCruzado', true, '2'],
-        ['attackRapida', true, '3'],
+        ['attackRapida', {}, '1'],
+        ['attackCruzado', { encadena: true }, '2'],
+        ['attackRapida', { encadena: true, remata: true }, '3'],
       ]),
     },
     {
       arma: 'chaira',
       celdas: combo([
-        ['attackRapida', false, '1'],
-        ['attackRapida', true, '2'],
+        ['attackRapida', {}, '1'],
+        ['attackRapida', { encadena: true }, '2'],
+        ['attackRapida', { encadena: true, remata: true }, '3'],
       ]),
     },
     {
       arma: 'tranca',
       celdas: combo([
-        ['attackPesada', false, '1'],
-        ['attackPesada', true, '2'],
+        ['attackPesada', {}, '1'],
+        ['attackPesada', { encadena: true, remata: true }, '2'],
       ]),
     },
     {
       arma: 'chuzo',
       celdas: combo([
-        ['attackLarga', false, '1'],
-        ['attackLarga', true, '2'],
+        ['attackLarga', {}, '1'],
+        ['attackLarga', { encadena: true, remata: true }, '2'],
       ]),
     },
-    { celdas: recorrer(REST.parts, 'block', false, 'para') },
+    { celdas: recorrer(REST.parts, 'block', {}, 'para') },
   ];
   const porFila = Math.max(...filas.map((f) => f.celdas.length));
   sheet(

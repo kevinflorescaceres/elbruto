@@ -107,6 +107,44 @@ export function profundidad(name: PartName): number {
 /** Por encima del torso y por debajo de la cabeza: el brazo de atras en guardia. */
 export const Z_DELANTE = Z_ORDER.indexOf('torso') + 0.5;
 
+/** Del hombro al codo y del codo al centro del puno, en unidades del rig. */
+export const LARGO_BRAZO = 15;
+export const ANTEBRAZO_HASTA_PUNO = 16;
+
+/**
+ * Gira un vector como lo gira Pixi: con la y hacia abajo, positivo es horario.
+ * Una parte que cuelga (0, L) con rotacion negativa se va hacia +x, delante.
+ */
+export function girar(x: number, y: number, rot: number): [number, number] {
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  return [x * c - y * s, x * s + y * c];
+}
+
+/**
+ * Si el brazo de atras va por delante del torso, segun su pose y no segun que
+ * animacion la puso. El torso esta dibujado de frente: el brazo lejano colgando
+ * o echado atras va detras, de lado, pero con el puno subido por delante del
+ * hombro (guardia, cruzado, agarre del arma) tapa el pecho.
+ *
+ * Era un `set` suelto al principio y al final de cada animacion, y como la
+ * vuelta de un golpe suena encima del siguiente, el final del primero mandaba
+ * el brazo detras justo en el contacto del segundo. Derivarlo de la pose hace
+ * imposible que la capa y el gesto se contradigan.
+ *
+ * `dx` es lo que se ha movido el hombro respecto a su sitio (el cruzado lo
+ * adelanta), y las medidas van desde el hombro, asi valen para cualquier
+ * complexion.
+ */
+export function brazoAtrasDelante(dx: number, rotBrazo: number, rotAntebrazo: number): boolean {
+  if (dx > 5) return true;
+  const [cx, cy] = girar(0, LARGO_BRAZO, rotBrazo);
+  const [px, py] = girar(0, ANTEBRAZO_HASTA_PUNO, rotBrazo + rotAntebrazo);
+  // Puno por encima de la cintura y por delante del hombro. Al andar el brazo
+  // se adelanta, pero estirado: el puno no sube de la cadera.
+  return cy + py < LARGO_BRAZO && cx + px > 5;
+}
+
 // --- Piezas ---
 
 /**

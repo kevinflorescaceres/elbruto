@@ -14,20 +14,12 @@
  * "Delante" es siempre hacia el rival: el cuerpo se voltea con `facing`, asi
  * que el +x local apunta al contrario en los dos bandos.
  */
-import type { PartName } from './parts.js';
+import { girar, type PartName } from './parts.js';
 
 export interface Pose {
   rot?: number;
   x?: number;
   y?: number;
-  /**
-   * Pasa la parte por delante del torso. Solo tiene sentido en el brazo de
-   * atras: colgando va detras, de lado, pero levantado en guardia o cruzando
-   * un golpe queda delante del pecho, que esta dibujado de frente. Se aplica
-   * al EMPEZAR el tramo si se adelanta y al ACABARLO si se retrasa, para que
-   * el cambio de capa ocurra con el brazo pegado al costado.
-   */
-  delante?: boolean;
 }
 
 export interface Frame {
@@ -103,11 +95,11 @@ export const REST: Frame = {
  * tapaba la boca, y con ella el gesto de esfuerzo.
  */
 const GUARDIA: Partial<Record<PartName, Pose>> = {
-  armBack: { rot: -0.45, x: 0, delante: true },
+  armBack: { rot: -0.45, x: 0 },
   forearmBack: { rot: -1.75 },
 };
 const RECOGIDA: Partial<Record<PartName, Pose>> = {
-  armBack: { rot: -0.15, x: 0, delante: true },
+  armBack: { rot: -0.15, x: 0 },
   forearmBack: { rot: -2.05 },
 };
 /** La misma guardia para el brazo de delante, cuando pega el de atras. */
@@ -122,7 +114,7 @@ const RECOGIDA_DELANTE: Partial<Record<PartName, Pose>> = {
 /** Cuanto avanza el hombro de atras al cruzar, en unidades del rig. */
 const HOMBRO_ADELANTE = 30;
 const BRAZO_ATRAS_SUELTO: Partial<Record<PartName, Pose>> = {
-  armBack: { rot: 0, x: 0, delante: false },
+  armBack: { rot: 0, x: 0, y: 0 },
   forearmBack: { rot: 0 },
 };
 
@@ -239,7 +231,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
       {
-        t: 0.55,
+        t: 0.6,
         ease: 'none',
         parts: {
           armFront: { rot: -1.7 },
@@ -303,7 +295,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
       {
-        t: 0.65,
+        t: 0.7,
         ease: 'none',
         parts: { armFront: { rot: -1.45 }, torso: { rot: -0.38 }, hips: { x: 11, y: 3 } },
       },
@@ -357,7 +349,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
       {
-        t: 0.58,
+        t: 0.63,
         ease: 'none',
         parts: { armFront: { rot: -1.55 }, torso: { rot: -0.13 }, hips: { x: 14 } },
       },
@@ -408,7 +400,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
       {
-        t: 0.58,
+        t: 0.63,
         ease: 'none',
         parts: { armFront: { rot: -1.3 }, torso: { rot: -0.22 }, hips: { x: 7 } },
       },
@@ -443,7 +435,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         t: 0.3,
         ease: 'power2.out',
         parts: {
-          armBack: { rot: 0.35, x: -3, delante: false },
+          armBack: { rot: 0.35, x: -3 },
           forearmBack: { rot: -1.7 },
           torso: { rot: 0.14 },
           hips: { x: -2 },
@@ -454,7 +446,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         t: 0.45,
         ease: 'power4.in',
         parts: {
-          armBack: { rot: -1.3, x: HOMBRO_ADELANTE, delante: true },
+          armBack: { rot: -1.3, x: HOMBRO_ADELANTE },
           forearmBack: { rot: -0.05 },
           torso: { rot: -0.45 },
           hips: { x: 26 },
@@ -463,7 +455,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
       {
-        t: 0.55,
+        t: 0.6,
         ease: 'none',
         parts: {
           armBack: { rot: -1.26, x: HOMBRO_ADELANTE },
@@ -478,7 +470,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         t: 1,
         ease: 'power2.inOut',
         parts: {
-          armBack: { rot: 0, x: 0, delante: false },
+          armBack: { rot: 0, x: 0 },
           forearmBack: { rot: 0 },
           armFront: { rot: 0, x: 0 },
           forearmFront: { rot: 0 },
@@ -821,8 +813,14 @@ function contraLaGuardia(anim: Animation): Animation {
  * como un combo. Con poco mas de la mitad, el segundo sale casi del rebote.
  */
 const CARGA_ENCADENADA = 0.55;
-/** Lo que se aguanta el golpe anterior antes de cargar el siguiente. */
-const RESPIRO = 0.1;
+/** El ultimo del combo es el remate: casi se carga entero. */
+const CARGA_REMATE = 0.9;
+/**
+ * Lo que se aguanta el golpe anterior antes de cargar el siguiente. Va a la
+ * par del sosten de cada ataque (del contacto al frame siguiente, un 15%), o
+ * la carga nueva se comeria el final del hit-stop.
+ */
+const RESPIRO = 0.16;
 
 /**
  * El mismo ataque cuando sigue a otro del mismo turno. Sin frame de partida:
@@ -830,7 +828,7 @@ const RESPIRO = 0.1;
  * el brazo saltaba de estirado a colgando. La carga se acorta, y la guardia
  * (lo que no estaba en el frame de partida) no se toca: no baja entre golpes.
  */
-function encadenado(anim: Animation): Animation {
+function encadenado(anim: Animation, fuerza: number): Animation {
   const [partida, carga, ...resto] = anim.frames;
   if (partida === undefined || carga === undefined || anim.contacto === undefined) return anim;
   const recortar = new Set(Object.keys(partida.parts));
@@ -841,9 +839,9 @@ function encadenado(anim: Animation): Animation {
       continue;
     }
     parts[name] = {
-      ...(pose.rot !== undefined && { rot: pose.rot * CARGA_ENCADENADA }),
-      ...(pose.x !== undefined && { x: pose.x * CARGA_ENCADENADA }),
-      ...(pose.y !== undefined && { y: pose.y * CARGA_ENCADENADA }),
+      ...(pose.rot !== undefined && { rot: pose.rot * fuerza }),
+      ...(pose.x !== undefined && { x: pose.x * fuerza }),
+      ...(pose.y !== undefined && { y: pose.y * fuerza }),
     };
   }
   // El frame vacio de en medio deja sonar el hit-stop del golpe anterior: la
@@ -854,20 +852,119 @@ function encadenado(anim: Animation): Animation {
   };
 }
 
+/** Hasta donde se estira el sosten del remate, en fraccion de la animacion. */
+const SOSTEN_REMATE = 0.25;
+
+/**
+ * El ultimo golpe del combo. Tres iguales seguidos sonaban a metronomo: el
+ * remate entra mas alto (a la mandibula), con mas cadera y mas giro, y se
+ * queda clavado el doble de tiempo antes de volver.
+ */
+function remate(anim: Animation): Animation {
+  const i = anim.frames.findIndex((f) => f.t === anim.contacto);
+  const golpe = anim.frames[i];
+  const sosten = anim.frames[i + 1];
+  if (golpe === undefined || sosten === undefined || anim.contacto === undefined) return anim;
+  const brazo = anim.brazo ?? 'armFront';
+  const mas: Frame['parts'] = { [brazo]: { rot: -0.15 }, torso: { rot: -0.08 }, hips: { x: 5 } };
+  const frames = [...anim.frames];
+  const clavado = desplazar(golpe.parts, mas);
+  frames[i] = { ...golpe, parts: clavado };
+  // Congelado del todo: el sosten normal se deja ir un poco, el remate no.
+  frames[i + 1] = {
+    ...sosten,
+    t: Math.max(sosten.t, anim.contacto + SOSTEN_REMATE),
+    parts: clavado,
+  };
+  return { ...anim, frames };
+}
+
+/** Donde agarra la mano de atras, en unidades a lo largo del arma desde el puno. */
+const AGARRE: Partial<Record<AnimName, number>> = { attackPesada: 9, attackLarga: 13 };
+
+/**
+ * Las armas pesadas y largas se cogen a dos manos. El rig tiene el torso de
+ * frente y los hombros a los lados, y desde el hombro de atras la mano no
+ * llega al mango: el brazo de atras COPIA la pose del de delante y se corre
+ * entero hasta que su puno cae sobre el arma, un poco mas alla del otro. Queda
+ * casi tapado por el brazo de delante, que se pinta encima, y lo que asoma es
+ * el segundo puno en el mango, que es lo que dice "a dos manos".
+ *
+ * Las medidas van en el sistema del torso, con los hombros de cada complexion:
+ * por eso se calcula por peleon y no va en la tabla de animaciones.
+ */
+function aDosManos(
+  anim: Animation,
+  agarre: number,
+  hombros: { delante: { x: number; y: number }; atras: { x: number; y: number } },
+): Animation {
+  // La mano del arma esta girada -0.35 (ver `pixiRig`): el mango sale asi.
+  const [gx, gy] = girar(agarre, 0, -0.35);
+  let actual = { rot: 0, antebrazo: 0, x: 0, y: 0 };
+  const ultimo = anim.frames.length - 1;
+  const frames = anim.frames.map((frame, j): Frame => {
+    const brazo = frame.parts.armFront;
+    const antebrazo = frame.parts.forearmFront;
+    actual = {
+      rot: brazo?.rot ?? actual.rot,
+      antebrazo: antebrazo?.rot ?? actual.antebrazo,
+      x: brazo?.x ?? actual.x,
+      y: brazo?.y ?? actual.y,
+    };
+    if (j === 0) return frame;
+    // Al volver al reposo suelta el mango: cada brazo a su sitio.
+    if (j === ultimo) return { ...frame, parts: { ...frame.parts, ...BRAZO_ATRAS_SUELTO } };
+    if (brazo === undefined && antebrazo === undefined) return frame;
+    const [dx, dy] = girar(gx, gy, actual.rot + actual.antebrazo);
+    return {
+      ...frame,
+      parts: {
+        ...frame.parts,
+        armBack: {
+          rot: actual.rot,
+          x: hombros.delante.x + actual.x - hombros.atras.x + dx,
+          y: hombros.delante.y + actual.y - hombros.atras.y + dy,
+        },
+        forearmBack: { rot: actual.antebrazo },
+      },
+    };
+  });
+  return { ...anim, frames };
+}
+
+export interface Variante {
+  /** El rival lo para: apunta a la guardia y rebota. */
+  parada?: boolean;
+  /** Sigue a otro golpe del mismo turno: arranca de donde este el brazo. */
+  encadena?: boolean;
+  /** El ultimo golpe del combo. Solo cuenta si encadena. */
+  remata?: boolean;
+  /** Hombros del peleon, en el sistema del torso: para coger el arma a dos manos. */
+  hombros?: { delante: { x: number; y: number }; atras: { x: number; y: number } };
+}
+
 const variantes = new Map<string, Animation>();
 
 /**
- * La animacion que toca: segun si el golpe entra o lo paran, y si abre el
- * turno o encadena con el anterior.
+ * La animacion que toca: segun si el golpe entra o lo paran, si abre el turno,
+ * encadena con el anterior o lo remata, y con que manos se coge el arma.
  */
-export function animacion(anim: AnimName, parada = false, encadena = false): Animation {
+export function animacion(anim: AnimName, variante: Variante = {}): Animation {
   const base = ANIMATIONS[anim];
-  if (base.contacto === undefined || (!parada && !encadena)) return base;
-  const clave = `${anim}:${parada}:${encadena}`;
+  if (base.contacto === undefined) return base;
+  const { parada = false, encadena = false, hombros } = variante;
+  const remata = encadena && variante.remata === true;
+  const agarre = hombros === undefined ? undefined : AGARRE[anim];
+  if (!parada && !encadena && agarre === undefined) return base;
+  const manos = agarre === undefined || hombros === undefined ? '' : JSON.stringify(hombros);
+  const clave = `${anim}:${parada}:${encadena}:${remata}:${manos}`;
   let hecha = variantes.get(clave);
   if (hecha === undefined) {
-    const enSerie = encadena ? encadenado(base) : base;
-    hecha = parada ? contraLaGuardia(enSerie) : enSerie;
+    let paso = encadena ? encadenado(base, remata ? CARGA_REMATE : CARGA_ENCADENADA) : base;
+    if (remata) paso = remate(paso);
+    if (parada) paso = contraLaGuardia(paso);
+    if (agarre !== undefined && hombros !== undefined) paso = aDosManos(paso, agarre, hombros);
+    hecha = paso;
     variantes.set(clave, hecha);
   }
   return hecha;
