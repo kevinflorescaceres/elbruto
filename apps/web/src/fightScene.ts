@@ -45,7 +45,8 @@ export type Move =
   | { kind: 'retreat'; id: string }
   /** Toca una animacion del rig por su nombre (ver `art/poses.ts`). */
   /** `parada`: el golpe acaba contra una guardia (ver `animacion`). */
-  | { kind: 'pose'; id: string; anim: AnimName; parada?: boolean }
+  /** `encadena`: sigue a otro golpe del mismo turno, sin volver a reposo. */
+  | { kind: 'pose'; id: string; anim: AnimName; parada?: boolean; encadena?: boolean }
   /** Destello de color (parada, maña, curacion). */
   | { kind: 'flash'; id: string; color: number }
   /** Mueve la barra de vida a su nuevo valor. */
@@ -161,18 +162,23 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
   const cerrarConRetirada = (): void => {
     // Quien embistio vuelve a su sitio al ACABAR el turno, no tras el primer
     // golpe: si volviera antes, los impactos de un combo saldrian desde lejos
-    // en vez de encadenarse en el sitio (COMBATE.md §5).
-    const embestida = actual.flatMap((c) => c.moves).find((m) => m.kind === 'lunge');
-    if (embestida !== undefined && embestida.kind === 'lunge') {
+    // en vez de encadenarse en el sitio (COMBATE.md §5). Vuelven TODOS los que
+    // se movieron: quien contraataca tambien se planta, y si se quedara alli el
+    // siguiente que fuera a por el lo cruzaria y pegaria al aire.
+    const movidos = new Set<string>();
+    for (const m of actual.flatMap((c) => c.moves)) {
+      if (m.kind === 'lunge' || m.kind === 'approach') movidos.add(m.id);
+    }
+    if (movidos.size > 0) {
       actual.push({
         type: 'turn',
         weight: PESO_RETIRADA,
         caption: null,
         linea: null,
-        moves: [
-          { kind: 'retreat', id: embestida.id },
-          { kind: 'pose', id: embestida.id, anim: 'walk' },
-        ],
+        moves: [...movidos].flatMap((id): Move[] => [
+          { kind: 'retreat', id },
+          { kind: 'pose', id, anim: 'walk' },
+        ]),
       });
     }
     cerrar();
@@ -325,9 +331,16 @@ function placeActor(side: 'A' | 'B', isPet: boolean, petIndex: number): Actor['h
   return { x: bruteX - facing * (0.069 + petIndex * 0.0375), y: 0.88 };
 }
 
-/** La categoria del arma decide el gesto. Las mascotas muerden: gesto rapido. */
-function attackAnim(weaponId: string): AnimName {
+/**
+ * La categoria del arma decide el gesto. Las mascotas muerden: gesto rapido.
+ *
+ * `serie` es el numero de golpe dentro del combo, desde 0. A punos el combo
+ * alterna las manos (uno-dos): el segundo es un cruzado del brazo de atras, y
+ * el tercero vuelve al de delante. Con arma pega siempre la mano que la lleva.
+ */
+function attackAnim(weaponId: string, serie = 0): AnimName {
   if (weaponId.startsWith('pet:')) return 'attackRapida';
+  if (weaponId === 'punos') return serie % 2 === 1 ? 'attackCruzado' : 'attackRapida';
   switch (getWeapon(weaponId).category) {
     case 'pesada':
       return 'attackPesada';
@@ -352,6 +365,17 @@ export function planFight(replay: Replayable): Scene {
   const petCount = { A: 0, B: 0 };
   const crudos: Crudo[] = [];
   let eventoPrevio: FightEvent | null = null;
+  // La serie de golpes en curso: de quien es, con que arma, cuantos golpes
+  // lleva dados (desde 0) y cuantos impactos ha tenido el ultimo ataque. La
+  // cortan el cambio de turno y el golpe de otro: un contraataque abre la suya.
+  let serie = { id: '', arma: 'punos', golpes: 0, impactos: 0 };
+  const golpe = (id: string, arma: string): number => {
+    serie =
+      serie.id === id
+        ? { id, arma, golpes: serie.golpes + 1, impactos: 0 }
+        : { id, arma, golpes: 0, impactos: 0 };
+    return serie.golpes;
+  };
 
   const push = (event: FightEvent, moves: Move[]): void => {
     const weight = WEIGHT[event.type];
@@ -395,6 +419,7 @@ export function planFight(replay: Replayable): Scene {
       }
 
       case 'turn':
+        serie = { id: '', arma: 'punos', golpes: 0, impactos: 0 };
         push(event, [{ kind: 'pulse', id: event.id }]);
         break;
 
@@ -410,13 +435,20 @@ export function planFight(replay: Replayable): Scene {
         ]);
         break;
 
-      case 'attack':
+      case 'attack': {
+        const n = golpe(event.id, event.weapon);
         push(event, [
           { kind: 'lunge', id: event.id, toward: event.target, weapon: event.weapon },
-          { kind: 'pose', id: event.id, anim: attackAnim(event.weapon) },
+          {
+            kind: 'pose',
+            id: event.id,
+            anim: attackAnim(event.weapon, n),
+            ...(n > 0 && { encadena: true }),
+          },
           { kind: 'face', id: event.id, cara: 'esfuerzo' },
         ]);
         break;
+      }
 
       // El contraataque no dice con que: es con lo que se tenga en la mano.
       case 'counter':
@@ -432,13 +464,27 @@ export function planFight(replay: Replayable): Scene {
         ]);
         break;
 
-      case 'hit':
+      case 'hit': {
+        // Del segundo impacto de un combo en adelante, el motor no manda otro
+        // `attack`: solo el `hit`. Sin esto el rival acusaba golpes que nadie
+        // daba. El golpe va en el beat ANTERIOR (el del impacto previo), que es
+        // donde se estira para que su contacto caiga justo al empezar este.
+        if (serie.id === event.id && ++serie.impactos > 1) {
+          serie.golpes++;
+          crudos.at(-1)?.moves.push({
+            kind: 'pose',
+            id: event.id,
+            anim: attackAnim(serie.arma, serie.golpes),
+            encadena: true,
+          });
+        }
         push(event, [
           { kind: 'pose', id: event.target, anim: 'hit' },
           { kind: 'impact', id: event.target, fuerza: 0, parada: false },
           { kind: 'face', id: event.target, cara: 'dolor' },
         ]);
         break;
+      }
 
       // Un golpe sin numero no se distinguia de uno que te perdiste: el fallo se
       // dice donde se diria el dano. Un tercio de las acciones acaba asi.

@@ -37,7 +37,7 @@ group('rig', () => {
 group('animaciones', () => {
   const nombres = Object.keys(ANIMATIONS) as AnimName[];
 
-  it('estan las 12 que pide el plan', () => {
+  it('estan las 12 que pide el plan, mas el cruzado del uno-dos', () => {
     expect(nombres).toEqual([
       'idle',
       'walk',
@@ -45,6 +45,7 @@ group('animaciones', () => {
       'attackPesada',
       'attackLarga',
       'attackArrojadiza',
+      'attackCruzado',
       'hit',
       'evade',
       'block',
@@ -90,8 +91,9 @@ group('animaciones', () => {
       }
       expect(parado.contacto).toBe(base.contacto);
       const i = base.frames.findIndex((f) => f.t === base.contacto);
+      const pega = base.brazo ?? 'armFront';
       const brazo = (a: typeof base, j: number): number =>
-        a.frames[j]?.parts.armFront?.rot ?? Number.NaN;
+        a.frames[j]?.parts[pega]?.rot ?? Number.NaN;
       // Mas abajo que el golpe que entra (positivo = hacia abajo y atras)...
       expect(brazo(parado, i)).toBeGreaterThan(brazo(base, i));
       // ...y despues del contacto vuelve hacia atras en vez de congelarse.
@@ -110,6 +112,37 @@ group('animaciones', () => {
       for (const [part, pose] of Object.entries(primero)) {
         expect(ultimo[part as PartName]?.rot ?? 0).toBeCloseTo(pose.rot ?? 0, 5);
       }
+    }
+  });
+
+  it('un golpe encadenado arranca donde este, guarda el hit-stop y no baja la guardia', () => {
+    for (const name of nombres) {
+      const base = ANIMATIONS[name];
+      if (base.contacto === undefined) continue;
+      const seguido = animacion(name, false, true);
+      // Sin frame de partida: fijar los brazos a 0 los hacia saltar entre impactos.
+      expect(seguido.frames[0]?.parts).toEqual({});
+      // La carga no empieza en el contacto anterior, o se come su hit-stop.
+      expect(seguido.frames[1]?.parts).toEqual({});
+      expect(seguido.frames[1]?.t).toBeGreaterThan(0);
+      // El contacto cae donde caia: la linea de tiempo estira con el.
+      expect(seguido.contacto).toBe(base.contacto);
+      expect(seguido.frames.find((f) => f.t === base.contacto)).toBeDefined();
+      expect(seguido.frames.at(-1)).toEqual(base.frames.at(-1));
+    }
+  });
+
+  it('en los ataques el brazo que no pega sube en guardia y vuelve a su sitio', () => {
+    for (const name of nombres) {
+      const base = ANIMATIONS[name];
+      if (base.contacto === undefined) continue;
+      const libre = base.brazo === 'armBack' ? 'armFront' : 'armBack';
+      const i = base.frames.findIndex((f) => f.t === base.contacto);
+      // En el contacto, levantado hacia delante (rot negativa), no colgando...
+      expect(base.frames[i]?.parts[libre]?.rot ?? 0).toBeLessThan(0);
+      // ...y al acabar, otra vez colgando y detras del torso.
+      expect(base.frames.at(-1)?.parts[libre]?.rot).toBe(0);
+      if (libre === 'armBack') expect(base.frames.at(-1)?.parts.armBack?.delante).toBe(false);
     }
   });
 

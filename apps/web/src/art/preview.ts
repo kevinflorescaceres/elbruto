@@ -17,13 +17,14 @@ import {
   PUNO,
   TRAZO,
   weaponShapes,
-  Z_ORDER,
+  profundidad,
+  Z_DELANTE,
   type Look,
   type PartName,
   type Shape,
   type WeaponCategory,
 } from './parts.js';
-import { ANIMATIONS, REST, type AnimName, type Frame } from './poses.js';
+import { animacion, ANIMATIONS, REST, type AnimName, type Frame } from './poses.js';
 
 const shapesToSvg = (shapes: Shape[], colors: Look['colors']): string =>
   shapes
@@ -54,17 +55,27 @@ function figure(
     const pose = { ...REST.parts[part], ...frame.parts[part] };
     const x = spec.at[0] + (pose.x ?? 0);
     const y = spec.at[1] + (pose.y ?? 0);
-    const hijos = look.rig
-      .filter((p) => p.parent === part)
-      .sort((a, b) => Z_ORDER.indexOf(a.name) - Z_ORDER.indexOf(b.name));
+    // La misma profundidad que `pixiRig.ts`: la forma propia de una parte va a
+    // su altura de Z_ORDER entre sus hijos. Pintarla siempre antes de ellos
+    // ponia el brazo de atras DELANTE del torso, y la hoja no era el combate.
     const propias = look.parts[part];
+    const capas = [
+      ...(propias === undefined
+        ? []
+        : [{ z: profundidad(part), svg: shapesToSvg(propias, look.colors) }]),
+      ...look.rig
+        .filter((p) => p.parent === part)
+        .map((h) => ({
+          z: frame.parts[h.name]?.delante === true ? Z_DELANTE : profundidad(h.name),
+          svg: render(h.name),
+        })),
+    ].sort((a, b) => a.z - b.z);
     return (
       `<g transform="translate(${x} ${y}) rotate(${((pose.rot ?? 0) * 180) / Math.PI})">` +
-      (propias === undefined ? '' : shapesToSvg(propias, look.colors)) +
+      capas.map((c) => c.svg).join('') +
       (part === 'forearmFront'
         ? `<g transform="translate(0 16) rotate(-20)">${shapesToSvg(arma, look.colors)}${shapesToSvg(PUNO, look.colors)}</g>`
         : '') +
-      hijos.map((h) => render(h.name)).join('') +
       '</g>'
     );
   };
@@ -145,6 +156,108 @@ sheet(
   `${salida}/poses.svg`,
   anims.map((anim) => ({ label: anim, body: figure('Chirlo de la Cava', peakFrame(anim)) })),
 );
+
+// 2b. Golpes seguidos, frame a frame: que hace cada brazo en un combo. Cada
+// animacion parte de donde dejo la anterior, como en el combate.
+{
+  type Estado = Frame['parts'];
+  const tras = (estado: Estado, frame: Frame): Estado => {
+    const out: Estado = { ...estado };
+    for (const [part, pose] of Object.entries(frame.parts)) {
+      out[part as PartName] = { ...out[part as PartName], ...pose };
+    }
+    return out;
+  };
+  /** Los frames de una animacion que mueven algo, ya apilados sobre `desde`. */
+  const recorrer = (desde: Estado, anim: AnimName, encadena: boolean, etiqueta: string) => {
+    const celdas: { label: string; estado: Estado }[] = [];
+    let estado = desde;
+    const { frames, contacto } = animacion(anim, false, encadena);
+    for (const frame of frames) {
+      if (Object.keys(frame.parts).length === 0) continue;
+      estado = tras(estado, frame);
+      const que =
+        frame.t === 0
+          ? 'parte'
+          : frame.t === contacto
+            ? 'pega'
+            : frame.t === 1
+              ? 'vuelve'
+              : frame.t > (contacto ?? 1)
+                ? 'aguanta'
+                : 'carga';
+      celdas.push({ label: `${etiqueta} ${que}`, estado });
+    }
+    return celdas;
+  };
+  /** Un combo: cada golpe arranca en el contacto del anterior, sin su vuelta. */
+  const combo = (golpes: [AnimName, boolean, string][]) => {
+    const celdas: { label: string; estado: Estado }[] = [];
+    let estado: Estado = REST.parts;
+    for (const [i, [anim, encadena, etiqueta]] of golpes.entries()) {
+      const pasos = recorrer(estado, anim, encadena, etiqueta);
+      const ultimo = i === golpes.length - 1;
+      const hasta = pasos.findIndex((p) => p.label.endsWith('pega'));
+      celdas.push(...(ultimo ? pasos : pasos.slice(0, hasta + 1)));
+      estado = pasos[hasta]?.estado ?? estado;
+    }
+    return celdas;
+  };
+  const filas: { celdas: { label: string; estado: Estado }[]; arma?: string }[] = [
+    {
+      celdas: combo([
+        ['attackRapida', false, '1'],
+        ['attackCruzado', true, '2'],
+        ['attackRapida', true, '3'],
+      ]),
+    },
+    {
+      arma: 'chaira',
+      celdas: combo([
+        ['attackRapida', false, '1'],
+        ['attackRapida', true, '2'],
+      ]),
+    },
+    {
+      arma: 'tranca',
+      celdas: combo([
+        ['attackPesada', false, '1'],
+        ['attackPesada', true, '2'],
+      ]),
+    },
+    {
+      arma: 'chuzo',
+      celdas: combo([
+        ['attackLarga', false, '1'],
+        ['attackLarga', true, '2'],
+      ]),
+    },
+    { celdas: recorrer(REST.parts, 'block', false, 'para') },
+  ];
+  const porFila = Math.max(...filas.map((f) => f.celdas.length));
+  sheet(
+    `${salida}/golpes.svg`,
+    filas.flatMap(({ celdas, arma }) => {
+      const w = arma === undefined ? undefined : WEAPONS.find((x) => x.id === arma);
+      const relleno = Array.from({ length: porFila - celdas.length }, () => ({
+        label: '',
+        body: '',
+      }));
+      return [
+        ...celdas.map((c) => ({
+          label: c.label,
+          body: figure(
+            'Chirlo de la Cava',
+            { t: 0, parts: c.estado },
+            w === undefined ? undefined : { category: w.category, reach: w.reach },
+          ),
+        })),
+        ...relleno,
+      ];
+    }),
+    porFila,
+  );
+}
 
 // 3. Las diez armas en la mano.
 sheet(

@@ -56,7 +56,7 @@ tests, asi que nunca pisan la base de desarrollo.
   `art/pixiRig.ts` monta el mismo personaje como rig de contenedores para el combate.
   Si tocas una ruta, cambia en los dos sitios a la vez.
 - **`pnpm --filter @camorra/web art <dir>`** escribe hojas de contacto en SVG
-  (variedad, poses, armas, bichos). Es la unica forma de mirar el arte sin navegador:
+  (variedad, poses, golpes, armas, bichos). Es la unica forma de mirar el arte sin navegador:
   usalo antes de dar por buena cualquier ruta nueva. Para verlas como PNG hace falta un
   rasterizador (`@resvg/resvg-js` en un directorio aparte, no es dependencia del repo).
 - **Las cuatro cabezas comparten la calota** (`CALOTA` en `parts.ts`): solo cambian de la sien

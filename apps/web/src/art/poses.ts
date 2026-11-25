@@ -20,6 +20,14 @@ export interface Pose {
   rot?: number;
   x?: number;
   y?: number;
+  /**
+   * Pasa la parte por delante del torso. Solo tiene sentido en el brazo de
+   * atras: colgando va detras, de lado, pero levantado en guardia o cruzando
+   * un golpe queda delante del pecho, que esta dibujado de frente. Se aplica
+   * al EMPEZAR el tramo si se adelanta y al ACABARLO si se retrasa, para que
+   * el cambio de capa ocurra con el brazo pegado al costado.
+   */
+  delante?: boolean;
 }
 
 export interface Frame {
@@ -49,6 +57,8 @@ export interface Animation {
    * despues del choque no para nada.
    */
   adelanto?: number;
+  /** El brazo que pega. Sin el, el de delante, que es el que lleva el arma. */
+  brazo?: 'armFront' | 'armBack';
 }
 
 export type AnimName =
@@ -58,6 +68,7 @@ export type AnimName =
   | 'attackPesada'
   | 'attackLarga'
   | 'attackArrojadiza'
+  | 'attackCruzado'
   | 'hit'
   | 'evade'
   | 'block'
@@ -80,6 +91,55 @@ export const REST: Frame = {
     legFront: { rot: 0 },
   },
 };
+
+/*
+ * El brazo que no pega no cuelga muerto: sube a tapar la barbilla mientras el
+ * otro carga y, al soltar el golpe, se recoge contra el pecho. Es el contrapeso
+ * del giro del torso, y lo que hace que el golpe parezca de todo el cuerpo.
+ *
+ * Con el torso girado hacia delante (rot negativa), el brazo cuelga ya un poco
+ * adelantado: por eso la recogida tiene MENOS rotacion que la guardia, no mas.
+ * El puno se queda a la altura de la mandibula y a un lado: delante de la cara
+ * tapaba la boca, y con ella el gesto de esfuerzo.
+ */
+const GUARDIA: Partial<Record<PartName, Pose>> = {
+  armBack: { rot: -0.45, x: 0, delante: true },
+  forearmBack: { rot: -1.75 },
+};
+const RECOGIDA: Partial<Record<PartName, Pose>> = {
+  armBack: { rot: -0.15, x: 0, delante: true },
+  forearmBack: { rot: -2.05 },
+};
+/** La misma guardia para el brazo de delante, cuando pega el de atras. */
+const GUARDIA_DELANTE: Partial<Record<PartName, Pose>> = {
+  armFront: { rot: -0.7 },
+  forearmFront: { rot: -1.9 },
+};
+const RECOGIDA_DELANTE: Partial<Record<PartName, Pose>> = {
+  armFront: { rot: -0.15 },
+  forearmFront: { rot: -2.4 },
+};
+/** Cuanto avanza el hombro de atras al cruzar, en unidades del rig. */
+const HOMBRO_ADELANTE = 30;
+const BRAZO_ATRAS_SUELTO: Partial<Record<PartName, Pose>> = {
+  armBack: { rot: 0, x: 0, delante: false },
+  forearmBack: { rot: 0 },
+};
+
+/**
+ * Pone el brazo libre en guardia durante un ataque del brazo de delante: sube
+ * con la carga, se recoge en el contacto y el sosten, y baja en la vuelta. El
+ * primer frame no lo toca, para que arranque desde donde este.
+ */
+function conGuardia(anim: Animation): Animation {
+  const i = anim.frames.findIndex((f) => f.t === anim.contacto);
+  const frames = anim.frames.map((frame, j): Frame => {
+    if (j === 0) return frame;
+    const extra = j === anim.frames.length - 1 ? BRAZO_ATRAS_SUELTO : j < i ? GUARDIA : RECOGIDA;
+    return { ...frame, parts: { ...frame.parts, ...extra } };
+  });
+  return { ...anim, frames };
+}
 
 export const ANIMATIONS: Record<AnimName, Animation> = {
   idle: {
@@ -146,7 +206,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
    */
 
   // Rapida: poco recorrido, mucha punta. Es una punalada, no un mandoble.
-  attackRapida: {
+  attackRapida: conGuardia({
     contacto: 0.45,
     frames: [
       {
@@ -199,10 +259,10 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
     ],
-  },
+  }),
 
   // Pesada: se carga por encima de la cabeza, se sostiene arriba y cae con todo el cuerpo.
-  attackPesada: {
+  attackPesada: conGuardia({
     contacto: 0.55,
     frames: [
       {
@@ -259,10 +319,10 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
     ],
-  },
+  }),
 
   // Larga: estocada recta, el cuerpo entero va detras del arma.
-  attackLarga: {
+  attackLarga: conGuardia({
     contacto: 0.48,
     frames: [
       {
@@ -313,9 +373,9 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         },
       },
     ],
-  },
+  }),
 
-  attackArrojadiza: {
+  attackArrojadiza: conGuardia({
     contacto: 0.48,
     frames: [
       {
@@ -357,6 +417,70 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
         ease: 'power2.inOut',
         parts: {
           armFront: { rot: 0 },
+          forearmFront: { rot: 0 },
+          torso: { rot: 0 },
+          hips: { x: 0 },
+        },
+      },
+    ],
+  }),
+
+  /**
+   * El "dos" del uno-dos a punos: pega el brazo de atras, que sale del hombro
+   * lejano y por eso necesita mas giro de torso y mas cadera para llegar. El
+   * de delante, que acaba de pegar, vuelve a la guardia mientras tanto. Solo
+   * suena encadenado, asi que no tiene frame de partida: arranca desde donde
+   * haya dejado los brazos el golpe anterior.
+   */
+  // El hombro de atras se adelanta en el giro: en plano, el brazo sale de
+  // detras del torso y el puno no llegaba ni a asomar por el otro lado.
+  attackCruzado: {
+    contacto: 0.45,
+    brazo: 'armBack',
+    frames: [
+      { t: 0, parts: {} },
+      {
+        t: 0.3,
+        ease: 'power2.out',
+        parts: {
+          armBack: { rot: 0.35, x: -3, delante: false },
+          forearmBack: { rot: -1.7 },
+          torso: { rot: 0.14 },
+          hips: { x: -2 },
+          ...GUARDIA_DELANTE,
+        },
+      },
+      {
+        t: 0.45,
+        ease: 'power4.in',
+        parts: {
+          armBack: { rot: -1.3, x: HOMBRO_ADELANTE, delante: true },
+          forearmBack: { rot: -0.05 },
+          torso: { rot: -0.45 },
+          hips: { x: 26 },
+          ...RECOGIDA_DELANTE,
+          armFront: { ...RECOGIDA_DELANTE.armFront, x: -6 },
+        },
+      },
+      {
+        t: 0.55,
+        ease: 'none',
+        parts: {
+          armBack: { rot: -1.26, x: HOMBRO_ADELANTE },
+          forearmBack: { rot: -0.05 },
+          torso: { rot: -0.43 },
+          hips: { x: 26 },
+          ...RECOGIDA_DELANTE,
+          armFront: { ...RECOGIDA_DELANTE.armFront, x: -6 },
+        },
+      },
+      {
+        t: 1,
+        ease: 'power2.inOut',
+        parts: {
+          armBack: { rot: 0, x: 0, delante: false },
+          forearmBack: { rot: 0 },
+          armFront: { rot: 0, x: 0 },
           forearmFront: { rot: 0 },
           torso: { rot: 0 },
           hips: { x: 0 },
@@ -484,12 +608,14 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
           forearmFront: { rot: 1.6 },
           torso: { rot: 0.08 },
           hips: { x: -2 },
+          // El otro brazo tambien sube, a tapar la cara por si el golpe pasa.
+          ...GUARDIA,
         },
       },
       {
         t: 0.3,
         ease: 'none',
-        parts: { armFront: { rot: -1.9 }, torso: { rot: 0.08 }, hips: { x: -2 } },
+        parts: { armFront: { rot: -1.9 }, torso: { rot: 0.08 }, hips: { x: -2 }, ...GUARDIA },
       },
       {
         t: 0.42,
@@ -504,6 +630,7 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
           forearmFront: { rot: 0 },
           torso: { rot: 0 },
           hips: { x: 0 },
+          ...BRAZO_ATRAS_SUELTO,
         },
       },
     ],
@@ -649,12 +776,17 @@ export const ANIMATIONS: Record<AnimName, Animation> = {
  * El rebote ocupa el sitio del hit-stop; la recuperacion parte de ahi.
  */
 const BAJADA = 0.4;
-const REBOTE: Partial<Record<PartName, Pose>> = {
-  armFront: { rot: 0.5 },
-  forearmFront: { rot: 0.45 },
-  torso: { rot: 0.1 },
-  hips: { x: -6 },
-};
+
+/** El rebote contra la guardia, del brazo que pega. */
+function rebote(brazo: 'armFront' | 'armBack'): Partial<Record<PartName, Pose>> {
+  const antebrazo = brazo === 'armFront' ? 'forearmFront' : 'forearmBack';
+  return {
+    [brazo]: { rot: 0.5 },
+    [antebrazo]: { rot: 0.45 },
+    torso: { rot: 0.1 },
+    hips: { x: -6 },
+  };
+}
 
 function desplazar(parts: Frame['parts'], delta: Frame['parts']): Frame['parts'] {
   const out: Frame['parts'] = {};
@@ -675,19 +807,68 @@ function contraLaGuardia(anim: Animation): Animation {
   const golpe = anim.frames[i];
   const sosten = anim.frames[i + 1];
   if (golpe === undefined || sosten === undefined) return anim;
-  const contacto = desplazar(golpe.parts, { armFront: { rot: BAJADA } });
+  const brazo = anim.brazo ?? 'armFront';
+  const contacto = desplazar(golpe.parts, { [brazo]: { rot: BAJADA } });
   const frames = [...anim.frames];
   frames[i] = { ...golpe, parts: contacto };
-  frames[i + 1] = { ...sosten, ease: 'power3.out', parts: desplazar(contacto, REBOTE) };
+  frames[i + 1] = { ...sosten, ease: 'power3.out', parts: desplazar(contacto, rebote(brazo)) };
   return { ...anim, frames };
 }
 
-/** La animacion que toca, segun si el golpe entra o lo paran. */
-export function animacion(anim: AnimName, parada = false): Animation {
-  const base = ANIMATIONS[anim];
-  return parada && base.contacto !== undefined ? PARADAS[anim] : base;
+/**
+ * Cuanto se carga un golpe que encadena con el anterior. El brazo viene de
+ * estar estirado: volver a cargar entero se leia como dos ataques sueltos, no
+ * como un combo. Con poco mas de la mitad, el segundo sale casi del rebote.
+ */
+const CARGA_ENCADENADA = 0.55;
+/** Lo que se aguanta el golpe anterior antes de cargar el siguiente. */
+const RESPIRO = 0.1;
+
+/**
+ * El mismo ataque cuando sigue a otro del mismo turno. Sin frame de partida:
+ * el primero fijaba los brazos en reposo de golpe, y entre impacto e impacto
+ * el brazo saltaba de estirado a colgando. La carga se acorta, y la guardia
+ * (lo que no estaba en el frame de partida) no se toca: no baja entre golpes.
+ */
+function encadenado(anim: Animation): Animation {
+  const [partida, carga, ...resto] = anim.frames;
+  if (partida === undefined || carga === undefined || anim.contacto === undefined) return anim;
+  const recortar = new Set(Object.keys(partida.parts));
+  const parts: Frame['parts'] = {};
+  for (const [name, pose] of Object.entries(carga.parts) as [PartName, Pose][]) {
+    if (!recortar.has(name)) {
+      parts[name] = pose;
+      continue;
+    }
+    parts[name] = {
+      ...(pose.rot !== undefined && { rot: pose.rot * CARGA_ENCADENADA }),
+      ...(pose.x !== undefined && { x: pose.x * CARGA_ENCADENADA }),
+      ...(pose.y !== undefined && { y: pose.y * CARGA_ENCADENADA }),
+    };
+  }
+  // El frame vacio de en medio deja sonar el hit-stop del golpe anterior: la
+  // carga empieza alli y no en el instante del contacto, que lo borraba.
+  return {
+    ...anim,
+    frames: [{ t: 0, parts: {} }, { t: RESPIRO, parts: {} }, { ...carga, parts }, ...resto],
+  };
 }
 
-const PARADAS = Object.fromEntries(
-  (Object.keys(ANIMATIONS) as AnimName[]).map((n) => [n, contraLaGuardia(ANIMATIONS[n])]),
-) as Record<AnimName, Animation>;
+const variantes = new Map<string, Animation>();
+
+/**
+ * La animacion que toca: segun si el golpe entra o lo paran, y si abre el
+ * turno o encadena con el anterior.
+ */
+export function animacion(anim: AnimName, parada = false, encadena = false): Animation {
+  const base = ANIMATIONS[anim];
+  if (base.contacto === undefined || (!parada && !encadena)) return base;
+  const clave = `${anim}:${parada}:${encadena}`;
+  let hecha = variantes.get(clave);
+  if (hecha === undefined) {
+    const enSerie = encadena ? encadenado(base) : base;
+    hecha = parada ? contraLaGuardia(enSerie) : enSerie;
+    variantes.set(clave, hecha);
+  }
+  return hecha;
+}

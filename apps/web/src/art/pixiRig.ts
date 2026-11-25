@@ -14,6 +14,7 @@ import {
   PUNO,
   TRAZO,
   weaponShapes,
+  profundidad,
   Z_ORDER,
   type Expresion,
   type Look,
@@ -64,20 +65,13 @@ export function buildRig(
   const caras = new Map<Expresion, Graphics>();
   const root = new Container();
 
-  // Z_ORDER da la profundidad, y la forma propia de una parte usa la suya: asi
-  // el brazo de atras queda detras del torso y el de delante por encima.
-  const depth = (name: PartName): number => {
-    const index = Z_ORDER.indexOf(name);
-    return index === -1 ? Z_ORDER.indexOf('torso') : index;
-  };
-
   for (const spec of look.rig) {
     const node = new Container();
     const pose = REST.parts[spec.name] ?? {};
     node.x = spec.at[0] + (pose.x ?? 0);
     node.y = spec.at[1] + (pose.y ?? 0);
     node.rotation = pose.rot ?? 0;
-    node.zIndex = depth(spec.name);
+    node.zIndex = profundidad(spec.name);
     node.sortableChildren = true;
 
     // La cabeza va en capas para poder cambiarle la cara (ver `cabezaPorCapas`).
@@ -96,12 +90,12 @@ export function buildRig(
       // Todas a la misma profundidad: con `sortableChildren` el orden de alta
       // decide, y es el de pintado.
       for (const capa of capas) {
-        capa.zIndex = depth(spec.name);
+        capa.zIndex = profundidad(spec.name);
         node.addChild(capa);
       }
     } else if (shapes !== undefined) {
       const graphics = node.addChild(drawShapes(shapes, look.colors));
-      graphics.zIndex = depth(spec.name);
+      graphics.zIndex = profundidad(spec.name);
     }
 
     parts.set(spec.name, node);

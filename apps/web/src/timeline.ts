@@ -6,7 +6,7 @@
  */
 import { gsap } from 'gsap';
 import { Container } from 'pixi.js';
-import type { PartName } from './art/parts.js';
+import { profundidad, Z_DELANTE, type PartName } from './art/parts.js';
 import { animacion, type AnimName } from './art/poses.js';
 import { pistaDeCaras, TIME_SCALE, type Move, type Pie, type Scene } from './fightScene.js';
 import {
@@ -36,6 +36,36 @@ interface Escena {
   mundo: Container;
   carteles: Container;
   menosMovimiento: boolean;
+  /** Donde esta cada uno y hacia donde mira, al ir montando la linea de tiempo. */
+  sitios: Map<string, Sitio>;
+}
+
+/**
+ * La linea de tiempo se monta en orden, asi que basta con ir apuntando donde
+ * acaba cada movimiento. Sin esto el contacto se calculaba contra la casa del
+ * rival: si el rival no estaba en casa, el atacante lo cruzaba, se quedaba
+ * detras mirando al lado contrario y pegaba al aire.
+ */
+interface Sitio {
+  x: number;
+  facing: 1 | -1;
+}
+
+/**
+ * Lo pone mirando hacia `facing`. Se voltea el cuerpo, no la raiz: la barra y
+ * el nombre del bicho cuelgan de la raiz y no deben leerse al reves. Las poses
+ * van en coordenadas del cuerpo, asi que se reflejan solas.
+ */
+function encarar(
+  tl: gsap.core.Timeline,
+  view: ActorView,
+  sitio: Sitio,
+  facing: 1 | -1,
+  at: number,
+): void {
+  if (sitio.facing === facing) return;
+  sitio.facing = facing;
+  tl.set(view.body.scale, { x: facing * ESCALA_ACTOR }, at);
 }
 
 /**
@@ -141,11 +171,13 @@ function playAnimation(
   anim: AnimName,
   at: number,
   duration: number,
+  facing: 1 | -1,
   parada = false,
+  encadena = false,
 ): void {
-  if (view.rig === null) return playFallback(tl, view, anim, at, duration);
+  if (view.rig === null) return playFallback(tl, view, anim, at, duration, facing);
 
-  const { frames, contacto, adelanto } = animacion(anim, parada);
+  const { frames, contacto, adelanto } = animacion(anim, parada, encadena);
   // Un gesto que tiene que estar hecho al llegar el golpe empieza antes de su turno.
   if (adelanto !== undefined) at -= duration * adelanto;
   // Con impacto, la animacion se estira para que el contacto caiga al final del
@@ -164,6 +196,11 @@ function playAnimation(
       const base = view.rig.base.get(name as PartName);
       if (node === undefined || base === undefined) continue;
 
+      if (pose.delante !== undefined) {
+        // Pixi reordena solo al cambiar `zIndex` (el padre es `sortableChildren`).
+        const z = pose.delante ? Z_DELANTE : profundidad(name as PartName);
+        tl.set(node, { zIndex: z }, pose.delante ? desde : desde + tramo);
+      }
       const destino: Record<string, number> = {};
       if (pose.rot !== undefined) destino['rotation'] = pose.rot;
       if (pose.x !== undefined) destino['x'] = base.x + pose.x;
@@ -184,20 +221,21 @@ function playFallback(
   anim: AnimName,
   at: number,
   duration: number,
+  facing: 1 | -1,
 ): void {
-  const { body, actor } = view;
+  const { body } = view;
   const mitad = duration / 2;
 
   if (anim === 'hit') {
-    tl.to(body, { x: actor.facing * -10, duration: mitad, ease: 'power3.out' }, at);
+    tl.to(body, { x: facing * -10, duration: mitad, ease: 'power3.out' }, at);
     tl.to(body, { x: 0, duration: mitad, ease: 'elastic.out(1, 0.4)' }, at + mitad);
   } else if (anim === 'evade') {
     tl.to(body, { y: -16, duration: mitad, ease: 'power2.out' }, at);
     tl.to(body, { y: 0, duration: mitad, ease: 'power2.in' }, at + mitad);
   } else if (anim === 'death') {
-    tl.to(body, { rotation: actor.facing * 1.4, duration, ease: 'power2.in' }, at);
+    tl.to(body, { rotation: facing * 1.4, duration, ease: 'power2.in' }, at);
   } else if (anim.startsWith('attack')) {
-    tl.to(body, { x: actor.facing * 12, duration: mitad, ease: 'power2.in' }, at);
+    tl.to(body, { x: facing * 12, duration: mitad, ease: 'power2.in' }, at);
     tl.to(body, { x: 0, duration: mitad, ease: 'power1.out' }, at + mitad);
   } else {
     tl.to(body.scale, { y: ESCALA_ACTOR * 1.06, duration: mitad }, at);
@@ -233,10 +271,12 @@ function addMove(
     return;
   }
 
-  const view = views.get(move.kind === 'projectile' ? move.from : move.id);
-  if (view === undefined) return;
+  const id = move.kind === 'projectile' ? move.from : move.id;
+  const view = views.get(id);
+  const sitio = escena.sitios.get(id);
+  if (view === undefined || sitio === undefined) return;
   const { root, body } = view;
-  const { mundo, menosMovimiento } = escena;
+  const { mundo, menosMovimiento, sitios } = escena;
   const homeX = view.actor.home.x * SIZE.width;
   const homeY = view.actor.home.y * SIZE.height;
   const mitad = duration / 2;
@@ -249,10 +289,16 @@ function addMove(
     case 'approach':
     case 'lunge': {
       const target = views.get(move.toward);
-      if (target === undefined) return;
-      const targetX = target.actor.home.x * SIZE.width;
-      const hacia = targetX > homeX ? 1 : -1;
-      const contacto = targetX - hacia * hueco(move.weapon);
+      const suyo = sitios.get(move.toward);
+      if (target === undefined || suyo === undefined) return;
+      // Desde donde esta cada uno AHORA, no desde su casa.
+      const hacia = suyo.x === sitio.x ? sitio.facing : suyo.x > sitio.x ? 1 : -1;
+      const contacto = suyo.x - hacia * hueco(move.weapon);
+      sitio.x = contacto;
+      encarar(tl, view, sitio, hacia, at);
+      // El rival se vuelve hacia quien llega: un bicho que viene por la espalda
+      // no debe encontrarse una guardia mirando al otro lado.
+      encarar(tl, target, suyo, hacia === 1 ? -1 : 1, at);
 
       // Los dos se plantan y SE QUEDAN. La vuelta la hace el movimiento
       // `retreat`, al cerrar el turno: si volviera aqui, los impactos
@@ -272,7 +318,7 @@ function addMove(
     case 'pose':
       // Andar sin desplazarse (ver `cortar`) seria andar en el sitio.
       if (menosMovimiento && move.anim === 'walk') break;
-      playAnimation(tl, view, move.anim, at, duration, move.parada);
+      playAnimation(tl, view, move.anim, at, duration, sitio.facing, move.parada, move.encadena);
       break;
 
     case 'flash':
@@ -288,7 +334,7 @@ function addMove(
       // La parada choca con el antebrazo de la guardia, algo por debajo: el
       // ataque parado apunta ahi (ver `animacion` en poses.ts).
       const alto = view.rig === null ? arriba(22) : arriba(move.parada ? 64 : 72);
-      chispa.x = homeX + view.actor.facing * MEDIO_CUERPO * 0.7;
+      chispa.x = sitio.x + sitio.facing * MEDIO_CUERPO * 0.7;
       chispa.y = homeY - alto;
       chispa.rotation = (move.fuerza % 5) * 0.3;
       chispa.alpha = 0;
@@ -332,7 +378,7 @@ function addMove(
     case 'float': {
       const label = makeFloater(move.text, move.color);
       const y0 = homeY - arriba(view.rig === null ? 60 : 135);
-      label.x = homeX;
+      label.x = sitio.x;
       label.y = y0;
       label.alpha = 0;
       mundo.addChild(label);
@@ -375,16 +421,18 @@ function addMove(
 
     case 'projectile': {
       const target = views.get(move.to);
-      if (target === undefined) return;
+      const suyo = sitios.get(move.to);
+      if (target === undefined || suyo === undefined) return;
+      if (suyo.x !== sitio.x) encarar(tl, view, sitio, suyo.x > sitio.x ? 1 : -1, at);
       const bala = makeProjectile();
       bala.alpha = 0;
       mundo.addChild(bala);
       fromTo(
         tl,
         bala,
-        { alpha: 1, x: homeX, y: homeY - arriba(70) },
+        { alpha: 1, x: sitio.x, y: homeY - arriba(70) },
         {
-          x: target.actor.home.x * SIZE.width,
+          x: suyo.x,
           y: target.actor.home.y * SIZE.height - arriba(70),
           rotation: 8,
           duration,
@@ -404,9 +452,9 @@ function addMove(
       fromTo(
         tl,
         perdida,
-        { alpha: 1, x: homeX, y: homeY - arriba(70) },
+        { alpha: 1, x: sitio.x, y: homeY - arriba(70) },
         {
-          x: homeX - view.actor.facing * 80,
+          x: sitio.x - sitio.facing * 80,
           y: homeY - 5,
           rotation: 12,
           duration,
@@ -419,7 +467,7 @@ function addMove(
 
     case 'ring': {
       const anillo = makeRing(move.color);
-      anillo.x = homeX;
+      anillo.x = sitio.x;
       anillo.y = homeY - arriba(60);
       anillo.alpha = 0;
       mundo.addChild(anillo);
@@ -428,10 +476,20 @@ function addMove(
       break;
     }
 
-    case 'retreat':
+    case 'retreat': {
       if (menosMovimiento) cortar(tl, root, homeX, at, duration);
       else tl.to(root, { x: homeX, duration, ease: 'power1.out' }, at);
+      sitio.x = homeX;
+      // Vuelve a mirar al frente, y con el los que se habian girado para
+      // recibirle y siguen en casa.
+      for (const [otro, suyo] of sitios) {
+        const otraVista = views.get(otro);
+        if (otraVista === undefined) continue;
+        if (suyo.x !== otraVista.actor.home.x * SIZE.width) continue;
+        encarar(tl, otraVista, suyo, otraVista.actor.facing, at);
+      }
       break;
+    }
 
     // Las caras van por su propia pista (ver `ponerCaras`): un gesto suelto no
     // sabe si el siguiente lo corta.
@@ -511,7 +569,14 @@ export function buildTimeline(
   const mundo = new Container();
   const carteles = new Container();
   stage.addChild(mundo, carteles);
-  const escena: Escena = { mundo, carteles, menosMovimiento: opciones.menosMovimiento ?? false };
+  const escena: Escena = {
+    mundo,
+    carteles,
+    menosMovimiento: opciones.menosMovimiento ?? false,
+    sitios: new Map(
+      scene.actors.map((a) => [a.id, { x: a.home.x * SIZE.width, facing: a.facing }]),
+    ),
+  };
 
   // El fondo se pasa del lienzo por todos los lados, o el temblor destapa una
   // franja del color de la pagina. Se agranda desde la linea del suelo, que

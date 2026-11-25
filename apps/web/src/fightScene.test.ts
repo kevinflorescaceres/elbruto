@@ -61,6 +61,62 @@ group('planFight', () => {
     }
   }, 30_000);
 
+  it('todo el que se planta junto al rival vuelve a casa antes del turno siguiente', () => {
+    // Quien contraatacaba se quedaba donde acabo, y el siguiente que iba a por
+    // el apuntaba a su casa vacia: lo cruzaba y pegaba al aire de espaldas.
+    let contras = 0;
+    for (let seed = 0; seed < 300; seed++) {
+      const fuera = new Set<string>();
+      for (const beat of planFight(fight(seed)).beats) {
+        for (const move of beat.moves) {
+          if (move.kind === 'pulse') expect([...fuera], `semilla ${seed}`).toEqual([]);
+          if (move.kind === 'lunge' || move.kind === 'approach') {
+            if (fuera.size > 0 && !fuera.has(move.id)) contras++;
+            fuera.add(move.id);
+          }
+          if (move.kind === 'retreat') fuera.delete(move.id);
+        }
+      }
+    }
+    expect(contras).toBeGreaterThan(0);
+  });
+
+  it('cada impacto de un combo tiene su golpe, y a punos alternan las manos', () => {
+    // El motor manda un `attack` y luego varios `hit`: sin esto, del segundo
+    // impacto en adelante el rival acusaba golpes que nadie daba.
+    let combos = 0;
+    let cruzados = 0;
+    for (let seed = 0; seed < 300; seed++) {
+      const replay = fight(seed);
+      const scene = planFight(replay);
+      const poses = scene.beats.flatMap((b) =>
+        b.moves.filter((m): m is Extract<Move, { kind: 'pose' }> => m.kind === 'pose'),
+      );
+      const golpes = poses.filter((m) => m.anim.startsWith('attack'));
+      const seguidos = golpes.filter((m) => m.encadena === true);
+      combos += seguidos.length;
+      for (const m of seguidos) if (m.anim === 'attackCruzado') cruzados++;
+
+      // Tantos golpes como impactos encadenados en el log.
+      let esperados = 0;
+      let impactos = 0;
+      let quien = '';
+      for (const e of replay.log) {
+        if (e.type === 'attack') {
+          impactos = 0;
+          quien = e.id;
+        } else if (e.type === 'turn') quien = '';
+        else if (e.type === 'hit' && e.id === quien && ++impactos > 1) esperados++;
+      }
+      const ataquesSeguidos = seguidos.length - esperados;
+      expect(ataquesSeguidos, `semilla ${seed}`).toBeGreaterThanOrEqual(0);
+      // El cruzado no abre nunca: es el "dos" del uno-dos.
+      for (const m of golpes) if (m.anim === 'attackCruzado') expect(m.encadena).toBe(true);
+    }
+    expect(combos).toBeGreaterThan(0);
+    expect(cruzados).toBeGreaterThan(0);
+  });
+
   it('el ataque que acaba parado usa su version parada, y el que entra no', () => {
     let paradas = 0;
     for (let seed = 0; seed < 200; seed++) {

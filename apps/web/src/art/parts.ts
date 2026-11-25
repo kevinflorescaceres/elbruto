@@ -95,6 +95,18 @@ export const RIG: Joint[] = [
 /** Orden de pintado dentro de cada padre. Lo de delante, al final. */
 export const Z_ORDER: PartName[] = ['legBack', 'armBack', 'legFront', 'torso', 'head', 'armFront'];
 
+/**
+ * Z_ORDER da la profundidad, y la forma propia de una parte usa la suya: asi
+ * el brazo de atras queda detras del torso y el de delante por encima.
+ */
+export function profundidad(name: PartName): number {
+  const index = Z_ORDER.indexOf(name);
+  return index === -1 ? Z_ORDER.indexOf('torso') : index;
+}
+
+/** Por encima del torso y por debajo de la cabeza: el brazo de atras en guardia. */
+export const Z_DELANTE = Z_ORDER.indexOf('torso') + 0.5;
+
 // --- Piezas ---
 
 /**
