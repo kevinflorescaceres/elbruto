@@ -124,7 +124,7 @@ Al comenzar el combate, el tiempo inicial de cada luchador se sortea con el PRNG
 ```
 base    = weapon.damage + strength * weapon.strengthScale / 100     # sin floor desde ENGINE_VERSION 4
 variado = floor(base * rand(80, 120) / 100)
-final   = max(1, variado - defender.armor)   # la armadura, solo en el primer impacto
+final   = max(1, variado - defender.armor)   # en cada impacto desde ENGINE_VERSION 5 (antes, solo el primero)
 ```
 
 Para armas arrojadizas, sustituir la fuerza por `agility * 0.7 + strength * 0.3` en el término de escalado.

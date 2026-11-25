@@ -90,7 +90,7 @@ tests, asi que nunca pisan la base de desarrollo.
 - Prisma 7 no admite `url` en el schema: la conexión va en `apps/server/prisma.config.ts`
   y el cliente usa el driver adapter de `pg`. `prisma` está fijado en 7.10.0 porque su
   tag `latest` en npm apunta a una release candidate de la 8.
-- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **4**.
+- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **5**.
   Los combates antiguos se siguen viendo: se reproducen desde su log guardado, no se
   vuelven a simular.
 - **Los textos que ve el jugador llevan tildes.** Los comentarios del código no, para
@@ -110,19 +110,31 @@ tests, asi que nunca pisan la base de desarrollo.
 - **Combos**: hasta 3 impactos, cada uno al 70% del **anterior** (no de la base), con
   probabilidad `comboRate + agilidad*3`, tope 45%.
 - **Daño**: el aporte de la fuerza no se redondea; se trunca una sola vez, tras el ±20%.
-  La armadura solo frena el **primer** impacto de cada acción, no los del combo.
+  La armadura frena **cada** impacto (motor 5; antes solo el primero), con mínimo 1.
 - **Nivel 1**: sin arma, con una maña al azar que nunca es Desjarrete (no hay nada que
   desarmar). Por eso los puños pegan 6 y no 3.
 - **Defensa** en orden: esquiva → bloqueo → contraataque. El contraataque responde a la
   **esquiva**, y un arma larga en la mano añade 25 puntos. Revire es la excepción: también
   responde tras **encajar** un golpe (solo su porcentaje, sin el bonus del arma larga).
 - **Arrojadizas**: solo se lanzan, no se agotan, y el daño escala con agilidad.
-- **Mascotas**: cuestan resistencia (2/4/8), así que tener bicho te hace más frágil.
+- **Mascotas**: cuestan resistencia (2/3/6), así que tener bicho te hace más frágil.
+- **Mañas de disparo** (motor 5): ninguna maña da "+N a una estadística", que ya lo da subir de
+  nivel. Cuero Curtido, Resuello, Pies Ligeros y Brazo de Fragua se disparan en un momento del
+  combate y lo dicen en el log con un evento `skill`, que el lienzo pinta con su nombre flotando.
+  Trago Largo solo se bebe por debajo de la mitad de vida, y Desjarrete es un golpe que además
+  hace perder el turno al rival (y lo desarma si lleva arma).
 
 **Desviaciones del documento, medidas:** la esquiva es `17 + agilidad*3` y no `10 + agilidad*2`
 (con base 10 los fallos se quedaban en 12,6% y el objetivo es 20-35%; el ×3 es para que un
 punto de agilidad valga casi lo que uno de resistencia), y el techo del clamp es 36 y no 40
 (con 40, a nivel 10 los fallos se iban a 35,6%).
+
+**Cómo se mide si un arma, maña o bicho vale la pena:** `pnpm balance` clona el mismo peleón y
+le da a uno el elemento y al otro los 3 puntos de estadística que siempre se ofrecen al subir de
+nivel (`frenteAPuntos`, a niveles 3, 10 y 20). El 50% es una elección justa; la banda es [35, 65].
+La tabla de "quien lo tiene contra quien no" sale sesgada: quien tiene más elementos tiene menos
+estadísticas, y casi todo cae por debajo del 50%. Las armas bajan al ~42% a nivel 10-20 por diseño:
+a esas alturas ya llevas varias y solo se empuña una.
 
 **Cómo se mide el equilibrio entre categorías:** cara a cara, con ambos armados y armas de
 distinta clase. Medir "tener arma contra no tenerla" da 86% para cualquier categoría,

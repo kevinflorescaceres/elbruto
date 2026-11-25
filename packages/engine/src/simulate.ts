@@ -3,13 +3,14 @@
  * El cliente solo reproduce el log; aqui se decide todo.
  */
 import { maxHpFor } from './brute.js';
-import { FISTS, getPet, getSkill, getWeapon } from './catalog.js';
+import { FISTS, getPet, getSkill, getWeapon, SKILLS } from './catalog.js';
 import { chance, clamp, mulberry32, randInt, weightedPick, type Rng } from './prng.js';
 import type {
   Brute,
   Combatant,
   FightEvent,
   FightResult,
+  Pasivas,
   Pet,
   Side,
   Skill,
@@ -20,7 +21,10 @@ import type {
 // nueva con azar, combos de hasta 3 impactos, defensa en orden esquiva /
 // bloqueo / contraataque, arrojadizas que no se agotan y mascotas que cuestan
 // resistencia.
-export const ENGINE_VERSION = 4;
+// 5: las manas de estadistica pasan a dispararse en un momento del combate
+// (Cuero Curtido, Resuello, Pies Ligeros, Brazo de Fragua) y la armadura de
+// Callo Viejo frena todos los impactos, no solo el primero.
+export const ENGINE_VERSION = 5;
 
 const MAX_TURNS = 500;
 
@@ -28,6 +32,20 @@ const MAX_TURNS = 500;
 const MAX_COMBO_HITS = 3;
 const MAX_COMBO_CHANCE = 45;
 const COMBO_FALLOFF = 0.7;
+/** La mana de cada pasiva de disparo, para nombrarla en el log. */
+const SKILL_DE = {
+  lastStand: skillDe('lastStand'),
+  secondWind: skillDe('secondWind'),
+  afterDodge: skillDe('afterDodge'),
+  firstBlow: skillDe('firstBlow'),
+};
+
+function skillDe(kind: Skill['effect']['kind']): string {
+  const skill = SKILLS.find((s) => s.effect.kind === kind);
+  if (skill === undefined) throw new Error(`Ninguna mana tiene el efecto ${kind}`);
+  return skill.id;
+}
+
 /** Lo que anade un arma larga a la probabilidad de contestar tras esquivar. */
 const COUNTER_LARGA = 25;
 
@@ -56,6 +74,7 @@ export interface CombatStats {
   block: number;
   counter: number;
   actives: Skill[];
+  pasivas: Pasivas;
 }
 
 /**
@@ -67,8 +86,9 @@ export function combatStats(brute: Brute): CombatStats {
   // vida base de 30 no se toca.
   const coste = brute.pets.reduce((suma, id) => suma + getPet(id).enduranceCost, 0);
   const endurance = Math.max(0, brute.endurance - coste);
-  let maxHp = maxHpFor(endurance, brute.level);
-  let { strength, agility, speed } = brute;
+  const maxHp = maxHpFor(endurance, brute.level);
+  const { strength, agility, speed } = brute;
+  const pasivas = sinPasivas();
   let armor = 0;
   let block = 0;
   let counter = 0;
@@ -82,9 +102,6 @@ export function combatStats(brute: Brute): CombatStats {
     }
     const effect = skill.effect;
     switch (effect.kind) {
-      case 'maxHp':
-        maxHp += effect.amount;
-        break;
       case 'armor':
         armor += effect.amount;
         break;
@@ -94,22 +111,36 @@ export function combatStats(brute: Brute): CombatStats {
       case 'counter':
         counter += effect.chance;
         break;
-      case 'stat':
-        if (effect.stat === 'endurance') maxHp += effect.amount * 6;
-        if (effect.stat === 'strength') strength += effect.amount;
-        if (effect.stat === 'agility') agility += effect.amount;
-        if (effect.stat === 'speed') speed += effect.amount;
+      case 'lastStand':
+        pasivas.aguanta = true;
+        break;
+      case 'secondWind':
+        pasivas.resuello = { below: effect.below, speed: effect.speed };
+        break;
+      case 'afterDodge':
+        pasivas.quiebro = { combo: effect.combo, listo: false };
+        break;
+      case 'firstBlow':
+        pasivas.primerGolpe = effect.multiplier;
         break;
       default:
         break;
     }
   }
 
-  return { maxHp, strength, agility, speed, armor, block, counter, actives };
+  return { maxHp, strength, agility, speed, armor, block, counter, actives, pasivas };
 }
 
+const sinPasivas = (): Pasivas => ({
+  aguanta: false,
+  resuello: null,
+  quiebro: null,
+  primerGolpe: null,
+});
+
 function buildFighter(brute: Brute, side: Side): Combatant {
-  const { maxHp, strength, agility, speed, armor, block, counter, actives } = combatStats(brute);
+  const { maxHp, strength, agility, speed, armor, block, counter, actives, pasivas } =
+    combatStats(brute);
 
   // Entra con un arma en la mano: empezar a punos desperdiciaba turnos. Cual,
   // se decide despues, cuando se conoce al rival (ver `equipBest`).
@@ -131,6 +162,7 @@ function buildFighter(brute: Brute, side: Side): Combatant {
     block,
     counter,
     actives,
+    pasivas,
     next: 0,
   };
 }
@@ -154,6 +186,7 @@ function buildPet(petId: string, side: Side, index: number): Combatant {
     block: 0,
     counter: 0,
     actives: [],
+    pasivas: sinPasivas(),
     next: 0,
   };
 }
@@ -255,9 +288,19 @@ function resolveAttack(
   if (weapon.reach <= 2) state.log.push({ type: 'move', id: attacker.id, target: defender.id });
   state.log.push({ type: 'attack', id: attacker.id, target: defender.id, weapon: weapon.id });
 
+  // Pies Ligeros: el ataque que sigue a una esquiva sale del quiebro y entra.
+  const quiebro = attacker.pasivas.quiebro;
+  const cargado = quiebro !== null && quiebro.listo;
+  if (quiebro !== null && cargado) {
+    quiebro.listo = false;
+    state.log.push({ type: 'skill', id: attacker.id, skill: SKILL_DE.afterDodge });
+  }
+
   // Defensa en el orden de COMBATE.md §4.6: esquiva, bloqueo, contraataque.
-  if (chance(state.rng, dodgeChance(weapon, defender))) {
+  if (!cargado && chance(state.rng, dodgeChance(weapon, defender))) {
     state.log.push({ type: 'evade', id: defender.id });
+    const suyo = defender.pasivas.quiebro;
+    if (suyo !== null) suyo.listo = true;
 
     // Quien se aparta con un arma larga en la mano tiene sitio para responder.
     const contra = defender.counter + (defender.weapon.category === 'larga' ? COUNTER_LARGA : 0);
@@ -288,7 +331,9 @@ function resolveAttack(
 
   // Combos (COMBATE.md §4.2): hasta 3 impactos encadenados, cada uno al 70% del
   // anterior, y cada uno se tira contra la misma probabilidad.
-  const combo = clamp(weapon.comboRate + attacker.agility * COMBO_PER_AGILITY, 0, MAX_COMBO_CHANCE);
+  const combo =
+    clamp(weapon.comboRate + attacker.agility * COMBO_PER_AGILITY, 0, MAX_COMBO_CHANCE) +
+    (quiebro !== null && cargado ? quiebro.combo : 0);
   const varied = Math.floor((base * randInt(state.rng, 80, 120)) / 100);
   // Un golpe pesado pasa por encima del acolchado: la dureza no lo amortigua.
   const armadura = weapon.category === 'pesada' ? 0 : defender.armor;
@@ -297,12 +342,29 @@ function resolveAttack(
   // previo siempre, y no solo de media.
   let golpeado = Math.floor(varied * multiplier);
 
+  // Brazo de Fragua: el primer golpe que entra en el combate lleva todo el peso.
+  const primerGolpe = attacker.pasivas.primerGolpe;
+  if (primerGolpe !== null) {
+    attacker.pasivas.primerGolpe = null;
+    golpeado = Math.floor(golpeado * primerGolpe);
+    state.log.push({ type: 'skill', id: attacker.id, skill: SKILL_DE.firstBlow });
+  }
+
   for (let golpe = 0; golpe < MAX_COMBO_HITS; golpe++) {
     state.log.push({ type: 'hit', id: attacker.id, target: defender.id });
 
-    // La armadura solo frena el primer impacto: los del combo entran ya sin
-    // defensa, y asi un golpe de 1 de dano no se queda siempre en el minimo.
-    const amount = Math.max(1, golpeado - (golpe === 0 ? armadura : 0));
+    // La armadura frena cada impacto. Era solo el primero, para que un golpe de
+    // 1 no se quedara siempre en el minimo; pero con Callo Viejo como unica
+    // fuente, restar 1 a un solo impacto no se notaba. El minimo sigue en 1.
+    let amount = Math.max(1, golpeado - armadura);
+
+    // Cuero Curtido: el golpe que lo tumbaria lo deja de pie con 1 de vida. Con
+    // 1 ya no hay de donde quitar: ese golpe no se aguanta.
+    const aguanta = defender.pasivas.aguanta && amount >= defender.hp && defender.hp > 1;
+    if (aguanta) {
+      defender.pasivas.aguanta = false;
+      amount = defender.hp - 1;
+    }
 
     defender.hp = Math.max(0, defender.hp - amount);
     state.log.push({ type: 'damage', id: defender.id, amount, hp: defender.hp });
@@ -311,6 +373,18 @@ function resolveAttack(
       state.log.push({ type: 'death', id: defender.id });
       return;
     }
+    if (aguanta) state.log.push({ type: 'skill', id: defender.id, skill: SKILL_DE.lastStand });
+
+    // Resuello: con poca vida, saca fuerzas y acelera el resto del combate.
+    const resuello = defender.pasivas.resuello;
+    if (resuello !== null && defender.hp * 100 <= resuello.below * defender.maxHp) {
+      defender.pasivas.resuello = null;
+      defender.speed += resuello.speed;
+      state.log.push({ type: 'skill', id: defender.id, skill: SKILL_DE.secondWind });
+    }
+
+    // Quien aguanta de pie corta el combo: el rival se queda mirando.
+    if (aguanta) break;
     if (!chance(state.rng, combo)) break;
     golpeado = Math.floor(golpeado * COMBO_FALLOFF);
   }
@@ -370,11 +444,16 @@ function throwWeapon(state: State, actor: Combatant): void {
   resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 1 });
 }
 
-/** Solo tiene sentido desarmar a quien lleva algo. */
+/** Desjarrete necesita a quien barrer: el peleon rival, no sus bichos. */
 function canUseSkill(state: State, actor: Combatant, skill: Skill): boolean {
+  // Beber con la vida entera era tirar el trago: se guarda para cuando hace falta.
+  if (skill.effect.kind === 'heal') return actor.hp * 100 <= actor.maxHp * TRAGO_POR_DEBAJO;
   if (skill.effect.kind !== 'disarm') return true;
-  return enemiesOf(state, actor).some((e) => !e.isPet && e.weapon.id !== FISTS.id);
+  return enemiesOf(state, actor).some((e) => !e.isPet);
 }
+
+/** Por debajo de que porcentaje de vida se echa mano del trago. */
+const TRAGO_POR_DEBAJO = 50;
 
 function useSkill(state: State, actor: Combatant): void {
   const usable = actor.actives.filter((s) => canUseSkill(state, actor, s));
@@ -398,12 +477,21 @@ function useSkill(state: State, actor: Combatant): void {
       attack(state, actor, skill.effect.multiplier);
       break;
     case 'disarm': {
-      const target = enemiesOf(state, actor).find((e) => !e.isPet && e.weapon.id !== FISTS.id);
+      // Desjarrete: un tajo a las corvas. El rival pierde su siguiente turno, si
+      // lleva arma la suelta, y encaja el golpe. Antes solo desarmaba, y contra quien iba a
+      // punos (todo el nivel 1, y medio nivel 3) era una mana muerta.
+      const target = enemiesOf(state, actor).find((e) => !e.isPet);
       if (target === undefined) break;
-      const lost = target.weapon;
-      target.weapons = target.weapons.filter((w) => w.id !== lost.id);
-      target.weapon = FISTS;
-      state.log.push({ type: 'disarm', id: actor.id, target: target.id, weapon: lost.id });
+      // El tajo es un golpe: sin el, gastar el turno para quitarle uno al rival
+      // dejaba el tempo igual.
+      target.next += delayOf(target);
+      if (target.weapon.id !== FISTS.id) {
+        const lost = target.weapon;
+        target.weapons = target.weapons.filter((w) => w.id !== lost.id);
+        target.weapon = FISTS;
+        state.log.push({ type: 'disarm', id: actor.id, target: target.id, weapon: lost.id });
+      }
+      resolveAttack(state, actor, target, actor.weapon, { allowCounter: true, multiplier: 1 });
       break;
     }
     default:

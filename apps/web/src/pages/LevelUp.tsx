@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
 import { getPet, getSkill, getWeapon, type LevelUpOption } from '@camorra/engine';
-import { Confirmar, ESTADISTICAS, Pagina, TarjetaBoton, TusCifras } from '../ui.js';
+import { Confirmar, ESTADISTICAS, Pagina, QUE_HACE, TarjetaBoton, TusCifras } from '../ui.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Escenario } from '../Escenario.js';
 import { useBrute } from '../hooks.js';
@@ -73,9 +73,13 @@ function describeOption(option: LevelUpOption, ahora: Cifras | undefined): Opcio
       // "Reflejos 3 → 6": lo que se gana, contado contra lo que ya se tiene.
       const cambios = Object.entries(option.gains).map(([stat, amount]) => {
         const antes = ahora?.[stat];
-        return antes === undefined
-          ? `+${amount} de ${STAT_NAMES[stat] ?? stat}`
-          : `${STAT_NAMES[stat] ?? stat} ${antes} → ${antes + amount}`;
+        // Lo que hace va al lado: elegir entre Reflejos y Brio sin saberlo era a ciegas.
+        const que = QUE_HACE[stat as keyof typeof QUE_HACE]?.corto;
+        const cifra =
+          antes === undefined
+            ? `+${amount} de ${STAT_NAMES[stat] ?? stat}`
+            : `${STAT_NAMES[stat] ?? stat} ${antes} → ${antes + amount}`;
+        return que === undefined ? cifra : `${cifra} (${que})`;
       });
       return { title: parts.join(' y '), detail: cambios.join(' · ') };
     }

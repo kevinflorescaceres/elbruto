@@ -24,8 +24,15 @@ export interface Weapon {
 }
 
 export type SkillEffect =
-  | { kind: 'stat'; stat: Stat; amount: number }
-  | { kind: 'maxHp'; amount: number }
+  /** Una vez por combate, el golpe que lo tumbaria lo deja con 1 de vida. */
+  | { kind: 'lastStand' }
+  /** Al bajar del `below`% de vida, suma `speed` de brio el resto del combate. */
+  | { kind: 'secondWind'; below: number; speed: number }
+  /** Tras esquivar, su siguiente ataque no se esquiva y suma `combo` al de encadenar. */
+  | { kind: 'afterDodge'; combo: number }
+  /** El primer golpe que conecta en el combate pega `multiplier` veces mas. */
+  | { kind: 'firstBlow'; multiplier: number }
+  /** Resta `amount` a cada impacto que encaja, salvo de armas pesadas. */
   | { kind: 'armor'; amount: number }
   | { kind: 'block'; chance: number }
   | { kind: 'counter'; chance: number }
@@ -119,8 +126,22 @@ export interface Combatant {
   counter: number;
   /** Habilidades activas sin gastar. */
   actives: Skill[];
+  /** Las pasivas que se disparan en un momento del combate, con su estado. */
+  pasivas: Pasivas;
   /** Momento de su proxima accion en la cola de iniciativa. */
   next: number;
+}
+
+/** Pasivas de disparo. Cada una se gasta o se arma durante el combate. */
+export interface Pasivas {
+  /** Cuero Curtido sin gastar. */
+  aguanta: boolean;
+  /** Resuello sin disparar: umbral de vida (%) y brio que suma. */
+  resuello: { below: number; speed: number } | null;
+  /** Pies Ligeros: lo que suma al combo, y si el siguiente ataque va cargado. */
+  quiebro: { combo: number; listo: boolean } | null;
+  /** Brazo de Fragua sin gastar: el multiplicador del primer golpe. */
+  primerGolpe: number | null;
 }
 
 export type FightEvent =

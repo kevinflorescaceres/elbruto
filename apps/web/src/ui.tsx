@@ -178,6 +178,50 @@ export const ESTADISTICAS = [
   ['Brío', 'speed'],
 ] as const;
 
+/**
+ * Que hace cada estadistica. `corto` va junto a la cifra donde se decide (la
+ * subida de nivel); `largo`, en la ficha. Las cuentas son las de `simulate.ts`
+ * y `maxHpFor`: si cambian alli, hay que cambiarlas aqui.
+ */
+export const QUE_HACE: Record<(typeof ESTADISTICAS)[number][1], { corto: string; largo: string }> =
+  {
+    endurance: {
+      corto: 'más vida',
+      largo: 'Más vida: cada punto suma 6. Los bichos se pagan en Aguante.',
+    },
+    strength: {
+      corto: 'más daño',
+      largo:
+        'Más daño en cada golpe. Las armas pesadas sacan más de cada punto; las rápidas, menos.',
+    },
+    agility: {
+      corto: 'esquivas y encadenas más',
+      largo:
+        'Esquivas más (un 3% por punto) y encadenas más golpes seguidos (otro 3%). Con las arrojadizas, también pegas más.',
+    },
+    speed: {
+      corto: 'actúas más a menudo',
+      largo: 'Actúas más a menudo: esperas menos entre una acción y la siguiente.',
+    },
+  };
+
+/** La leyenda de las cifras, plegada: quien ya lo sabe no tiene por que leerla. */
+export function QueHaceCadaCifra() {
+  return (
+    <details className="que-hace">
+      <summary>¿Qué hace cada cifra?</summary>
+      <dl>
+        {ESTADISTICAS.map(([etiqueta, campo]) => (
+          <div key={campo}>
+            <dt>{etiqueta}</dt>
+            <dd>{QUE_HACE[campo].largo}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
 /** Etiqueta encima y cifra grande debajo. */
 export function Estadistica({ etiqueta, valor }: { etiqueta: string; valor: number | string }) {
   return (

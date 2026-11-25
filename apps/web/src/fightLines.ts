@@ -72,8 +72,24 @@ export function describe(
       return corto && esPeleon(event.target)
         ? `${nameOf(event.id)} le quita ${weaponName(event.weapon)}.`
         : `${nameOf(event.id)} desarma a ${nameOf(event.target)}: ${weaponName(event.weapon)} al suelo.`;
-    case 'skill':
-      return `${nameOf(event.id)} tira de ${getSkill(event.skill).name}.`;
+    case 'skill': {
+      // Las pasivas de disparo no se "usan": pasan. Cada una con su frase.
+      const skill = getSkill(event.skill);
+      switch (skill.effect.kind) {
+        case 'lastStand':
+          return `${nameOf(event.id)} aguanta de pie con 1 de vida.`;
+        case 'secondWind':
+          return `${nameOf(event.id)} toma resuello y se acelera.`;
+        case 'afterDodge':
+          return `${nameOf(event.id)} sale del quiebro y entra seguro.`;
+        case 'firstBlow':
+          return `${nameOf(event.id)} mete el primer golpe con todo el brazo.`;
+        case 'disarm':
+          return `${nameOf(event.id)} le tira un tajo a las piernas.`;
+        default:
+          return `${nameOf(event.id)} tira de ${skill.name}.`;
+      }
+    }
     case 'death':
       return `${nameOf(event.id)} se desploma.`;
     case 'end':

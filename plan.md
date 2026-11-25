@@ -157,7 +157,7 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 
 1. **Esquiva:** `clamp(17 + defender.agility * 3 - weapon.accuracyBonus, 5, 36)` por ciento. Si esquiva, el defensor puede **contraatacar**: su probabilidad de contra, más 25 si empuña un arma larga. El contraataque no encadena.
 2. **Bloqueo:** solo si el defensor tiene habilidad de bloqueo.
-3. **Daño:** `weapon.damage + aporte * strengthScale / 100`, con variación ±20% y truncado al final. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor, solo en el primer impacto y salvo con arma **pesada**, que la ignora. Mínimo 1.
+3. **Daño:** `weapon.damage + aporte * strengthScale / 100`, con variación ±20% y truncado al final. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor en cada impacto _(Ajustado en motor 5: antes solo en el primero)_, salvo con arma **pesada**, que la ignora. Mínimo 1.
 4. **Combos:** tras un impacto, se tira `clamp(weapon.comboRate + agility * 3, 0, 45)`. Hasta **3 impactos** por acción, y cada uno hace el **70% del anterior** (del impacto previo, no de la base). Cada impacto emite su propio `hit` y `damage`.
 
 **Gestión de armas:**
@@ -167,7 +167,7 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 - Ser desarmado deja el arma inservible. Sin arma se pelea a puños, siempre disponibles.
 - `disarm` solo mediante la habilidad activa correspondiente.
 
-**Mascotas:** cuestan resistencia al dueño (chucho 2, mastín 4, jabalí 8, con suelo en 0). Pelean por ti, pero te hacen más frágil.
+**Mascotas:** cuestan resistencia al dueño (chucho 2, mastín 3, jabalí 6, con suelo en 0; _ajustado en motor 5: eran 2/4/8_). Pelean por ti, pero te hacen más frágil.
 
 **Tope de turnos:** 500. Si se alcanza, gana quien tenga mayor porcentaje de vida restante.
 
@@ -176,7 +176,7 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 ### Catálogo inicial (nombres y efectos originales)
 
 - **10 armas**, dos por cada una de las 5 categorías: rápida, media, larga, pesada, arrojadiza. Campos: `id, name, category, damage, accuracyBonus, interval, comboRate, strengthScale, reach, throwable`.
-- **10 habilidades**, mezcla de pasivas (más vida, más agilidad, bloqueo, contraataque) y activas (curación única, golpe fuerte, desarmar). Campos: `id, name, type, effect`. _(Ajustado en Fase 1: `trigger` era redundante, `type` + `effect` ya determinan cuándo se aplica.)_
+- **10 habilidades**, mezcla de pasivas (bloqueo, contraataque, armadura y cuatro que se disparan en un momento del combate) y activas (curación única, golpe fuerte, tajo a las piernas). _(Ajustado en motor 5: las pasivas de "+2 a una estadística" y "+10 de vida" pasaron a dispararse: Cuero Curtido aguanta un golpe mortal, Resuello acelera con poca vida, Pies Ligeros entra seguro tras esquivar, Brazo de Fragua dobla el primer golpe.)_ Campos: `id, name, type, effect`. _(Ajustado en Fase 1: `trigger` era redundante, `type` + `effect` ya determinan cuándo se aplica.)_
 - **3 mascotas** con stats propias y un `enduranceCost` que paga el dueño.
 
 ## 7. Eventos del combate

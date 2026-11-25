@@ -33,6 +33,11 @@ describe('growBot', () => {
         total += 1;
       }
     }
-    expect(gana / total).toBeGreaterThan(0.55);
+    // Era > 0.55 con el motor 4, cuando 3 puntos de estadistica valian mas que
+    // casi cualquier arma o mana y elegir bien era elegir siempre los puntos.
+    // Con el motor 5 las dos opciones de cada nivel valen parecido (ver
+    // `frenteAPuntos` en `pnpm balance`), y elegir con cabeza da poco: 0.51.
+    // Lo que se protege es que el bot no elija PEOR que una moneda.
+    expect(gana / total).toBeGreaterThan(0.5);
   });
 });

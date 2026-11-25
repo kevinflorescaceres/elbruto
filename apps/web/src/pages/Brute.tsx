@@ -6,6 +6,7 @@ import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
 import {
+  QueHaceCadaCifra,
   Barra,
   Boton,
   cuando,
@@ -189,6 +190,7 @@ export function BrutePage() {
                 <Estadistica key={campo} etiqueta={etiqueta} valor={b[campo]} />
               ))}
             </div>
+            <QueHaceCadaCifra />
 
             <Barra de={b.xp} entre={b.xpToNextLevel} etiqueta="Experiencia" />
 

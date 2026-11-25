@@ -9,7 +9,7 @@
 import { createBrute, growTo } from './brute.js';
 import { PETS, SKILLS, WEAPONS } from './catalog.js';
 import { mulberry32, randInt } from './prng.js';
-import { medir, porCategoria } from './sensacion.js';
+import { frenteAPuntos, medir, porCategoria } from './sensacion.js';
 import { simulate } from './simulate.js';
 import type { Brute } from './types.js';
 
@@ -100,6 +100,20 @@ for (const [cat, fila] of [...porCategoria(4000)].sort(
   const marca = tasa > 60 || tasa < 40 ? '  <-- fuera de [40, 60]' : '';
   console.log(`  ${cat.padEnd(14)}${tasa.toFixed(1).padStart(5)}%  (n=${fila.con})${marca}`);
   if (tasa > 60 || tasa < 40) fuera.push(`categoria ${cat} = ${tasa.toFixed(1)}%`);
+}
+
+// --- La eleccion al subir de nivel: esto o 3 puntos (ver `frenteAPuntos`) ---
+const NIVELES_ELECCION = [3, 10, 20];
+const elecciones = NIVELES_ELECCION.map((n) => frenteAPuntos(1500, n));
+console.log('\nElegir esto frente a 3 puntos de estadistica, el mismo peleon:\n');
+console.log(`  ${''.padEnd(28)}${NIVELES_ELECCION.map((n) => `niv ${n}`.padStart(8)).join('')}`);
+for (const id of elecciones[0]?.keys() ?? []) {
+  const tasas = elecciones.map((e) => e.get(id) ?? Number.NaN);
+  const malas = tasas.filter((t) => t > 65 || t < 35);
+  const marca = malas.length > 0 ? '  <-- fuera de [35, 65]' : '';
+  console.log(
+    `  ${(names.get(id) ?? id).padEnd(28)}${tasas.map((t) => `${t.toFixed(1)}%`.padStart(8)).join('')}${marca}`,
+  );
 }
 
 const worst = rows.filter((r) => r.rate > 60);

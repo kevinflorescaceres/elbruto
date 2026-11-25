@@ -12,21 +12,25 @@ const STAT_NAMES: Record<string, string> = Object.fromEntries(
 export function describeSkill(skill: Skill): string {
   const effect = skill.effect;
   switch (effect.kind) {
-    case 'stat':
-      return `+${effect.amount} de ${STAT_NAMES[effect.stat] ?? effect.stat}.`;
-    case 'maxHp':
-      return `+${effect.amount} de vida.`;
+    case 'lastStand':
+      return 'Una vez por pelea, aguanta de pie con 1 de vida el golpe que lo tumbaría.';
+    case 'secondWind':
+      return `Por debajo del ${effect.below}% de vida, +${effect.speed} de ${STAT_NAMES.speed ?? 'Brío'} el resto de la pelea.`;
+    case 'afterDodge':
+      return `Tras esquivar, su siguiente ataque no se puede esquivar y encadena más (+${effect.combo}%).`;
+    case 'firstBlow':
+      return `El primer golpe que mete en la pelea hace ${effect.multiplier === 2 ? 'el doble' : `×${effect.multiplier}`} de daño.`;
     case 'armor':
-      return `Resta ${effect.amount} de daño al primer golpe de cada ataque, salvo armas pesadas.`;
+      return `Resta ${effect.amount} de daño a cada golpe que encaja, salvo de armas pesadas.`;
     case 'block':
       return `${effect.chance}% de parar un golpe en seco.`;
     case 'counter':
       return `${effect.chance}% de devolver el golpe tras esquivarlo o encajarlo.`;
     case 'heal':
-      return `Cura el ${effect.percent}% de la vida, una vez por pelea.`;
+      return `Cura el ${effect.percent}% de la vida al bajar de la mitad, una vez por pelea.`;
     case 'power':
       return `Un golpe con ${effect.multiplier === 2 ? 'el doble' : `×${effect.multiplier}`} de daño, una vez por pelea.`;
     case 'disarm':
-      return 'Le quita el arma al rival, una vez por pelea.';
+      return 'Un tajo a las piernas, una vez por pelea: el rival pierde su siguiente turno y suelta el arma.';
   }
 }

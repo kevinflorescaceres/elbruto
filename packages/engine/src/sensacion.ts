@@ -3,10 +3,11 @@
  * proyecto, no datos de nadie: se ajustan las constantes hasta entrar en rango.
  */
 import { applyLevelUpOption, createBrute, growTo } from './brute.js';
-import { WEAPONS } from './catalog.js';
+import { PETS, SKILLS, WEAPONS } from './catalog.js';
 import { mulberry32, pick, randInt, type Rng } from './prng.js';
 import { simulate } from './simulate.js';
-import type { Brute, FightEvent, FightResult } from './types.js';
+import { STATS } from './brute.js';
+import type { Brute, FightEvent, FightResult, LevelUpOption } from './types.js';
 
 export interface Medida {
   nombre: string;
@@ -197,3 +198,56 @@ const armado = (brute: Brute, rng: Rng): Brute =>
 
 const categoriaDe = (id: string | undefined): string | undefined =>
   id === undefined ? undefined : WEAPONS.find((w) => w.id === id)?.category;
+
+/** Una opcion de estadistica cualquiera, como las que salen al subir de nivel: 3 puntos. */
+function puntosAlAzar(rng: Rng): LevelUpOption {
+  if (randInt(rng, 1, 2) === 1) return { type: 'stat', gains: { [pick(rng, STATS)]: 3 } };
+  const primera = pick(rng, STATS);
+  const segunda = pick(
+    rng,
+    STATS.filter((s) => s !== primera),
+  );
+  return { type: 'stat', gains: { [primera]: 2, [segunda]: 1 } };
+}
+
+/**
+ * La eleccion de verdad: al subir de nivel siempre se ofrecen 3 puntos de
+ * estadistica, y la otra opcion puede ser esto. Se clona el MISMO peleon y uno
+ * se lleva el elemento y el otro los puntos. El 50% es una eleccion justa; por
+ * encima del 60% nadie elegiria los puntos, por debajo del 40% es una trampa.
+ *
+ * Medir "quien lo tiene contra quien no" en combates al azar no sirve para
+ * esto: quien tiene mas elementos tiene menos estadisticas, y casi todo sale
+ * por debajo del 50%.
+ */
+export function frenteAPuntos(combates: number, nivel: number): Map<string, number> {
+  const ids = [...WEAPONS.map((w) => w.id), ...SKILLS.map((s) => s.id), ...PETS.map((p) => p.id)];
+  const tabla = new Map<string, number>();
+  for (const id of ids) {
+    const rng = mulberry32(0xe1e + nivel);
+    const opcion: LevelUpOption = WEAPONS.some((w) => w.id === id)
+      ? { type: 'weapon', id }
+      : SKILLS.some((s) => s.id === id)
+        ? { type: 'skill', id }
+        : { type: 'pet', id };
+    let jugados = 0;
+    let ganados = 0;
+    for (let i = 0; jugados < combates && i < combates * 3; i++) {
+      const base = growTo(createBrute(`elige-${nivel}-${i}`), nivel, rng);
+      if ([...base.weapons, ...base.skills, ...base.pets].includes(id)) continue;
+      const con = applyLevelUpOption(base, opcion);
+      const sin = applyLevelUpOption(base, puntosAlAzar(rng));
+      // Lado alterno: el lado A no lleva ventaja, pero asi ni se plantea.
+      const aLaIzquierda = i % 2 === 0;
+      const r = simulate(
+        aLaIzquierda ? con : sin,
+        aLaIzquierda ? sin : con,
+        randInt(rng, 0, 2 ** 30),
+      );
+      jugados += 1;
+      if ((r.winner === 'A') === aLaIzquierda) ganados += 1;
+    }
+    tabla.set(id, jugados === 0 ? Number.NaN : (ganados / jugados) * 100);
+  }
+  return tabla;
+}

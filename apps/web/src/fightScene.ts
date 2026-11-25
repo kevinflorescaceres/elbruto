@@ -8,7 +8,7 @@
  * Las coordenadas van en 0..1 sobre el ancho y alto del lienzo: el renderer las
  * escala y el guion no sabe nada de pixeles.
  */
-import { getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
+import { getSkill, getWeapon, type Appearance, type FightEvent } from '@camorra/engine';
 import type { FightReplay } from '@camorra/shared';
 import type { Expresion } from './art/parts.js';
 import type { AnimName } from './art/poses.js';
@@ -593,10 +593,18 @@ export function planFight(replay: Replayable): Scene {
         ]);
         break;
 
+      // El nombre de la maña flota sobre quien la usa: las de disparo (Resuello,
+      // Cuero Curtido...) no tienen otro gesto propio, y sin letrero pasaban.
       case 'skill':
         push(event, [
           { kind: 'ring', id: event.id, color: COLOR.maña },
           { kind: 'flash', id: event.id, color: COLOR.maña },
+          {
+            kind: 'float',
+            id: event.id,
+            text: `¡${getSkill(event.skill).name}!`,
+            color: COLOR.maña,
+          },
         ]);
         break;
 

@@ -1063,6 +1063,44 @@ th {
   gap: var(--e-2);
 }
 
+/* La leyenda de las cifras, plegada bajo ellas. */
+.que-hace summary {
+  cursor: pointer;
+  color: var(--apagado);
+  font-size: var(--t-apoyo);
+  /* El area tactil, no solo la linea de texto. */
+  padding-block: var(--e-1);
+}
+
+.que-hace dl {
+  margin: var(--e-2) 0 0;
+  display: grid;
+  gap: var(--e-2);
+}
+
+.que-hace dl div {
+  display: grid;
+  gap: var(--e-1);
+}
+
+.que-hace dt {
+  font-family: var(--letra-titulo);
+  font-weight: 700;
+}
+
+.que-hace dd {
+  margin: 0;
+  color: var(--apagado);
+  font-size: var(--t-apoyo);
+}
+
+@media (min-width: 48rem) {
+  .que-hace dl div {
+    grid-template-columns: 6rem 1fr;
+    align-items: baseline;
+  }
+}
+
 .equipo {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -12,8 +12,10 @@ describe('describeSkill', () => {
   });
 
   it('usa los numeros del catalogo y los nombres visibles de las aptitudes', () => {
-    expect(describeSkill(getSkill('brazo-de-fragua'))).toBe('+2 de Fuerza.');
-    expect(describeSkill(getSkill('callo-viejo'))).toContain('1');
+    expect(describeSkill(getSkill('resuello'))).toBe(
+      'Por debajo del 30% de vida, +12 de Brío el resto de la pelea.',
+    );
+    expect(describeSkill(getSkill('callo-viejo'))).toContain('Resta 2');
     expect(describeSkill(getSkill('revire'))).toContain('20%');
   });
 
