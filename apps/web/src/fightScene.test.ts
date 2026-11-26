@@ -81,6 +81,28 @@ group('planFight', () => {
     expect(contras).toBeGreaterThan(0);
   });
 
+  it('el contraataque se anima una vez: sin golpe al aire antes del que pega', () => {
+    // El motor manda `counter`, luego `move` y `attack`. Si el `counter` tambien
+    // embestia, quien contraatacaba pegaba dos veces y solo la segunda llegaba.
+    let contras = 0;
+    for (let seed = 0; seed < 300; seed++) {
+      const scene = planFight(fight(seed));
+      for (const [i, beat] of scene.beats.entries()) {
+        const contra = beat.moves.find((m) => m.kind === 'float' && m.text === '¡Contra!');
+        if (contra === undefined) continue;
+        contras++;
+        expect(beat.moves.some((m) => m.kind === 'lunge' || m.kind === 'pose')).toBe(false);
+        // El ataque llega en los beats siguientes, del mismo que contraataca.
+        const ataque = scene.beats
+          .slice(i + 1, i + 4)
+          .flatMap((b) => b.moves)
+          .find((m) => m.kind === 'lunge');
+        expect(ataque).toMatchObject({ id: contra.kind === 'float' ? contra.id : '' });
+      }
+    }
+    expect(contras).toBeGreaterThan(0);
+  });
+
   it('cada impacto de un combo tiene su golpe, y a punos alternan las manos', () => {
     // El motor manda un `attack` y luego varios `hit`: sin esto, del segundo
     // impacto en adelante el rival acusaba golpes que nadie daba.

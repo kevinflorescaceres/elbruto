@@ -305,7 +305,8 @@ const WEIGHT: Record<FightEvent['type'], number> = {
   hit: 100,
   evade: 300,
   block: 350,
-  counter: 450,
+  // Solo el anuncio: el golpe va en el `attack` que le sigue.
+  counter: 250,
   damage: 250,
   heal: 350,
   drawWeapon: 400,
@@ -467,17 +468,14 @@ export function planFight(replay: Replayable): Scene {
         break;
       }
 
-      // El contraataque no dice con que: es con lo que se tenga en la mano.
+      // El contraataque solo se anuncia: el motor manda despues su `move` y su
+      // `attack`, y son ellos los que lo animan. Antes este beat embestia y
+      // pegaba tambien, asi que quien contraatacaba daba un golpe al aire, se
+      // acercaba andando y pegaba otra vez.
       case 'counter':
         rematar();
         push(event, [
-          {
-            kind: 'lunge',
-            id: event.id,
-            toward: event.target,
-            weapon: byId.get(event.id)?.weapon ?? 'punos',
-          },
-          { kind: 'pose', id: event.id, anim: attackAnim(byId.get(event.id)?.weapon ?? 'punos') },
+          { kind: 'float', id: event.id, text: '¡Contra!', color: COLOR.maña },
           { kind: 'face', id: event.id, cara: 'esfuerzo' },
         ]);
         break;
