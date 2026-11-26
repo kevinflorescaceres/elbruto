@@ -342,6 +342,32 @@ describe('detras de un proxy', () => {
     expect((await crear('2.2.2.2')).statusCode).toBe(429);
     await suyo.close();
   });
+
+  it('con rangos de confianza, la IP es la primera de la cadena que no es de un proxy', async () => {
+    // Como en produccion: 127.0.0.1 hace de kamal-proxy y 173.245.48.0/20 es un borde de
+    // Cloudflare. La cadena se lee de derecha a izquierda hasta salir de los rangos.
+    const antes = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = '127.0.0.1,173.245.48.0/20';
+    const suyo = await buildApp({ createLimit: 1 });
+    process.env.TRUST_PROXY = antes;
+    const crear = (cadena: string) =>
+      suyo.inject({
+        method: 'POST',
+        url: '/api/brutes',
+        payload: { name: `rango ${Math.random().toString(36).slice(2, 7)}` },
+        headers: { 'x-forwarded-for': cadena },
+      });
+
+    // Por Cloudflare: el jugador 9.9.9.9 y el borde 173.245.48.1.
+    expect((await crear('9.9.9.9, 173.245.48.1')).statusCode).toBe(201);
+    // El mismo jugador, falsificando una IP delante: Cloudflare la deja y anade la suya.
+    expect((await crear('6.6.6.6, 9.9.9.9, 173.245.48.1')).statusCode).toBe(429);
+    // Directo al VPS, sin Cloudflare, con la cabecera inventada: cuenta 9.9.9.9, no 7.7.7.7.
+    expect((await crear('7.7.7.7, 9.9.9.9')).statusCode).toBe(429);
+    // Otro jugador por Cloudflare tiene su propio cupo.
+    expect((await crear('8.8.8.8, 173.245.48.1')).statusCode).toBe(201);
+    await suyo.close();
+  });
 });
 
 describe('metadatos para compartir', () => {

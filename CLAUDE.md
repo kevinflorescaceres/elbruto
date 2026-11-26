@@ -151,11 +151,12 @@ es la única forma de saber si un cambio rompe algo.
 Produccion: `https://camorra.florescaceres.cl`, en un VPS compartido con otras apps
 (Contabo, Ubuntu 24.04, usuario `deploy`). La ficha de despliegue vive en Pantheon.
 
-- `config/deploy.yml`: la app, kamal-proxy (TLS con Let's Encrypt, healthcheck en
+- `config/deploy.yml`: la app, kamal-proxy (TLS con certificado de origen de Cloudflare, healthcheck en
   `/api/health`) y dos accessories: `db` (PostgreSQL 16, alcanzable solo dentro de la red
   `kamal` como `camorra-db:5432`) y `backup` (`pg_dump` diario a Cloudflare R2, 30 dias).
 - `.kamal/secrets` no tiene valores: lee la clave de Postgres de
-  `~/.config/camorra/postgres-password` y las credenciales de R2 de `~/.config/pantheon/`.
+  `~/.config/camorra/postgres-password`, el certificado de origen de
+  `~/.config/camorra/origin-{cert,key}.pem` y las credenciales de R2 de `~/.config/pantheon/`.
   Sin esos archivos en la maquina que despliega, no hay deploy.
 - Registry local de Kamal (`localhost:5555`): la imagen se construye en tu maquina y
   viaja al VPS por un tunel SSH. Hace falta Docker local y estar en el grupo `docker`.
@@ -172,9 +173,17 @@ kamal accessory exec backup --reuse "sh backup.sh"   # backup a mano
 Las migraciones corren al arrancar el contenedor (`prisma migrate deploy`), asi que no hay
 paso aparte. Sin pooler de por medio, `DATABASE_URL` y `DIRECT_URL` apuntan a lo mismo.
 
-**`TRUST_PROXY` cuenta los proxies por delante.** Hoy es 1 (kamal-proxy; el DNS de
-Cloudflare va sin proxy). Si se activa el proxy de Cloudflare pasa a 2, o el rate limit
-veria la IP del borde de Cloudflare en vez de la del jugador.
+**Detras del proxy de Cloudflare (nube naranja, SSL Full strict).** Dos consecuencias:
+
+- TLS: Let's Encrypt no renueva detras de Cloudflare (el reto TLS-ALPN lo contesta el borde),
+  asi que kamal-proxy sirve un certificado de origen de Cloudflare. Ese certificado solo lo
+  aceptan los bordes: **apagar la nube naranja deja la app sin HTTPS valido**. Para volver a
+  la nube gris, antes cambiar `ssl` a `true` en `deploy.yml` (Let's Encrypt) y desplegar.
+- IP del jugador: `TRUST_PROXY` es una lista de rangos (red Docker + bordes de Cloudflare), no
+  un numero de saltos, y kamal-proxy lleva `forward_headers: true`. Con un numero, quien fuera
+  directo a la IP del VPS se saltaria el rate limit falsificando `X-Forwarded-For`. Los rangos
+  de Cloudflare estan copiados en `deploy.yml`: si cambian, el rate limit veria la IP del borde
+  y todos compartirian cupo.
 
 **Reportes de la beta:** la franja de `ReportarProblema.tsx` (en cada `Pagina`) guarda en la
 tabla `Feedback` y avisa al movil por ntfy si existe `NTFY_URL` (secreto, leido de
