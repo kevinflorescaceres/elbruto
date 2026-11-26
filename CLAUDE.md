@@ -23,9 +23,12 @@ El `.env` de la raiz (ignorado por git) manda sobre los valores por defecto, y l
 manda sobre el `.env`. Lo leen los scripts del servidor, vitest, playwright y Prisma.
 
 **En esta maquina el rol de Postgres se llama `rufianes`** por herencia del nombre
-provisional del proyecto, y no tengo permisos para crear roles. Para dejarlo parejo:
-`sudo -u postgres psql -c "CREATE ROLE camorra LOGIN PASSWORD 'camorra' CREATEDB"` y luego
-borrar el `.env`. Mientras tanto, funciona igual.
+provisional del proyecto, y no tengo permisos para crear roles. Para dejarlo parejo, desde
+una terminal con sudo (el `!` de Claude Code no puede pedir la clave):
+`sudo -u postgres psql -c "ALTER ROLE rufianes RENAME TO camorra" -c "ALTER ROLE camorra PASSWORD 'camorra'"`
+(renombrar arrastra la propiedad de `camorra` y `camorra_test`), y dejar en el `.env` solo
+`GAME_TIMEZONE=America/Santiago`: sin ella el codigo cae a `Europe/Madrid`. Mientras tanto,
+funciona igual.
 
 Hay dos caminos y ambos valen:
 
