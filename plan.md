@@ -1,5 +1,4 @@
 # PLAN.md — Juego de peleas automáticas inspirado en El Bruto
-
 > Nombre: **Camorra**. Pendiente de verificar contra el registro de marcas antes de publicar.
 > Ojo: "Camorra" es tambien el nombre de la mafia napolitana. En espanol es palabra corriente
 > ("buscar camorra"), pero la asociacion existe.
@@ -21,10 +20,10 @@ Juego web multijugador asíncrono. Creas un luchador solo con un nombre y lo man
 
 ### Fuera del MVP (fases futuras)
 
-- Pupilos (enlace de invitación que te da beneficios).
 - Torneos diarios.
-- Ranking global.
 - Sonido y música.
+
+---
 
 ## 2. Principio técnico central
 
@@ -38,6 +37,8 @@ Juego web multijugador asíncrono. Creas un luchador solo con un nombre y lo man
   - Usar enteros o redondeo explícito en todos los cálculos para evitar diferencias de coma flotante.
   - Sin dependencias externas y sin I/O.
   - Exportar `ENGINE_VERSION`. Si cambian las reglas, se incrementa, y los combates antiguos se siguen mostrando con su log guardado.
+
+---
 
 ## 3. Stack
 
@@ -70,6 +71,8 @@ Juego web multijugador asíncrono. Creas un luchador solo con un nombre y lo man
 └── CLAUDE.md
 ```
 
+---
+
 ## 4. Identidad sin login
 
 - **Guardián (Keeper):** usuario anónimo. Al entrar por primera vez se crea uno y se guarda su token en una cookie `httpOnly`, `secure`, `sameSite=lax`.
@@ -79,6 +82,9 @@ Juego web multijugador asíncrono. Creas un luchador solo con un nombre y lo man
 - Páginas públicas: perfil de cualquier luchador (`/b/:name`) y repetición de combates (`/fight/:id`).
 - Acciones de dueño (pelear, subir de nivel) requieren que el guardián de la cookie sea el dueño.
 - Anti-abuso: rate limit por IP en creación de luchadores y en endpoints de escritura (`@fastify/rate-limit`).
+- **Rate limit en memoria** por máquina (basta para la escala prevista; ver `CLAUDE.md` §196).
+
+---
 
 ## 5. Modelo de datos (Prisma)
 
@@ -118,11 +124,14 @@ Fight
 - Los catálogos de armas, habilidades y mascotas viven en código (`packages/engine`), no en la base de datos.
 - Índices: `Brute(level)` para buscar oponentes, `Fight(bruteAId, createdAt)` y `Fight(bruteBId, createdAt)` para el historial.
 
+---
+
 ## 6. Reglas del juego (valores iniciales, se ajustan con el script de balance)
 
 ### Creación
 
 - La semilla del luchador es un hash del slug.
+- **Semilla por campo** en `Appearance`: cada campo (`brow`, `mouth`, `beard`, `mark`, `clothColor2`) deriva de su propio hash del slug (`hashString(slug + ':' + campo)`), independiente del orden de consumo del PRNG. Los peleones existentes obtienen sus campos nuevos calculados desde su slug al pintarlos; se persiste la próxima vez que se escriba el peleón. Ver `packages/engine/src/brute.ts:31` y `ARTE-Y-TOKENS.md` §1.3.
 - Estadísticas iniciales: `endurance`, `strength`, `agility` y `speed` repartiendo 12 puntos, con mínimo 2 en cada una, usando el PRNG.
 - Vida máxima: `floor(30 + endurance * 6 + level * 3)`. El término por nivel sube la vida en paralelo al daño, para que el combate no se acorte al subir de nivel.
 - Empieza con 1 habilidad aleatoria. Nunca arma ni mascota: a nivel 1 se pelea a mano limpia y las armas llegan al subir de nivel.
@@ -145,7 +154,7 @@ Fight
 
 ### Combate
 
-Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya conflicto. Resumen de lo implementado:
+Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya conflicto. Resumen de lo implementado (ENGINE_VERSION 5):
 
 - Participantes: los dos luchadores y sus mascotas. El combate termina solo cuando un **luchador** llega a 0.
 - **Iniciativa:** actúa quien tenga menor tiempo de próxima acción. Tras actuar suma `round(weapon.interval * 100 / (10 + speed))`, con un **±18% de azar**. Sin ese azar, dos luchadores iguales alternan en lockstep y nunca encadenan dos acciones seguidas.
@@ -156,16 +165,28 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 **Resolución, en este orden:**
 
 1. **Esquiva:** `clamp(17 + defender.agility * 3 - weapon.accuracyBonus, 5, 36)` por ciento. Si esquiva, el defensor puede **contraatacar**: su probabilidad de contra, más 25 si empuña un arma larga. El contraataque no encadena.
-2. **Bloqueo:** solo si el defensor tiene habilidad de bloqueo.
+2. **Bloqueo:** solo si el defensor tiene habilidad de bloqueo (pasiva **Mano Zurda**: 15%).
 3. **Daño:** `weapon.damage + aporte * strengthScale / 100`, con variación ±20% y truncado al final. El `aporte` es la fuerza, salvo en las arrojadizas, donde es `agility * 0.7 + strength * 0.3`. Se resta la armadura del defensor en cada impacto _(Ajustado en motor 5: antes solo en el primero)_, salvo con arma **pesada**, que la ignora. Mínimo 1.
 4. **Combos:** tras un impacto, se tira `clamp(weapon.comboRate + agility * 3, 0, 45)`. Hasta **3 impactos** por acción, y cada uno hace el **70% del anterior** (del impacto previo, no de la base). Cada impacto emite su propio `hit` y `damage`.
+
+**Habilidades pasivas de disparo (motor 5):**
+
+- **Cuero Curtido:** una vez por combate, el golpe que la tumbaría la deja con 1 de vida.
+- **Callo Viejo:** cada impacto que encaja resta 2 de daño (armadura persistente).
+- **Pies Ligeros:** tras esquivar, el siguiente ataque no se esquiva y suma +15 al combo.
+- **Brazo de Fragua:** el primer golpe que conecta pega x2.
+- **Resuello:** al bajar del 30% de vida, suma +12 de velocidad el resto del combate.
+- **Mano Zurda:** 15% de bloquear un impacto.
+- **Revire:** 20% de contraatacar **tras encajar un golpe** (no tras esquivar).
+
+**Activas (una vez por combate):** Trago Largo (cura 50%), Zurriagazo (siguiente golpe x2), Desjarrete (quita turno al rival, lo desarma y pega un golpe).
 
 **Gestión de armas:**
 
 - Cambiar de arma **descarta** la que se llevaba: por eso el arsenal se agota dentro del combate.
 - Las **arrojadizas solo se lanzan**, nunca se usan de cerca, y **no se agotan**. Cualquier otra arma lanzada queda inutilizable.
 - Ser desarmado deja el arma inservible. Sin arma se pelea a puños, siempre disponibles.
-- `disarm` solo mediante la habilidad activa correspondiente.
+- `disarm` solo mediante la habilidad activa correspondiente (Desjarrete).
 
 **Mascotas:** cuestan resistencia al dueño (chucho 2, mastín 3, jabalí 6, con suelo en 0; _ajustado en motor 5: eran 2/4/8_). Pelean por ti, pero te hacen más frágil.
 
@@ -176,8 +197,10 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 ### Catálogo inicial (nombres y efectos originales)
 
 - **10 armas**, dos por cada una de las 5 categorías: rápida, media, larga, pesada, arrojadiza. Campos: `id, name, category, damage, accuracyBonus, interval, comboRate, strengthScale, reach, throwable`.
-- **10 habilidades**, mezcla de pasivas (bloqueo, contraataque, armadura y cuatro que se disparan en un momento del combate) y activas (curación única, golpe fuerte, tajo a las piernas). _(Ajustado en motor 5: las pasivas de "+2 a una estadística" y "+10 de vida" pasaron a dispararse: Cuero Curtido aguanta un golpe mortal, Resuello acelera con poca vida, Pies Ligeros entra seguro tras esquivar, Brazo de Fragua dobla el primer golpe.)_ Campos: `id, name, type, effect`. _(Ajustado en Fase 1: `trigger` era redundante, `type` + `effect` ya determinan cuándo se aplica.)_
+- **10 habilidades**, mezcla de pasivas de disparo (Cuero Curtido, Callo Viejo, Pies Ligeros, Brazo de Fragua, Resuello, Mano Zurda, Revire) y activas (Trago Largo, Zurriagazo, Desjarrete). Campos: `id, name, type, effect`.
 - **3 mascotas** con stats propias y un `enduranceCost` que paga el dueño.
+
+---
 
 ## 7. Eventos del combate
 
@@ -189,6 +212,8 @@ Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los 
 - `damage` incluye la vida restante para que el cliente no tenga que calcular nada.
 - El log debe ser suficiente para animar el combate sin volver a ejecutar el motor.
 
+---
+
 ## 8. API (Fastify, prefijo `/api`)
 
 | Método | Ruta                      | Acceso  | Descripción                                                          |
@@ -196,28 +221,36 @@ Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los 
 | GET    | `/me`                     | cookie  | Guardián actual y sus luchadores (lo crea si no existe)              |
 | POST   | `/brutes`                 | cookie  | Crear luchador `{ name }` → luchador + enlace de recuperación        |
 | POST   | `/claim`                  | cookie  | `{ token }` asocia un luchador al guardián actual                    |
-| GET    | `/brutes/:slug`           | público | Perfil, stats, equipo, récord                                        |
+| GET    | `/brutes/:slug`           | público | Perfil, stats, equipo, récord, **puesto en ranking**                 |
 | GET    | `/brutes/:slug/fights`    | público | Historial paginado                                                   |
 | GET    | `/brutes/:slug/opponents` | dueño   | 6 oponentes sugeridos                                                |
 | POST   | `/brutes/:slug/fights`    | dueño   | `{ opponentSlug }` → ejecuta y guarda el combate, devuelve `fightId` |
 | GET    | `/brutes/:slug/level-up`  | dueño   | Opciones pendientes                                                  |
 | POST   | `/brutes/:slug/level-up`  | dueño   | `{ choiceIndex }` aplica la mejora                                   |
 | GET    | `/fights/:id`             | público | Snapshots + log para la repetición                                   |
+| GET    | `/ranking`                | público | **Ranking global** (paginado, sin bots, orden: nivel, victorias, antigüedad) |
+| POST   | `/feedback`               | público | **Reportar un peleón** (nombre, slug, motivo, opcional email)        |
+| POST   | `/reclutar`               | dueño   | Genera/obtiene el enlace de reclutamiento del peleón                 |
 
 - Validar entrada y salida con los esquemas Zod de `packages/shared`.
 - El endpoint de combate debe ser transaccional: verificar límite diario, sin elección pendiente, oponente válido; ejecutar `simulate`; guardar combate; actualizar XP, récord y peleas del día; crear `LevelUpChoice` si corresponde.
 - Validación de nombres: 3 a 24 caracteres, letras, números, guion, guion bajo y espacio; lista de palabras bloqueadas. Los límites viven en `NAME_MIN`/`NAME_MAX` de `packages/shared`. _(En Fase 3 se subió a 5 porque con 3 salían nombres como "asd"; se volvió a 3 para que entren nombres cortos corrientes como "Ana" o "Leo", que se quedaban fuera sin explicación. El tope pasó de 20 a 30 porque nombres como "Bastardo de la cadena" no cabían, y luego bajó a 24: con 30, el pie del combate pasaba de dos líneas en el móvil en el 13% de las acciones, y con 24 en el 7%. Los nombres ya creados más largos siguen valiendo: el límite solo se aplica al crear.)_
+
+---
 
 ## 9. Frontend
 
 ### Rutas
 
 - `/` — crear luchador y lista de "mis luchadores".
-- `/b/:slug` — ficha (celda): personaje, stats, armas, habilidades, mascotas, historial, botón de pelear si eres dueño.
+- `/b/:slug` — ficha (celda): personaje, stats, armas, habilidades, mascotas, historial, botón de pelear si eres dueño, **puesto en ranking y cuenta atrás a la próxima tanda**.
 - `/b/:slug/arena` — elegir oponente entre 6.
 - `/b/:slug/level-up` — elegir entre 2 mejoras.
-- `/fight/:id` — repetición del combate, con botón para copiar enlace.
+- `/fight/:id` — repetición del combate, con botón para copiar enlace y **menú de compartir nativo (Web Share API) / copiar en escritorio**.
 - `/claim/:token` — recuperar luchador.
+- `/ranking` — **ranking global** con tabla responsive: en móvil lista densa de 3 columnas (puesto, nombre, nivel+récord) y barra fija al pie con el puesto propio; en desktop tabla de 4 columnas con fila propia destacada.
+- `/legal` — **página legal** (términos, privacidad, contacto).
+- `/reclutar/:slug` — **página de reclutamiento**: muestra el peleón del maestro y botón para crear el propio (da +1 pelea diaria al maestro, tope +6).
 
 ### Render del combate (PixiJS)
 
@@ -236,6 +269,18 @@ Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los 
 - Las armas y mascotas también son SVG.
 - Primera iteración con figuras geométricas simples; el arte final se reemplaza sin tocar la lógica, siempre que respete los nombres de partes y los pivotes.
 - Las partes SVG deben tener trazo grueso, colores planos y proporciones exageradas (cabeza grande).
+- **Doble renderer:** el mismo `Appearance` se consume en el combate (PixiJS) y en la ficha (SVG React plano), sin arrastrar Pixi a la pantalla de perfil. Ver `ARTE-Y-TOKENS.md` §1.6.
+- **Campos de `Appearance` actuales:** `body` (3), `head` (4), `hair` (6), `skinColor` (5), `hairColor` (6), `clothColor` (8), `clothColor2` (8, opcional), `brow` (4), `mouth` (4), `beard` (6), `mark` (6) = 9.953.280 combinaciones todas dibujables.
+- **Sombreros:** preparados en el dibujo (`montarCabeza(rasgos, sombrero)` pinta `bajoSombrero`), sin campo en `Appearance` aún. Ver `ARTE-Y-TOKENS.md` §1.6.
+
+### Tokens de diseño compartidos
+
+- `packages/shared/src/tokens.ts` exporta paletas, grosores, fuentes y variables CSS (`--tinta`, `--papel`, `--madera`, `--oro`, `--acento`, `--gana`, `--pierde`, `--linea`, `--borde`, `--radio`, escala tipográfica, espaciado). Los componentes UI (`ui.tsx`) y el CSS (`styles.css`) consumen solo tokens.
+- **Componentes base en `ui.tsx`:** `Boton` (principal/secundario), `Tarjeta`, `Chips`, `Estadistica`, `Barra`, `Pagina` (con `cabecera` = cartel de madera), `TarjetaBoton`, `CompartirEnlace`, `Escenario`, `NadieAqui`, `Resultado` (`cuenta()`, `record()`).
+- **Breakpoint único:** 48rem. Además `(hover: hover)` y `prefers-reduced-motion`.
+- **Modo oscuro:** no se hace (tokens preparados, pero el arte del combate no lo tiene).
+
+---
 
 ## 10. Fases de desarrollo
 
@@ -264,7 +309,7 @@ Cada fase termina con tests pasando, lint limpio y un commit.
 - Esquema Prisma y migraciones.
 - Guardianes, cookies y enlaces de recuperación.
 - Todos los endpoints de la sección 8 con validación Zod.
-- Script de seed con bots.
+- Script de seed con bots (240 bots, niveles 1–30).
 - Tests de integración contra una base de datos de test.
 - **Listo cuando:** se puede crear un luchador, pelear, subir de nivel y ver un combate solo con llamadas HTTP.
 
@@ -288,17 +333,25 @@ Cada fase termina con tests pasando, lint limpio y un commit.
 
 ### Fase 6 — Pulido y despliegue
 
-- Estados de carga y error, páginas 404, metadatos Open Graph para compartir combates.
+- Estados de carga y error, páginas 404 (`NadieAqui` con peleón "Nadie" sacado del motor), metadatos Open Graph para compartir combates (`og.png` en `apps/web/public`).
 - Test end-to-end con Playwright del flujo principal.
-- Despliegue (p. ej. Fly.io, Railway o Render con PostgreSQL gestionado). El servidor sirve el build estático del frontend.
+- Despliegue (Kamal en VPS Pantheon: `https://camorra.florescaceres.cl`). El servidor sirve el build estático del frontend.
 - **Listo cuando:** está en línea y el flujo principal pasa en producción.
+
+### Hecho (fases futuras completadas)
+
+- **Ranking:** `GET /api/ranking` y la página `/ranking`, ordenando por nivel y victorias, con los bots fuera. La ficha trae el puesto y una cuenta atrás hasta la próxima tanda de peleas. Responsive: móvil 3 columnas + barra fija pie; desktop 4 columnas + fila propia.
+- **Pupilos/Reclutamiento:** enlace `/reclutar/:slug`. Cada recluta da al maestro **+1 pelea diaria**, con tope de +6. Reclutarse a uno mismo no cuenta (se comprueba el guardián), y un bot no puede ser maestro.
+- **Feedback/Reportar:** `POST /api/feedback` + `ReportarProblema.tsx` en la ficha. Guarda motivo, slug, opcional email.
+- **Página legal:** `/legal` con términos, privacidad (cookie guardián) y dirección de contacto.
+- **Compartir nativo:** `CompartirEnlace` usa Web Share API en móvil, `navigator.clipboard` en escritorio; siempre confirma antes de copiar.
 
 ### Fases futuras
 
-- ~~Ranking.~~ **Hecho:** `GET /api/ranking` y la página `/ranking`, ordenando por nivel y victorias, con los bots fuera. La ficha trae el puesto y una cuenta atrás hasta la próxima tanda de peleas.
-- ~~Pupilos.~~ **Hecho:** enlace `/reclutar/:slug`. Cada recluta da al maestro **+1 pelea diaria**, con tope de +6. Reclutarse a uno mismo no cuenta (se comprueba el guardián), y un bot no puede ser maestro.
 - Torneos diarios por nivel.
 - Sonido.
+
+---
 
 ## 11. Restricciones de contenido original (obligatorias)
 
@@ -328,6 +381,8 @@ Como el nombre del luchador es texto libre, los usuarios crearán personajes con
 - Un endpoint o formulario para reportar un luchador.
 - Una forma sencilla de renombrar o eliminar un luchador a petición (comando administrativo basta).
 - En la Fase 6: términos de uso, política de privacidad (la cookie de guardián) y una dirección de contacto para solicitudes de retiro.
+
+---
 
 ## 12. Instrucciones para Claude Code
 

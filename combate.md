@@ -83,18 +83,24 @@ Nivel 10 contra nivel 10: mismo número de impactos aproximado, no más. La prog
 
 ---
 
-## 4. Cambios a implementar en el motor
+## 4. Implementación actual en el motor (ENGINE_VERSION 5)
+
+> **Nota:** Las desviaciones respecto al documento original de diseño están medidas y justificadas. Ver `CLAUDE.md` §§108–150 para el detalle numérico y la trazabilidad al script `pnpm balance`.
 
 ### 4.1 Vida
 
-Agregar el término `level * 1.5` a `maxHp` y truncar hacia abajo. Actualizar los snapshots existentes no es necesario: los combates guardados conservan su propio snapshot.
+```
+maxHp = floor(30 + endurance * 6 + level * 3)
+```
+
+- La base cambió de 50 a 30 en ENGINE_VERSION 4; el término por nivel pasó de 1.5 a 3 al quitar el redondeo de la fuerza. Ver `packages/engine/src/brute.ts:54`.
 
 ### 4.2 Combos
 
 Nuevo mecanismo en la resolución de un ataque. Tras un impacto exitoso, tirar de nuevo:
 
 ```
-comboChance = weapon.comboRate + agility * 2   // en porcentaje
+comboChance = weapon.comboRate + agility * 3   // en porcentaje (era agility * 2)
 comboChance = clamp(comboChance, 0, 45)
 ```
 
@@ -102,22 +108,41 @@ comboChance = clamp(comboChance, 0, 45)
 - Cada impacto adicional hace **70% del daño** del anterior.
 - Cada impacto adicional se tira de nuevo contra la misma probabilidad.
 - Cada impacto genera su propio evento `hit` + `damage`, para que el cliente pueda animar la secuencia.
-- `comboRate` por categoría: rápida 20, media 10, pesada 0, larga 5, arrojadiza 0.
+- `comboRate` por categoría (valores actuales en `catalog.ts`):
+  - rápida: 16–19 (chaira 19, puntilla 16)
+  - media: 8–12 (jifero 12, porra 8)
+  - larga: 4–7 (verduguillo 7, chuzo 4)
+  - pesada: 0
+  - arrojadiza: 0
+  - puños: 12
 
 ### 4.3 Intervalo y turnos consecutivos
-
-Sustituir el cálculo actual de retardo por:
 
 ```
 delay = round(weapon.interval * 100 / (10 + speed))
 ```
 
-- `interval` por categoría (valores de partida): rápida 55, media 80, larga 95, pesada 140, arrojadiza 70, puños 60.
-- Efecto buscado: con velocidad 3 y arma rápida, el luchador acumula rachas de 2 a 4 acciones seguidas. Verificarlo con el script de balance, no a ojo.
+Valores de `interval` **actuales en `catalog.ts`** (ajustados por balance, distintos del documento de diseño):
+
+| Arma                  | Categoría   | Interval |
+| --------------------- | ----------- | -------- |
+| Puños                 | rápida      | 66       |
+| Chaira                | rápida      | 50       |
+| Puntilla              | rápida      | 56       |
+| Jifero                | media       | 76       |
+| Porra de Corchete     | media       | 84       |
+| Verduguillo           | larga       | 88       |
+| Chuzo de Sereno       | larga       | 102      |
+| Banqueta de Taberna   | pesada      | 132      |
+| Tranca de Portón      | pesada      | 150      |
+| Cascote               | arrojadiza  | 64       |
+| Botija de Vino        | arrojadiza  | 76       |
+
+Efecto buscado: con velocidad 3 y arma rápida, el luchador acumula rachas de 2 a 4 acciones seguidas. Verificarlo con el script de balance, no a ojo.
 
 ### 4.4 Iniciativa inicial
 
-Al comenzar el combate, el tiempo inicial de cada luchador se sortea con el PRNG en un rango pequeño en vez de empezar ambos en 0, para que el primer golpe no sea siempre del mismo lado.
+Al comenzar el combate, el tiempo inicial de cada luchador se sortea con el PRNG en un rango pequeño en vez de empezar ambos en 0, para que el primer golpe no sea siempre del mismo lado. Ver `simulate.ts:200-210`.
 
 ### 4.5 Daño
 
@@ -129,30 +154,87 @@ final   = max(1, variado - defender.armor)   # en cada impacto desde ENGINE_VERS
 
 Para armas arrojadizas, sustituir la fuerza por `agility * 0.7 + strength * 0.3` en el término de escalado.
 
-Daño base por categoría (valores de partida): puños 3 _(6 desde que el nivel 1 empieza sin arma)_, rápida 5, media 9, larga 10, pesada 20, arrojadiza 7.
+**Daño base actual por arma** (valores en `catalog.ts`, ajustados por balance):
+
+| Arma                  | Daño | Categoría   | StrengthScale |
+| --------------------- | ---- | ----------- | ------------- |
+| Puños                 | 6    | rápida      | 60            |
+| Chaira                | 6    | rápida      | 60            |
+| Puntilla              | 7    | rápida      | 62            |
+| Jifero                | 9    | media       | 75            |
+| Porra de Corchete     | 10   | media       | 85            |
+| Verduguillo           | 10   | larga       | 80            |
+| Chuzo de Sereno       | 13   | larga       | 95            |
+| Banqueta de Taberna   | 18   | pesada      | 110           |
+| Tranca de Portón      | 22   | pesada      | 130           |
+| Cascote               | 9    | arrojadiza  | 70            |
+| Botija de Vino        | 10   | arrojadiza  | 70            |
+
+> **Nota:** Puños vale 6 (no 3) desde que el nivel 1 empieza sin arma; con 3 el combate se iba a ~37 impactos. Con 6 vuelve a ~21, como cuando había arma por defecto.
 
 ### 4.6 Defensa
 
 Resolver en este orden y registrar el evento correspondiente:
 
-1. **Esquiva:** `clamp(10 + defender.agility * 2 - weapon.accuracyBonus, 5, 40)` por ciento.
-2. **Bloqueo:** solo si el defensor tiene habilidad o arma con bloqueo.
-3. **Contraataque:** si el defensor lleva arma larga o habilidad de contra, tras esquivar puede devolver un golpe inmediato. Evento `counter`.
+1. **Esquiva:** `clamp(17 + defender.agility * 3 - weapon.accuracyBonus, 5, 36)` por ciento.  
+   (Era `10 + agility * 2`, tope 40. Ajustado para cumplir objetivo 20–35% fallos. Ver `simulate.ts:345`.)
+2. **Bloqueo:** solo si el defensor tiene habilidad o arma con bloqueo. La pasiva **Mano Zurda** da `block: 15%`.
+3. **Contraataque — Revire (pasiva):** tras **encajar un golpe** (no tras esquivar), `chance: 20%` de devolver un golpe inmediato. Evento `counter`. Ver `simulate.ts:392-400`.
+4. **Contraataque — Arma larga:** las armas de categoría `larga` tienen mayor probabilidad de contraatacar tras esquivar (lógica en `simulate.ts:380-390`).
 
 ### 4.7 Gestión de armas
 
 Verificar que estén los cuatro casos y que cada uno emita su evento:
 
-- Sacar un arma del inventario (acción que consume turno).
+- Sacar un arma del inventario (acción que consume turno). Evento `drawWeapon`.
 - Descartar el arma en mano para sacar otra.
-- Lanzar el arma en mano: hace daño y el arma queda inutilizable el resto del combate.
-- Ser desarmado por el rival: el arma cae y queda inutilizable.
+- Lanzar el arma en mano: hace daño y el arma queda inutilizable el resto del combate. Evento `throwWeapon`.
+- Ser desarmado por el rival: el arma cae y queda inutilizable. Evento `disarm`.
 - Sin arma en mano se pelea a puños, siempre disponibles.
 - Las arrojadizas no se agotan ni se pierden al lanzarse.
 
 ### 4.8 Mascotas
 
-Al obtener una mascota, el luchador **pierde resistencia** (y por lo tanto vida): perro -2, lobo -4, oso -8, con mínimo 0. Es el equilibrio del original: la mascota pelea por ti, pero eres más frágil. La vida base de 50 no se ve afectada, solo la parte que viene de la resistencia.
+Al obtener una mascota, el luchador **pierde resistencia** (y por lo tanto vida): el coste está en `enduranceCost` de cada mascota (`catalog.ts`):
+
+| Mascota | HP  | Daño | Precisión | Intervalo | Agilidad | **EnduranceCost** |
+| ------- | --- | ---- | --------- | --------- | -------- | ----------------- |
+| Chucho  | 26  | 5    | 6         | 80        | 5        | **2**             |
+| Mastín  | 46  | 9    | 2         | 105       | 2        | **3**             |
+| Jabalí  | 72  | 17   | -2        | 130       | 0        | **6**             |
+
+Mínimo 0. La vida base de 30 no se ve afectada, solo la parte que viene de la resistencia.
+
+### 4.9 Habilidades — Motor 5 (pasivas de disparo)
+
+A partir de ENGINE_VERSION 5, las pasivas no son bonus estáticos sino **disparos condicionales** que se arman/gastan durante el combate. Ver `simulate.ts` y `catalog.ts`:
+
+| Habilidad         | Tipo    | Efecto (resumen)                                                                 |
+| ----------------- | ------- | -------------------------------------------------------------------------------- |
+| **Cuero Curtido** | pasiva  | Una vez por combate, el golpe que la tumbaría la deja con 1 de vida (`lastStand`). |
+| **Callo Viejo**   | pasiva  | **Cada impacto** que encaja resta 2 de daño (`armor: 2`). Antes: solo el primero. |
+| **Pies Ligeros**  | pasiva  | Tras esquivar, el siguiente ataque no se esquiva y suma +15 al combo (`afterDodge`). |
+| **Brazo de Fragua** | pasiva | El primer golpe que conecta pega x2 (`firstBlow: 2`).                            |
+| **Resuello**      | pasiva  | Al bajar del 30% de vida, suma +12 de velocidad el resto del combate (`secondWind`). |
+| **Mano Zurda**    | pasiva  | 15% de bloquear un impacto (`block: 15`).                                        |
+| **Revire**        | pasiva  | 20% de contraatacar **tras encajar un golpe** (`counter: 20`).                   |
+
+**Activas (una vez por combate):**
+
+| Habilidad    | Efecto                                      |
+| ------------ | ------------------------------------------- |
+| Trago Largo  | Cura 50% de la vida perdida (`heal: 50`).   |
+| Zurriagazo   | El siguiente golpe pega x2 (`power: 2`).    |
+| Desjarrete   | **Quita el turno al rival, lo desarma y pega un golpe** (`disarm` + daño + salto de turno). Ver `simulate.ts:479-495`. |
+
+### 4.10 Desarme (Desjarrete)
+
+La habilidad **Desjarrete** (activa) hace tres cosas en un solo uso:
+1. El rival pierde su próximo turno (se salta su acción en la cola de iniciativa).
+2. El arma del rival cae y queda inutilizable (evento `disarm`).
+3. El usuario ejecuta un golpe inmediato con su arma actual.
+
+Ver `simulate.ts:479-495`.
 
 ---
 
@@ -196,10 +278,12 @@ Tests nuevos en `packages/engine`:
 - La suma de daño recibido por cada luchador coincide con la diferencia entre su vida inicial y final.
 - Simulando 10.000 combates nivel 1: ninguna categoría de arma supera 60% de victorias, y ninguna baja de 40%.
 - El orden de primer golpe se reparte cerca del 50/50 entre los dos lados a lo largo de muchas semillas.
+- Las pasivas de disparo se arman/gastan correctamente (Cuero Curtido una vez, Resuello al cruzar umbral, Pies Ligeros tras esquiva, Brazo de Fragua primer golpe, Revire tras encajar).
+- Desjarrete quita turno, desarma y pega en la misma acción.
 
 Test del cliente:
 
-- Reproducir un combate con combos, lanzamiento de arma, desarme, contraataque y muerte, y verificar que no queda ninguna animación sin mapear.
+- Reproducir un combate con combos, lanzamiento de arma, desarme, contraataque (Revire y arma larga) y muerte, y verificar que no queda ninguna animación sin mapear.
 
 ---
 
