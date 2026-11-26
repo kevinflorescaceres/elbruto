@@ -557,8 +557,6 @@ Z.» · «X le tira Z a Y.» · «X desarma a Y: Z al suelo.» · «X se desplom
 
 ### A medio hacer
 
-- `apps/web/src/pages/Legal.tsx:53` — `TODO: poner una dirección real antes de desplegar`.
-  El texto visible dice `CORREO_DE_CONTACTO_PENDIENTE`.
 - Tres tests de metadatos usan `it.runIf(construido)`: **se saltan si no existe
   `apps/web/dist`**. No están rotos, pero pasan en silencio sin avisar.
 - Tres marcadores `ponytail:` de deuda consciente: `ORDER BY random()` al buscar oponentes,

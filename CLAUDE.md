@@ -188,9 +188,10 @@ maquina basta; con varias, haria falta un almacen compartido.
 
 - El servidor sirve el frontend solo si existe `apps/web/dist`. En desarrollo no existe y
   de eso se encarga Vite con su proxy, asi que `pnpm dev` no cambia.
-- **Pendiente** (plan.md §11): verificar "Camorra" contra el registro de marcas, y poner
-  una direccion real en `CORREO_DE_CONTACTO_PENDIENTE` dentro de
-  `apps/web/src/pages/Legal.tsx`. Nada de esto bloquea desplegar en privado.
+- **Pendiente** (plan.md §11): confirmar "Camorra" en el buscador oficial de INAPI. La
+  busqueda previa y lo que falta estan en `docs/MARCAS.md`. No bloquea desplegar en privado.
+- El contacto de `Legal.tsx` es `camorra@florescaceres.cl`, un reenvio de Cloudflare Email
+  Routing (sin servidor de correo). No poner ahi un correo personal.
 
 ## Pruebas end-to-end
 

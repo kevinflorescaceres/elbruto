@@ -44,8 +44,9 @@ export function LegalPage() {
         peleón, escríbenos y lo atendemos:
       </p>
       <p>
-        {/* TODO: poner una dirección real antes de desplegar (plan.md §11). */}
-        <strong>CORREO_DE_CONTACTO_PENDIENTE</strong>
+        <a href="mailto:camorra@florescaceres.cl">
+          <strong>camorra@florescaceres.cl</strong>
+        </a>
       </p>
 
       <h2>Sin garantías</h2>
