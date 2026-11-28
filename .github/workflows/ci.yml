@@ -29,6 +29,8 @@ jobs:
           node-version: 22
       - run: corepack enable pnpm
       - run: pnpm install --frozen-lockfile
+      # Prisma 7 no genera el cliente al instalar; el Dockerfile tambien lo hace a mano.
+      - run: pnpm --filter @camorra/server exec prisma generate
       - run: pnpm db:deploy
       - run: pnpm lint
       - run: pnpm typecheck
