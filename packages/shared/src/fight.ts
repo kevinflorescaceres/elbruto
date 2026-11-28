@@ -71,6 +71,7 @@ export const appearanceSchema = z.object({
   mouth: z.number().int().nonnegative().optional(),
   beard: z.number().int().nonnegative().optional(),
   mark: z.number().int().nonnegative().optional(),
+  gender: z.enum(['male', 'female']).optional(),
 });
 
 export const bruteSchema = z.object({

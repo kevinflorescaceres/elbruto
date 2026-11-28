@@ -145,7 +145,7 @@ export function registerRoutes(
   const strictLimit = { config: { rateLimit: { max: createLimit, timeWindow: '1 hour' } } };
 
   app.post('/api/brutes', strictLimit, async (request, reply) => {
-    const { name, masterSlug } = createBruteBody.parse(request.body);
+    const { name, gender, masterSlug } = createBruteBody.parse(request.body);
     const check = checkName(name);
     if (!check.ok) throw new HttpError(400, check.reason);
 
@@ -154,7 +154,7 @@ export function registerRoutes(
       throw new HttpError(409, 'Ese nombre ya está cogido. Prueba con otro o añádele un mote.');
 
     const keeperId = await requireKeeperId(request, reply);
-    const brute = createBrute(name.trim());
+    const brute = createBrute(name.trim(), gender);
     const claimToken = newToken();
 
     // Reclutarte a ti mismo no cuenta: el maestro tiene que ser de otro.

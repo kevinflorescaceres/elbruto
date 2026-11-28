@@ -64,6 +64,8 @@ export interface Pet {
   enduranceCost: number;
 }
 
+export type Gender = 'male' | 'female';
+
 /** Variantes de dibujo derivadas del nombre. Las consume el arte (Fase 5). */
 export interface Appearance {
   body: number;
@@ -86,6 +88,8 @@ export interface Appearance {
   beard?: number;
   /** Marca, 0-5. Los tres primeros valores son vacios: la mitad no lleva. */
   mark?: number;
+  /** Sexo. Ausente = hombre: los peleones creados antes de las luchadoras no lo tienen. */
+  gender?: Gender;
 }
 
 export interface Brute {

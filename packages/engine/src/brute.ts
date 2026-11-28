@@ -1,7 +1,7 @@
 /** Creacion de luchadores y progresion. Todo puro y derivado del nombre (PLAN.md §6). */
 import { PETS, SKILLS, WEAPONS } from './catalog.js';
 import { hashString, mulberry32, pick, randInt, weightedPick, type Rng } from './prng.js';
-import type { Appearance, Brute, LevelUpOption, Stat } from './types.js';
+import type { Appearance, Brute, Gender, LevelUpOption, Stat } from './types.js';
 
 export const STATS: readonly Stat[] = ['endurance', 'strength', 'agility', 'speed'];
 
@@ -109,11 +109,19 @@ function rollAppearance(rng: Rng, slug: string): Appearance {
   };
 }
 
-/** Un luchador nuevo: nivel 1, una mejora al azar y los punos. */
 /** Desarmar no sirve de nada a nivel 1, donde nadie tiene arma. */
 const STARTER_SKILLS = SKILLS.filter((s) => s.effect.kind !== 'disarm');
 
-export function createBrute(name: string): Brute {
+/** Sexo de un bot, derivado de su slug: mitad y mitad, sin tocar el PRNG del peleon. */
+export function botGender(slug: string): Gender {
+  return hashString(`bot:gender:${slug}`) % 2 === 0 ? 'male' : 'female';
+}
+
+/**
+ * Un luchador nuevo: nivel 1, una mejora al azar y los punos. El sexo es 'male'
+ * por defecto y siempre se guarda explicito en la apariencia.
+ */
+export function createBrute(name: string, gender: Gender = 'male'): Brute {
   const slug = slugify(name);
   if (slug.length === 0) throw new Error('El nombre no produce un slug valido');
 
@@ -129,7 +137,7 @@ export function createBrute(name: string): Brute {
     weapons: [],
     skills: [],
     pets: [],
-    appearance: rollAppearance(rng, slug),
+    appearance: { ...rollAppearance(rng, slug), gender },
   };
 
   // Una mania inicial. Ni arma ni mascota: a nivel 1 se pelea a mano limpia,

@@ -7,6 +7,7 @@
  *   pnpm admin delete <slug>
  */
 import { createBrute } from '@camorra/engine';
+import { appearanceSchema } from '@camorra/shared';
 import { asJson, prisma } from './db.js';
 import { checkName } from './names.js';
 
@@ -46,8 +47,11 @@ async function main(): Promise<void> {
       const check = checkName(nuevo);
       if (!check.ok) throw new Error(check.reason);
 
-      // El nombre define la apariencia; se regenera para que sigan cuadrando.
-      const regenerado = createBrute(nuevo);
+      // El nombre define la apariencia; se regenera para que sigan cuadrando,
+      // conservando el sexo (las filas antiguas no lo traen: eran hombres).
+      const actual = await prisma.brute.findUniqueOrThrow({ where: { slug } });
+      const gender = appearanceSchema.parse(actual.appearance).gender ?? 'male';
+      const regenerado = createBrute(nuevo, gender);
       const updated = await prisma.brute.update({
         where: { slug },
         data: {

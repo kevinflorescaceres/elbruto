@@ -74,6 +74,7 @@ export const meSchema = z.object({ brutes: z.array(bruteProfileSchema) });
 // --- POST /api/brutes ---
 export const createBruteBody = z.object({
   name: nameSchema,
+  gender: z.enum(['male', 'female'], { error: 'Elige si es hombre o mujer.' }),
   /** Quien lo recluta, si viene de un enlace de invitacion. */
   masterSlug: z.string().min(1).optional(),
 });
