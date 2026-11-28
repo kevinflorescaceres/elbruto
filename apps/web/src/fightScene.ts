@@ -178,6 +178,12 @@ function repartirTiempo(crudos: Crudo[]): { beats: Beat[]; duration: number } {
     for (const m of actual.flatMap((c) => c.moves)) {
       if (m.kind === 'lunge' || m.kind === 'approach') movidos.add(m.id);
     }
+    // Quien cayo en el turno se queda tendido donde cayo. Pasa cuando muere de
+    // una contra: era el que se habia plantado, y volvia andando con el torso en
+    // el suelo y las piernas de pie.
+    for (const m of actual.flatMap((c) => c.moves)) {
+      if (m.kind === 'fall') movidos.delete(m.id);
+    }
     if (movidos.size > 0) {
       actual.push({
         type: 'turn',

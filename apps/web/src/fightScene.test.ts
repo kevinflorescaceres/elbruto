@@ -75,6 +75,8 @@ group('planFight', () => {
             fuera.add(move.id);
           }
           if (move.kind === 'retreat') fuera.delete(move.id);
+          // Un caido se queda donde cae: no tiene que volver.
+          if (move.kind === 'fall') fuera.delete(move.id);
         }
       }
     }
@@ -303,6 +305,48 @@ group('planFight', () => {
     expect(moves.filter((m) => m.kind === 'toss')).toEqual([]);
     const crac = moves.find((m) => m.kind === 'float' && m.text === '¡Crac!');
     expect(crac).toMatchObject({ id: 'B' });
+  });
+
+  it('quien muere de una contra se queda tendido: no vuelve andando a su sitio', () => {
+    const spawn = (id: 'A' | 'B'): FightEvent => ({
+      type: 'spawn',
+      id,
+      name: id,
+      side: id,
+      isPet: false,
+      hp: 10,
+      maxHp: 10,
+      weapon: 'punos',
+    });
+    const beats = planFight({
+      winner: 'B',
+      seed: 1,
+      snapshotA: { appearance: createBrute('uno').appearance, slug: 'uno' },
+      snapshotB: { appearance: createBrute('otro').appearance, slug: 'otro' },
+      log: [
+        spawn('A'),
+        spawn('B'),
+        { type: 'turn', id: 'A' },
+        { type: 'move', id: 'A', target: 'B' },
+        { type: 'attack', id: 'A', target: 'B', weapon: 'punos' },
+        { type: 'evade', id: 'B' },
+        { type: 'counter', id: 'B', target: 'A' },
+        { type: 'move', id: 'B', target: 'A' },
+        { type: 'attack', id: 'B', target: 'A', weapon: 'punos' },
+        { type: 'hit', id: 'B', target: 'A' },
+        { type: 'damage', id: 'A', amount: 10, hp: 0 },
+        { type: 'death', id: 'A' },
+        { type: 'end', winner: 'B', turns: 1 },
+      ],
+    }).beats;
+
+    const moves = beats.flatMap((b) => b.moves);
+    const caida = moves.findIndex((m) => m.kind === 'fall' && m.id === 'A');
+    expect(caida).toBeGreaterThan(-1);
+    const despues = moves.slice(caida + 1).filter((m) => 'id' in m && m.id === 'A');
+    expect(despues.filter((m) => m.kind === 'retreat' || m.kind === 'pose')).toEqual([]);
+    // Quien contraataco si vuelve a su sitio.
+    expect(moves.slice(caida + 1)).toContainEqual({ kind: 'retreat', id: 'B' });
   });
 
   it('cada accion de un peleon dura lo mismo', () => {
