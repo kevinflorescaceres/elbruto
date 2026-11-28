@@ -49,7 +49,8 @@ export function ayudaNombre(name: string): AyudaNombre {
     };
   }
   return {
-    texto: 'Así saldrá. La cara y las estadísticas salen del nombre, y no se puede cambiar.',
+    texto:
+      'Así saldrá. La cara y las estadísticas salen del nombre; el sexo lo eliges tú. Nada de esto se puede cambiar.',
     tipo: 'info',
     valido: true,
   };

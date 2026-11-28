@@ -1646,20 +1646,85 @@ th {
 }
 
 /*
- * Campo y boton en la misma linea tambien a 360 px: antes el campo media
- * 221 px y "Crear" caia debajo. 44 px de alto para el dedo.
+ * El campo a lo ancho y, debajo, Hombre/Mujer y "Crear" en la misma linea: el
+ * orden de lectura es el del tabulador (nombre, sexo, crear). Los cuatro en
+ * una linea no caben a 360 px. 44 px de alto para el dedo.
  */
 .campo-nombre {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'nombre nombre'
+    'sexo crear';
   gap: var(--e-2);
   /* Un nombre son pocas palabras: en escritorio no hace falta un campo de 700 px. */
   max-width: 30rem;
 }
 
 .campo-nombre input {
+  grid-area: nombre;
   min-height: 44px;
   box-sizing: border-box;
+}
+
+.campo-nombre > .boton {
+  grid-area: crear;
+}
+
+/* Dos botones pegados, como un interruptor de dos posiciones. */
+.sexo {
+  grid-area: sexo;
+  display: inline-flex;
+  justify-self: start;
+}
+
+.sexo-opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  font-weight: 400;
+}
+
+.sexo-opcion + .sexo-opcion {
+  margin-left: calc(-1 * var(--borde));
+}
+
+.sexo-opcion:first-child {
+  border-radius: var(--radio) 0 0 var(--radio);
+}
+
+.sexo-opcion:last-child {
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+
+/* El foco por encima del vecino: con el borde compartido, el anillo quedaba tapado. */
+.sexo-opcion:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * La marca ocupa su sitio siempre, para que elegir no mueva los botones; solo
+ * se ve en la elegida. Elegida, ademas, en negrita y con el fondo de tinta.
+ */
+.sexo-marca {
+  visibility: hidden;
+}
+
+.sexo-opcion[aria-checked='true'] {
+  font-weight: 700;
+  background: var(--tinta);
+  color: var(--papel-claro);
+}
+
+.sexo-opcion[aria-checked='true'] .sexo-marca {
+  visibility: visible;
+}
+
+@media (hover: hover) {
+  .sexo-opcion[aria-checked='true']:hover {
+    background: var(--tinta);
+  }
 }
 
 /* Etiqueta visible: el placeholder es un ejemplo, no dice que va ahi. */
@@ -1780,6 +1845,10 @@ a.boton {
 
 .nombre-vista {
   flex: none;
+  /* Sin sexo elegido van dos, hombre y mujer, lado a lado y mas pequenos. */
+  display: flex;
+  align-items: flex-end;
+  gap: var(--e-1);
   margin-top: var(--e-2);
   padding: var(--e-1) var(--e-2) 0;
   background: linear-gradient(to top, var(--linea) 0 0.5rem, var(--papel-hondo) 0.5rem);
