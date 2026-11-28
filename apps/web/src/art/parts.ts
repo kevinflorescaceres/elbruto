@@ -15,6 +15,7 @@ import {
   campoDeApariencia,
   clothColor2For,
   type Appearance,
+  type Gender,
   type WeaponCategory,
 } from '@camorra/engine';
 
@@ -254,6 +255,36 @@ const TORSOS: Shape[][] = COMPLEXIONES.map(({ torso, cintura: w }) => [
   { d: `M ${-w - 1.5} -4 L ${w + 1.5} -4 L ${w + 1} 4 L ${-w - 1} 4 Z`, fill: 'ropa2' },
 ]);
 
+/**
+ * Torsos de luchadora, uno por complexion y en el mismo orden. La silueta se
+ * marca con cintura y cadera, no con pecho. Los hombros del rig son los de
+ * `COMPLEXIONES`: solo cambia lo que se pinta, no donde cuelgan los brazos.
+ */
+const TORSOS_MUJER_RUTAS: { torso: string; cintura: number }[] = [
+  {
+    torso:
+      'M -11.5 3 Q -13 -3 -8.5 -8 Q -15.5 -13 -15 -21 Q -15 -30 -8 -30 L 8 -30 Q 15 -30 15 -21 Q 15.5 -13 8.5 -8 Q 13 -3 11.5 3 Z',
+    cintura: 9,
+  },
+  {
+    torso:
+      'M -15.5 3 Q -18.5 -3 -12.5 -8 Q -21.5 -13 -21 -20 Q -22 -30 -12 -31 L 12 -31 Q 22 -30 21 -20 Q 21.5 -13 12.5 -8 Q 18.5 -3 15.5 3 Z',
+    cintura: 13,
+  },
+  {
+    torso:
+      'M -13 3 Q -15.5 -3 -10 -8 Q -18.5 -13 -18 -20 Q -19 -30 -10 -31 L 10 -31 Q 19 -30 18 -20 Q 18.5 -13 10 -8 Q 15.5 -3 13 3 Z',
+    cintura: 10.5,
+  },
+];
+
+const TORSOS_MUJER: Shape[][] = TORSOS_MUJER_RUTAS.map(({ torso, cintura: w }) => [
+  { d: torso, fill: 'ropa' },
+  // Escote redondo, mas abierto que el del hombre.
+  { d: 'M -7.5 -30.5 Q 0 -19 7.5 -30.5', fill: 'piel' },
+  { d: `M ${-w - 1.5} -4 L ${w + 1.5} -4 L ${w + 1} 4 L ${-w - 1} 4 Z`, fill: 'ropa2' },
+]);
+
 /** Traslada una ruta absoluta. Igual que `scalePath`, no admite arcos. */
 function desplaza(d: string, dx: number, dy: number): string {
   if (/[aA]/.test(d)) throw new Error(`desplaza no sabe mover arcos: ${d}`);
@@ -448,6 +479,49 @@ const BOCA_DE_LADO: Shape[] = [
 const CLARO_DEL_OJO: Shape[] = [{ d: circulo(7, -24, 3.4), fill: 'piel', stroke: false }];
 
 /**
+ * El claro de la luchadora, mas grande: sus pestanas salen del ojo y el chirlo
+ * se cruzaba con ellas. Sin arcos, para que `scalePath` lo pueda espejar.
+ */
+const CLARO_DEL_OJO_MUJER: Shape[] = [
+  {
+    d: 'M 2.6 -24 Q 2.6 -30.6 8 -30.6 Q 13.4 -30.6 13.4 -24.5 Q 13.4 -20.6 8 -20.6 Q 2.6 -20.6 2.6 -24 Z',
+    fill: 'piel',
+    stroke: false,
+  },
+];
+
+/** Una pestana: trazo fino, mas que el de los ojos, para que no pese. */
+const pestana = (d: string): Shape => ({ d, fill: 'oscuro', trazo: 1.3 });
+
+/** Parpado de arriba con dos pestanas hacia fuera: el ojo abierto de la luchadora. */
+const PESTANAS_ABIERTAS = parDeOjos([
+  {
+    d: 'M -10.6 -24.6 Q -9.6 -27.6 -6 -27.2 Q -4.4 -26.9 -3.6 -25.6',
+    fill: 'oscuro',
+    trazo: 1.6,
+  },
+  pestana('M -10.3 -26 L -12.4 -27.4'),
+  // Acortada (el spec la llevaba a -10.4 -29.2) para no tocar la ceja subida.
+  pestana('M -9 -27.3 L -10.1 -28.6'),
+]);
+
+/**
+ * Las pestanas de cada gesto, siempre por fuera del ojo. En `> <` y `x x` no
+ * van: salian como brotes en las puntas.
+ */
+const PESTANAS: Record<Expresion, Shape[]> = {
+  neutral: PESTANAS_ABIERTAS,
+  esfuerzo: PESTANAS_ABIERTAS,
+  // Con el ojo cerrado cuelgan.
+  parpadeo: parDeOjos([pestana('M -9.4 -23.1 L -11.3 -21.5'), pestana('M -8 -22.4 L -9 -20.3')]),
+  alegria: parDeOjos([pestana('M -9.5 -23.8 L -11.6 -25'), pestana('M -8.6 -25.1 L -10 -27')]),
+  // Del parpado entornado.
+  socarrona: parDeOjos([pestana('M -9.8 -24.8 L -11.8 -26'), pestana('M -8.6 -25 L -9.6 -27')]),
+  dolor: [],
+  derrotado: [],
+};
+
+/**
  * Nariz: solo la linea de abajo, como las cejas y la boca. Rellena y con
  * contorno se comia la cara y se leia como un hocico.
  */
@@ -627,6 +701,137 @@ const PELOS: Peinado[] = [
   },
 ];
 
+// --- Peinados de luchadora ---
+
+/** Casquete con raya: el pelo baja en pico a la frente, un poco descentrado. */
+const CAP_RAYA =
+  'M -18.5 -25 Q -19 -44.5 0 -44.5 Q 19 -44.5 18.5 -25 Q 15 -35 3 -37 L 0 -34.5 Q -8 -37.5 -18.5 -25 Z';
+/** Casquete peinado hacia atras: frente despejada, para el monio y la coleta alta. */
+const CAP_ATRAS =
+  'M -18.5 -26 Q -19 -44.5 0 -44.5 Q 19 -44.5 18.5 -26 Q 15 -36 0 -37 Q -15 -36 -18.5 -26 Z';
+
+/**
+ * Lo que asoma de cada casquete bajo el ala: las sienes, de la linea del
+ * sombrero (un punto por encima, para que el ala las monte) hasta donde acaba
+ * el casquete. Cortadas a mano siguiendo las curvas de arriba.
+ */
+const SIENES_RAYA: Shape[] = [
+  { d: 'M -18.5 -25 Q -18.45 -28.6 -17.9 -32 L -11.5 -32 Q -15.5 -29 -18.5 -25 Z', fill: 'pelo' },
+  { d: 'M 18.5 -25 Q 18.45 -28.6 17.9 -32 L 14.7 -32 Q 16.6 -28.6 18.5 -25 Z', fill: 'pelo' },
+];
+const SIENES_ATRAS: Shape[] = [
+  { d: 'M -18.5 -26 Q -18.45 -29.2 -17.9 -32 L -14.6 -32 Q -17.3 -29.5 -18.5 -26 Z', fill: 'pelo' },
+  { d: 'M 18.5 -26 Q 18.45 -29.2 17.9 -32 L 14.6 -32 Q 17.3 -29.5 18.5 -26 Z', fill: 'pelo' },
+];
+
+/** Goma de pelo: un rectangulo de alto 2,8 centrado en (x, y), del color de la faja. */
+const goma = (x: number, y: number, ancho: number): Shape => ({
+  d: `M ${x - ancho / 2} ${y - 1.4} L ${x + ancho / 2} ${y - 1.4} L ${x + ancho / 2} ${y + 1.4} L ${x - ancho / 2} ${y + 1.4} Z`,
+  fill: 'ropa2',
+});
+
+const COLETA_IZQ = 'M -16 -35 Q -33 -36 -32 -18 Q -31 -8 -26 -4 Q -27 -20 -16 -27 Z';
+
+/** La trenza, de la nuca al pecho, por delante del hombro. */
+const TRENZA: Shape[] = [
+  { d: circulo(-15, -3, 4.6), fill: 'pelo' },
+  { d: circulo(-14.5, 5, 4.4), fill: 'pelo' },
+  { d: circulo(-14, 12.5, 4), fill: 'pelo' },
+  goma(-14, 17.5, 3),
+  { d: 'M -16.5 19 L -11.5 19 L -10.5 24 L -14 22.5 L -17.5 24 Z', fill: 'pelo' },
+];
+
+/**
+ * Seis peinados de luchadora, uno por valor de `hair`: monio, trenza, coletas,
+ * melena con flequillo, media melena y coleta alta. Mismas tres capas y la
+ * misma `CALOTA` que los de hombre.
+ */
+const PELOS_MUJER: Peinado[] = [
+  {
+    // El monio va en `encima` y no en `detras` para que un sombrero lo tape. El
+    // casquete despues, que cubre la base del monio.
+    detras: [],
+    encima: [
+      { d: circulo(0, -49, 7.5), fill: 'pelo' },
+      goma(0, -42.5, 4.5),
+      { d: CAP_ATRAS, fill: 'pelo' },
+    ],
+    bajoSombrero: SIENES_ATRAS,
+  },
+  {
+    // Por el lado -x porque en +x la tapa el brazo de delante.
+    detras: [
+      {
+        d: 'M -10 -38 Q -22 -34 -21 -22 Q -20 -12 -16 -6 L -11 -8 Q -15 -16 -14 -26 Z',
+        fill: 'pelo',
+      },
+    ],
+    encima: [{ d: CAP_RAYA, fill: 'pelo' }, ...TRENZA],
+    bajoSombrero: [...SIENES_RAYA, ...TRENZA],
+  },
+  {
+    detras: [
+      { d: COLETA_IZQ, fill: 'pelo' },
+      { d: scalePath(COLETA_IZQ, -1), fill: 'pelo' },
+      goma(-18.5, -31, 2.5),
+      goma(18.5, -31, 2.5),
+    ],
+    encima: [{ d: CAP_RAYA, fill: 'pelo' }],
+    bajoSombrero: SIENES_RAYA,
+  },
+  {
+    detras: [
+      {
+        d: 'M -20.5 -26 Q -21.5 -46 0 -46 Q 21.5 -46 20.5 -26 L 23 8 Q 18 11 14 4 L 13 -5 L -13 -5 L -14 4 Q -18 11 -23 8 Z',
+        fill: 'pelo',
+      },
+    ],
+    // El flequillo acaba en -33 para no tapar la ceja subida.
+    encima: [
+      {
+        d: 'M -18.5 -25 Q -19 -44.5 0 -44.5 Q 19 -44.5 18.5 -25 L 16 -33 L -16 -33 Z',
+        fill: 'pelo',
+      },
+    ],
+    // Bajo el ala el flequillo desaparece: solo quedan las puntas de las sienes.
+    bajoSombrero: [
+      { d: 'M -18.5 -25 Q -18.45 -28.6 -17.9 -32 L -16.3 -32 Z', fill: 'pelo' },
+      { d: 'M 18.5 -25 Q 18.45 -28.6 17.9 -32 L 16.3 -32 Z', fill: 'pelo' },
+    ],
+  },
+  {
+    detras: [
+      {
+        d: 'M -21 -26 Q -21.5 -46 0 -46 Q 21.5 -46 21 -26 L 21.5 -12 Q 21.5 -5 14.5 -6.5 Q 17 -14 14 -21 L -14 -21 Q -17 -14 -14.5 -6.5 Q -21.5 -5 -21.5 -12 Z',
+        fill: 'pelo',
+      },
+    ],
+    encima: [
+      {
+        d: 'M -18.5 -24 Q -19 -44.5 0 -44.5 Q 19 -44.5 18.5 -26 Q 12 -33 -4 -32 Q -14 -31 -18.5 -24 Z',
+        fill: 'pelo',
+      },
+    ],
+    // El mechon cruzado baja por la sien izquierda por debajo del ala, y por la
+    // derecha asoma la punta: los dos trozos del flequillo que quedan bajo -31.
+    bajoSombrero: [
+      { d: 'M -4 -32 Q -14 -31 -18.5 -24 Q -18.45 -28.6 -17.8 -32 Z', fill: 'pelo' },
+      {
+        d: 'M 18.5 -26 Q 14.6 -30.2 7.3 -31.5 L 7.3 -32 L 18 -32 Q 18.45 -29.2 18.5 -26 Z',
+        fill: 'pelo',
+      },
+    ],
+  },
+  {
+    detras: [
+      { d: 'M 4 -44 Q 24 -54 31 -38 Q 35 -26 28 -14 Q 27 -30 14 -38 Z', fill: 'pelo' },
+      goma(9, -42, 3),
+    ],
+    encima: [{ d: CAP_ATRAS, fill: 'pelo' }],
+    bajoSombrero: SIENES_ATRAS,
+  },
+];
+
 /**
  * El hueco de un sombrero: todo lo que vaya por encima de y=-31 y dentro de
  * ±21 lo puede tapar. Un sombrero nuevo se dibuja contra la `CALOTA` con el
@@ -642,6 +847,8 @@ export interface Rasgos {
   brow: number;
   mouth: number;
   mark: number;
+  /** Ausente es hombre: los peleones de antes no lo tienen guardado. */
+  gender?: Gender;
 }
 
 /**
@@ -672,11 +879,17 @@ export interface CabezaPorCapas {
 }
 
 export function cabezaPorCapas(r: Rasgos, sombrero?: Shape[]): CabezaPorCapas {
-  const pelo = pickFrom(PELOS, r.hair);
+  const mujer = r.gender === 'female';
+  const pelo = pickFrom(mujer ? PELOS_MUJER : PELOS, r.hair);
   const marca = pickFrom(MARCAS, r.mark);
   const boca = pickFrom(BOCAS, r.mouth);
-  const cejas = pickFrom(CEJAS, r.brow);
-  const claro = marca.enLaPiel.length > 0 ? CLARO_DEL_OJO : [];
+  // Las cejas de la luchadora van 1,5 mas altas, para dejar sitio a las
+  // pestanas. Las del gesto (V, enarcada) no se mueven.
+  const cejas = pickFrom(CEJAS, r.brow).map((s) =>
+    mujer ? { ...s, d: desplaza(s.d, 0, -1.5) } : s,
+  );
+  const claro = marca.enLaPiel.length === 0 ? [] : mujer ? CLARO_DEL_OJO_MUJER : CLARO_DEL_OJO;
+  const pestanas = (e: Expresion): Shape[] => (mujer ? PESTANAS[e] : []);
   return {
     debajo: [
       ...CUELLO,
@@ -684,7 +897,8 @@ export function cabezaPorCapas(r: Rasgos, sombrero?: Shape[]): CabezaPorCapas {
       ...OREJAS,
       ...pickFrom(CABEZAS, r.head),
       // La barba antes que el pelo para que las patillas queden bajo la melena.
-      ...pickFrom(BARBAS, r.beard),
+      // Una luchadora no lleva barba aunque la apariencia guarde una.
+      ...(mujer ? [] : pickFrom(BARBAS, r.beard)),
       ...NARIZ,
       ...marca.enLaPiel,
       ...(sombrero === undefined ? pelo.encima : pelo.bajoSombrero),
@@ -696,18 +910,20 @@ export function cabezaPorCapas(r: Rasgos, sombrero?: Shape[]): CabezaPorCapas {
     // personaje les llevaban la contraria (con las caidas, el ganador sonreia
     // con cara de enfado). El esfuerzo cambia las suyas por unas en V.
     caras: {
-      neutral: [...claro, ...cejas, ...OJOS, ...boca],
-      parpadeo: [...claro, ...cejas, ...OJOS_CERRADOS, ...boca],
-      dolor: [...claro, ...OJOS_APRETADOS, ...BOCA_QUEJIDO],
-      alegria: [...claro, ...OJOS_RISUENOS, ...BOCA_RISA],
-      derrotado: [...claro, ...OJOS_EN_X, ...BOCA_ONDA],
-      esfuerzo: [...claro, ...CEJAS_EN_V, ...OJOS, ...BOCA_DIENTES],
+      // Las pestanas, despues de los ojos.
+      neutral: [...claro, ...cejas, ...OJOS, ...pestanas('neutral'), ...boca],
+      parpadeo: [...claro, ...cejas, ...OJOS_CERRADOS, ...pestanas('parpadeo'), ...boca],
+      dolor: [...claro, ...OJOS_APRETADOS, ...pestanas('dolor'), ...BOCA_QUEJIDO],
+      alegria: [...claro, ...OJOS_RISUENOS, ...pestanas('alegria'), ...BOCA_RISA],
+      derrotado: [...claro, ...OJOS_EN_X, ...pestanas('derrotado'), ...BOCA_ONDA],
+      esfuerzo: [...claro, ...CEJAS_EN_V, ...OJOS, ...pestanas('esfuerzo'), ...BOCA_DIENTES],
       // La ceja izquierda es la suya; la derecha, enarcada.
       socarrona: [
         ...claro,
         ...cejas.slice(0, 1),
         ...CEJA_ENARCADA,
         ...OJOS_DE_VUELTA,
+        ...pestanas('socarrona'),
         ...BOCA_DE_LADO,
       ],
     },
@@ -838,13 +1054,14 @@ export function lookFrom(appearance: Appearance, slug: string): Look {
     brow: appearance.brow ?? campoDeApariencia(slug, 'brow'),
     mouth: appearance.mouth ?? campoDeApariencia(slug, 'mouth'),
     mark: appearance.mark ?? campoDeApariencia(slug, 'mark'),
+    gender: appearance.gender,
   });
 
   return {
     rig,
     cabeza,
     parts: {
-      torso: pickFrom(TORSOS, appearance.body),
+      torso: pickFrom(appearance.gender === 'female' ? TORSOS_MUJER : TORSOS, appearance.body),
       head: [...cabeza.debajo, ...cabeza.caras.neutral, ...cabeza.encima],
       legBack: pierna('izq'),
       legFront: pierna('der'),

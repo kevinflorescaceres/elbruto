@@ -5,6 +5,7 @@
  */
 import { Fragment } from 'react';
 import { getWeapon, type Appearance } from '@camorra/engine';
+import { segun } from '../genero.js';
 import {
   colorOf,
   GROSOR,
@@ -167,7 +168,7 @@ export function Fighter({ appearance, slug, weapon, height = 150, expresion = 'n
       viewBox="-58 -128 116 136"
       height={height}
       role="img"
-      aria-label="Retrato del peleón"
+      aria-label={segun(appearance.gender, 'Retrato del peleón', 'Retrato de la peleona')}
       style={{ display: 'block', overflow: 'visible' }}
     >
       {render('hips')}
