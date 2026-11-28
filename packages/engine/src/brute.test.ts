@@ -150,3 +150,22 @@ describe('armas nuevas en el reparto', () => {
     expect([...vistas].sort()).toEqual(['cuchillos', 'garrafa', 'vara']);
   });
 });
+
+describe('sexo', () => {
+  it('la mujer y el hombre del mismo nombre solo difieren en el sexo', () => {
+    for (const n of ['Rosca la Brava', 'Matías Puñetas', 'Chirlo de la Cava']) {
+      const h = createBrute(n, 'male');
+      const m = createBrute(n, 'female');
+      expect(m.appearance.gender).toBe('female');
+      expect(h.appearance.gender).toBe('male');
+      const { appearance: am, ...restoM } = m;
+      const { appearance: ah, ...restoH } = h;
+      expect(restoM).toEqual(restoH);
+      expect({ ...am, gender: 'male' }).toEqual(ah);
+    }
+  });
+
+  it('sin sexo, createBrute crea un hombre', () => {
+    expect(createBrute('Nadie').appearance.gender).toBe('male');
+  });
+});

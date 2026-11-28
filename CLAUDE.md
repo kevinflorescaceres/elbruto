@@ -72,6 +72,8 @@ tests, asi que nunca pisan la base de desarrollo.
   golpes se prueba en `timeline.test.ts`, que monta el combate y lo muestrea.
 - La apariencia sale de `Appearance`, que se genera en el motor y **se guarda en la BD**:
   cambiar el arte no debe cambiar la cara de un peleon ya creado.
+- `Appearance.gender` (`'male' | 'female'`) elige cuerpo y cabeza en `parts.ts`; ausente es hombre, asi los
+  peleones de antes no cambian. La elige el jugador al crear y no se puede cambiar.
 
 ## Convenciones
 

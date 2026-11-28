@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api } from '../api.js';
 import { useMe } from '../hooks.js';
+import { segun } from '../genero.js';
 import { Pagina, record } from '../ui.js';
 
 interface Fila {
@@ -96,7 +97,14 @@ export function RankingPage() {
             <span className="rk-puesto">{yo.rank}</span>
             <span className="rk-nombre">
               {yo.name}
-              <span className="apagado rk-etiqueta"> · Tu peleón</span>
+              <span className="apagado rk-etiqueta">
+                {' · Tu '}
+                {segun(
+                  me.data?.brutes.find((b) => b.slug === yo.slug)?.appearance.gender,
+                  'peleón',
+                  'peleona',
+                )}
+              </span>
             </span>
             <Marcador fila={{ ...yo, rank: yo.rank }} />
           </Link>

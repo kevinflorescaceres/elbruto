@@ -8,12 +8,14 @@ import {
   girar,
   LARGO_BRAZO,
   lookFrom,
+  montarCabeza,
   PALETA,
   RIG,
   scaleForTest,
   weaponShapes,
   Z_ORDER,
   type PartName,
+  type Rasgos,
   type Shape,
 } from './parts.js';
 import { animacion, ANIMATIONS, REST, type AnimName, type Frame, type Pose } from './poses.js';
@@ -311,6 +313,22 @@ group('cobertura de apariencia', () => {
     const { clothColor2: _sin, ...viejo } = b.appearance;
     expect(lookFrom(viejo, b.slug).colors.ropa2).toBe(lookFrom(b.appearance, b.slug).colors.ropa2);
   });
+
+  it('un peleon sin sexo guardado se pinta igual que hoy', () => {
+    const b = createBrute('Chirlo de la Cava');
+    const { gender: _g, ...sinSexo } = b.appearance;
+    expect(lookFrom(sinSexo, b.slug)).toEqual(lookFrom({ ...sinSexo, gender: 'male' }, b.slug));
+  });
+
+  it('la luchadora lleva torso propio y los mismos hombros que el hombre', () => {
+    const b = createBrute('Rosca la Brava');
+    for (const body of [0, 1, 2]) {
+      const h = lookFrom({ ...b.appearance, body, gender: 'male' }, b.slug);
+      const m = lookFrom({ ...b.appearance, body, gender: 'female' }, b.slug);
+      expect(m.parts.torso).not.toEqual(h.parts.torso);
+      expect(m.rig).toEqual(h.rig);
+    }
+  });
 });
 
 group('armas', () => {
@@ -376,5 +394,111 @@ group('expresiones', () => {
     // La socarrona conserva la izquierda y enarca la derecha.
     expect(JSON.stringify(caras.socarrona[0])).toBe(JSON.stringify(caras.neutral[0]));
     expect(JSON.stringify(caras.socarrona[1])).not.toBe(JSON.stringify(caras.neutral[1]));
+  });
+});
+
+group('luchadoras', () => {
+  it('los seis peinados de luchadora son distintos entre si y de los del hombre', () => {
+    const rasgos = { head: 0, beard: 0, brow: 0, mouth: 0, mark: 0 };
+    const m = [0, 1, 2, 3, 4, 5].map((hair) =>
+      JSON.stringify(montarCabeza({ ...rasgos, hair, gender: 'female' })),
+    );
+    const h = [0, 1, 2, 3, 4, 5].map((hair) => JSON.stringify(montarCabeza({ ...rasgos, hair })));
+    expect(new Set(m).size).toBe(6);
+    m.forEach((c) => expect(h).not.toContain(c));
+  });
+
+  it('una luchadora nunca lleva barba', () => {
+    const rasgos = { head: 0, hair: 0, brow: 0, mouth: 0, mark: 0, gender: 'female' as const };
+    const sin = montarCabeza({ ...rasgos, beard: 0 });
+    for (const beard of [1, 2, 3, 4, 5]) expect(montarCabeza({ ...rasgos, beard })).toEqual(sin);
+  });
+
+  it('la mellada de la luchadora no es un bloque sobre la barbilla', () => {
+    // El bloque relleno de la mellada del hombre se leia como perilla en una cara de mujer.
+    const rasgos = { head: 0, hair: 0, beard: 0, brow: 0, mark: 0 };
+    const boca = (gender?: 'female') =>
+      cabezaPorCapas({ ...rasgos, mouth: 3, gender }).caras.neutral.at(-2)!;
+    expect(boca('female')).not.toEqual(boca());
+    for (const mouth of [0, 1, 2]) {
+      expect(cabezaPorCapas({ ...rasgos, mouth, gender: 'female' }).caras.neutral.at(-1)).toEqual(
+        cabezaPorCapas({ ...rasgos, mouth }).caras.neutral.at(-1),
+      );
+    }
+  });
+
+  it('cada peinado de luchadora encaja bajo un sombrero', () => {
+    // Con un sombrero (vacio) no se pinta la capa `encima`, sino `bajoSombrero`.
+    const rasgos = { head: 0, beard: 0, brow: 0, mouth: 0, mark: 0, gender: 'female' as const };
+    for (const hair of [0, 1, 2, 3, 4, 5]) {
+      expect(montarCabeza({ ...rasgos, hair }, [])).not.toEqual(montarCabeza({ ...rasgos, hair }));
+    }
+  });
+
+  it('el monio no asoma bajo un sombrero', () => {
+    const rasgos = {
+      head: 0,
+      hair: 0,
+      beard: 0,
+      brow: 0,
+      mouth: 0,
+      mark: 0,
+      gender: 'female' as const,
+    };
+    // `circulo(0, -49, 7.5)`, el monio de la luchadora.
+    const monio = 'M -7.5 -49 a 7.5 7.5 0 1 0 15 0 a 7.5 7.5 0 1 0 -15 0 Z';
+    const lleva = (shapes: Shape[]) => shapes.some((s) => s.d === monio);
+    expect(lleva(montarCabeza(rasgos))).toBe(true);
+    expect(lleva(montarCabeza(rasgos, []))).toBe(false);
+  });
+
+  const rasgosM = {
+    head: 0,
+    hair: 0,
+    beard: 0,
+    brow: 0,
+    mouth: 0,
+    mark: 0,
+    gender: 'female' as const,
+  };
+
+  it('la luchadora lleva pestanas en cada gesto salvo dolor y derrotado', () => {
+    const h = cabezaPorCapas({ ...rasgosM, gender: undefined });
+    const m = cabezaPorCapas(rasgosM);
+    for (const e of EXPRESIONES) {
+      const extra = m.caras[e].length - h.caras[e].length;
+      if (e === 'dolor' || e === 'derrotado') expect(extra).toBe(0);
+      else expect(extra).toBeGreaterThan(0);
+    }
+  });
+
+  it('la ceja de la luchadora va 1,5 mas alta, y las del gesto no se mueven', () => {
+    // Sin chirlo, las dos primeras formas de la cara son las cejas del personaje.
+    const caras = (r: Rasgos) => cabezaPorCapas(r).caras;
+    const m = caras(rasgosM);
+    const h = caras({ ...rasgosM, gender: undefined });
+    expect(m.neutral[0]?.d).toBe('M -10.5 -30 L -4 -30');
+    expect(m.neutral[1]?.d).toBe('M 10.5 -30 L 4 -30');
+    expect(m.parpadeo.slice(0, 2)).toEqual(m.neutral.slice(0, 2));
+    expect(m.socarrona[0]).toEqual(m.neutral[0]);
+    // La V del esfuerzo y la ceja enarcada son del gesto, no del personaje.
+    expect(m.esfuerzo.slice(0, 2)).toEqual(h.esfuerzo.slice(0, 2));
+    expect(m.socarrona[1]).toEqual(h.socarrona[1]);
+  });
+
+  it('con chirlo, la luchadora lleva el claro grande', () => {
+    const m = cabezaPorCapas({ ...rasgosM, mark: 3 });
+    const h = cabezaPorCapas({ ...rasgosM, mark: 3, gender: undefined });
+    expect(m.caras.neutral[0]).not.toEqual(h.caras.neutral[0]);
+    expect(m.caras.neutral[0]?.fill).toBe('piel');
+    // Sin chirlo no hay claro.
+    expect(cabezaPorCapas(rasgosM).caras.neutral[0]?.fill).toBe('oscuro');
+  });
+
+  it('lookFrom pasa el sexo a la cabeza', () => {
+    const b = createBrute('Rosca la Brava');
+    const h = lookFrom({ ...b.appearance, gender: 'male' }, b.slug);
+    const m = lookFrom({ ...b.appearance, gender: 'female' }, b.slug);
+    expect(m.parts.head).not.toEqual(h.parts.head);
   });
 });

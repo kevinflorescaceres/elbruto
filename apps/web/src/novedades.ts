@@ -24,6 +24,16 @@ export const ETIQUETA: Record<TipoNovedad, string> = {
 
 export const NOVEDADES: readonly Novedad[] = [
   {
+    fecha: '2026-11-30',
+    puntos: [
+      {
+        tipo: 'nuevo',
+        texto:
+          'Ya puedes crear luchadoras: al poner el nombre, elige si tu peleón es hombre o mujer.',
+      },
+    ],
+  },
+  {
     fecha: '2026-11-28',
     puntos: [
       {

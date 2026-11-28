@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { growBot } from './bots.js';
-import { createBrute, growTo } from './brute.js';
+import { botGender, createBrute, growTo } from './brute.js';
 import { hashString, mulberry32 } from './prng.js';
 import { simulate } from './simulate.js';
 
@@ -39,5 +39,15 @@ describe('growBot', () => {
     // `frenteAPuntos` en `pnpm balance`), y elegir con cabeza da poco: 0.51.
     // Lo que se protege es que el bot no elija PEOR que una moneda.
     expect(gana / total).toBeGreaterThan(0.5);
+  });
+});
+
+describe('botGender', () => {
+  it('el sexo de un bot sale de su slug y reparte mitad y mitad', () => {
+    expect(botGender('pepe-el-gallo-3')).toBe(botGender('pepe-el-gallo-3'));
+    const slugs = Array.from({ length: 400 }, (_, i) => `bot-${i}`);
+    const mujeres = slugs.filter((s) => botGender(s) === 'female').length;
+    expect(mujeres).toBeGreaterThan(160);
+    expect(mujeres).toBeLessThan(240);
   });
 });

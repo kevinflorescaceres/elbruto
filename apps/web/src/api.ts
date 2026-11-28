@@ -3,6 +3,7 @@
  * `@camorra/shared`: es el otro extremo del contrato que ya cumple el servidor.
  */
 import type { z } from 'zod';
+import type { Gender } from '@camorra/engine';
 import {
   type FeedbackBody,
   bruteProfileSchema,
@@ -56,8 +57,8 @@ const post = (body: unknown) => ({ method: 'POST', body }) as const;
 export const api = {
   me: () => call(meSchema, '/me'),
   ranking: () => call(rankingSchema, '/ranking'),
-  createBrute: (name: string, masterSlug?: string) =>
-    call(createBruteResponse, '/brutes', post({ name, masterSlug })),
+  createBrute: (name: string, gender: Gender, masterSlug?: string) =>
+    call(createBruteResponse, '/brutes', post({ name, gender, masterSlug })),
   claimPreview: (token: string) =>
     call(claimPreviewResponse, `/claim/${encodeURIComponent(token)}`),
   claim: (token: string) => call(claimResponse, '/claim', post({ token })),

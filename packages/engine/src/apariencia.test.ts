@@ -31,6 +31,7 @@ group('apariencia', () => {
         mouth: _boca,
         beard: _barba,
         mark: _marca,
+        gender: _sexo,
         ...actual
       } = createBrute(nombre).appearance;
       expect(actual, `la cara de ${nombre} ha cambiado`).toEqual(esperada);

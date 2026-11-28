@@ -14,6 +14,7 @@ import {
   lookFrom,
   EXPRESIONES,
   montarCabeza,
+  type Expresion,
   type Rasgos,
   PUNO,
   TRAZO,
@@ -54,7 +55,15 @@ function figure(
   weapon?: { category: WeaponCategory; reach: number },
 ): string {
   const peleon = createBrute(name);
-  const look = lookFrom(peleon.appearance, peleon.slug);
+  return figuraDe(lookFrom(peleon.appearance, peleon.slug), frame, weapon);
+}
+
+/** Lo mismo que `figure`, con un `Look` ya montado (una apariencia a mano). */
+function figuraDe(
+  look: Look,
+  frame: Frame,
+  weapon?: { category: WeaponCategory; reach: number },
+): string {
   const arma = weapon === undefined ? [] : weaponShapes(weapon.category, weapon.reach);
 
   const render = (part: PartName): string => {
@@ -413,43 +422,100 @@ const colorHoja: Look['colors'] = {
   ropa2: PALETA.ropa[1],
 };
 const cabezas: { label: string; body: string }[] = [];
-for (const sombrero of [undefined, 'boina', 'ala'] as const) {
-  for (let hair = 0; hair < 6; hair++) {
-    for (let head = 0; head < 4; head++) {
-      const rasgos: Rasgos = {
-        head,
-        hair,
-        beard: head === 3 ? 5 : head,
-        brow: head,
-        mouth: hair % 4,
-        mark: head === 0 ? 3 : 0,
-      };
-      const formas = montarCabeza(rasgos, sombrero === undefined ? undefined : GALIBOS[sombrero]);
-      cabezas.push({
-        label: `p${hair} c${head}${sombrero === undefined ? '' : ' ' + sombrero}`,
-        body: `<g transform="translate(0 40) scale(1.6)">${shapesToSvg(formas, colorHoja)}</g>`,
-      });
+for (const gender of [undefined, 'female'] as const) {
+  for (const sombrero of [undefined, 'boina', 'ala'] as const) {
+    for (let hair = 0; hair < 6; hair++) {
+      for (let head = 0; head < 4; head++) {
+        const rasgos: Rasgos = {
+          head,
+          hair,
+          beard: head === 3 ? 5 : head,
+          brow: head,
+          mouth: hair % 4,
+          mark: head === 0 ? 3 : 0,
+          gender,
+        };
+        const formas = montarCabeza(rasgos, sombrero === undefined ? undefined : GALIBOS[sombrero]);
+        cabezas.push({
+          label: `${gender === undefined ? 'p' : 'm'}${hair} c${head}${sombrero === undefined ? '' : ' ' + sombrero}`,
+          body: `<g transform="translate(0 40) scale(1.6)">${shapesToSvg(formas, colorHoja)}</g>`,
+        });
+      }
     }
   }
 }
 {
   const porFila = 8;
+  // Alto de fila 175: la trenza y la melena bajan hasta y=24 y pisaban el rotulo.
   const filas = Math.ceil(cabezas.length / porFila);
   writeFileSync(
     `${salida}/cabezas.svg`,
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${porFila * 110}" height="${filas * 130}" viewBox="0 0 ${porFila * 110} ${filas * 130}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${porFila * 110}" height="${filas * 175}" viewBox="0 0 ${porFila * 110} ${filas * 175}"><rect width="100%" height="100%" fill="#f6f6f4"/>` +
       cabezas
         .map((c, i) => {
           const cx = (i % porFila) * 110 + 55;
-          const cy = Math.floor(i / porFila) * 130 + 75;
+          const cy = Math.floor(i / porFila) * 175 + 75;
           return (
             `<g transform="translate(${cx} ${cy})">${c.body}</g>` +
-            `<text x="${cx}" y="${cy + 50}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`
+            `<text x="${cx}" y="${cy + 92}" text-anchor="middle" font-family="monospace" font-size="10" fill="#444">${c.label}</text>`
           );
         })
         .join('') +
       '</svg>',
   );
+}
+
+// 5c. Luchadoras: los seis peinados sobre las cuatro cabezas, de cuerpo entero
+// en las tres complexiones, y los siete gestos sin marca, con chirlo y con
+// parche (las dos marcas que se pisan con las pestanas).
+{
+  const base: Appearance = {
+    body: 0,
+    head: 0,
+    hair: 0,
+    skinColor: 1,
+    hairColor: 2,
+    clothColor: 0,
+    brow: 0,
+    mouth: 0,
+    beard: 3,
+    mark: 0,
+    gender: 'female',
+  };
+  const look = (campos: Partial<Appearance>) => lookFrom({ ...base, ...campos }, 'luchadora');
+  const cabeza = (campos: Partial<Appearance>, expresion: Expresion = 'neutral') => {
+    const l = look(campos);
+    const formas = [...l.cabeza.debajo, ...l.cabeza.caras[expresion], ...l.cabeza.encima];
+    return `<g transform="translate(0 -40) scale(1.7)">${shapesToSvg(formas, l.colors)}</g>`;
+  };
+  // Siete por fila, una por gesto; las filas mas cortas se rellenan.
+  const hueco = (n: number) => Array.from({ length: n }, () => ({ label: '', body: '' }));
+  const celdas: { label: string; body: string }[] = [];
+  for (let hair = 0; hair < 6; hair++) {
+    for (let head = 0; head < 4; head++) {
+      celdas.push({ label: `m${hair} c${head}`, body: cabeza({ hair, head, brow: head }) });
+    }
+    celdas.push(...hueco(3));
+  }
+  const complexiones = ['enjuta', 'recia', 'media'];
+  for (let body = 0; body < 3; body++) {
+    for (let hair = 0; hair < 6; hair++) {
+      celdas.push({
+        label: `m${hair} ${complexiones[body] ?? body}`,
+        body: figuraDe(look({ hair, body, head: hair % 4, clothColor: hair }), REST),
+      });
+    }
+    celdas.push(...hueco(1));
+  }
+  const muestras: { campos: Partial<Appearance>; label: string }[] = [
+    { campos: { hair: 3, mark: 0, brow: 0 }, label: 'lisa' },
+    { campos: { hair: 1, mark: 3, brow: 2, head: 2 }, label: 'chirlo' },
+    { campos: { hair: 4, mark: 4, brow: 1, head: 1, mouth: 2 }, label: 'parche' },
+  ];
+  for (const { campos, label } of muestras) {
+    for (const e of EXPRESIONES) celdas.push({ label: `${label} ${e}`, body: cabeza(campos, e) });
+  }
+  sheet(`${salida}/luchadoras.svg`, celdas, EXPRESIONES.length);
 }
 
 // 6. Escenarios, a tamano real del lienzo y con un peleon dentro para escala.

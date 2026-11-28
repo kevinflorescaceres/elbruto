@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
-import { getPet, getSkill, getWeapon } from '@camorra/engine';
+import { getPet, getSkill, getWeapon, type Gender } from '@camorra/engine';
+import { segun } from '../genero.js';
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import type { BruteProfile } from '@camorra/shared';
@@ -26,10 +27,11 @@ import { NadieAqui } from '../Escenario.js';
 import { CrearAqui } from '../CrearPeleon.js';
 import { describeSkill } from '../skillText.js';
 
-function Denuncia({ slug }: { slug: string }) {
+function Denuncia({ slug, gender }: { slug: string; gender?: Gender }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const report = useMutation({ mutationFn: () => api.report(slug, reason) });
+  const problema = `Qué problema hay con ${segun(gender, 'este peleón', 'esta peleona')}`;
 
   if (report.isSuccess) return <p className="apagado">Denuncia recibida. Gracias.</p>;
   if (!open)
@@ -50,8 +52,8 @@ function Denuncia({ slug }: { slug: string }) {
       <input
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        placeholder="Qué problema hay con este peleón"
-        aria-label="Qué problema hay con este peleón"
+        placeholder={problema}
+        aria-label={problema}
         className="campo-crece"
       />
       <Boton type="submit" disabled={reason.trim().length < 3}>
@@ -167,7 +169,7 @@ export function BrutePage() {
           <>
             {/* La experiencia ya va en su barra: aqui sobraba repetida. */}
             Nivel {b.level} · {record(b.wins, b.losses)}
-            {b.isBot && ' · peleón de la casa'}
+            {b.isBot && ` · ${segun(b.appearance.gender, 'peleón', 'peleona')} de la casa`}
           </>
         ),
       }}
@@ -299,7 +301,7 @@ export function BrutePage() {
       {/* Denunciar el nombre de tu propio peleon no tiene sentido. */}
       {!mine && (
         <div className="denuncia">
-          <Denuncia slug={slug} />
+          <Denuncia slug={slug} gender={b.appearance.gender} />
         </div>
       )}
     </Pagina>

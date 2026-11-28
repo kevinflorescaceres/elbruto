@@ -3,10 +3,26 @@ import { expect, test, type Page } from '@playwright/test';
 /** Nombres nuevos en cada ejecucion, por si queda algo en la base. */
 const nombre = (prefijo: string): string => `${prefijo} ${Math.random().toString(36).slice(2, 7)}`;
 
-async function crearPeleon(page: Page, prefijo: string): Promise<string> {
+async function crearPeleon(
+  page: Page,
+  prefijo: string,
+  sexo: 'Hombre' | 'Mujer' = 'Hombre',
+): Promise<string> {
   const suyo = nombre(prefijo);
   await page.goto('/');
   await page.getByLabel('Nombre del peleón').fill(suyo);
+  // Sin sexo elegido no se crea: ninguna opcion viene marcada de entrada.
+  await expect(page.getByRole('button', { name: 'Crear' })).toBeDisabled();
+  await expect(page.getByText('Elige si es hombre o mujer.')).toBeVisible();
+  // La vista previa ensena las dos figuras hasta que se elige, y una despues.
+  await expect(page.locator('.nombre-vista svg')).toHaveCount(2);
+  await page.getByRole('radio', { name: sexo }).click();
+  await expect(page.locator('.nombre-vista svg')).toHaveCount(1);
+  await expect(page.getByRole('radio', { name: sexo })).toHaveAttribute('aria-checked', 'true');
+  // Elegido el sexo, ya es un peleon concreto: la etiqueta concuerda.
+  await expect(
+    page.getByLabel(sexo === 'Mujer' ? 'Nombre de la peleona' : 'Nombre del peleón'),
+  ).toHaveValue(suyo);
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Guarda este enlace')).toBeVisible();
   await expect(page.getByRole('heading', { name: `Aquí está ${suyo}` })).toBeVisible();
@@ -35,7 +51,7 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   const paginaMia = await mio.newPage();
   const paginaSuya = await suyo.newPage();
 
-  await crearPeleon(paginaSuya, 'Rival');
+  await crearPeleon(paginaSuya, 'Rival', 'Mujer');
   const propio = await crearPeleon(paginaMia, 'Peleon');
 
   await paginaMia.getByRole('link', { name: 'Ver su ficha' }).click();
@@ -99,6 +115,19 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   await paginaAnonima.goto(paginaMia.url());
   await expect(paginaAnonima.locator('canvas')).toBeVisible();
   await expect(paginaAnonima.getByRole('button', { name: 'Copiar enlace' })).toBeVisible();
+});
+
+test('una luchadora se crea como mujer y su ficha lo dice', async ({ browser }) => {
+  const contexto = await browser.newContext({
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
+  const page = await contexto.newPage();
+  const suya = await crearPeleon(page, 'Peleona', 'Mujer');
+
+  await page.getByRole('link', { name: 'Ver su ficha' }).click();
+  await expect(page).toHaveURL(/\/b\//);
+  await expect(page.getByRole('heading', { name: suya })).toBeVisible();
+  await expect(page.getByLabel('Retrato de la peleona').first()).toBeVisible();
 });
 
 test('el punto de novedades se apaga al verlas y no vuelve', async ({ page }) => {

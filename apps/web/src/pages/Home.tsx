@@ -8,6 +8,7 @@ import { Boton, BuscarPelea, ESTADISTICAS, Estadistica, Pagina, record, Tarjeta 
 import { armaVisible, Fighter } from '../art/Fighter.js';
 import { Cuenta } from '../Cuenta.js';
 import { useMe, usePendientes } from '../hooks.js';
+import { segun } from '../genero.js';
 import { FormularioNombre, useCrearPeleon } from '../CrearPeleon.js';
 import { EnlaceRecuperacion } from '../EnlaceRecuperacion.js';
 import { Escenario } from '../Escenario.js';
@@ -17,9 +18,10 @@ import { quitarPendiente } from '../enlacesPendientes.js';
 /*
  * Dos peleones de muestra, sacados del motor igual que cualquier otro: la cara
  * sale del nombre. Elegidos porque los dos empiezan con arma y se distinguen
- * bien. No existen en la base; si alguien crea uno con ese nombre, sera este.
+ * bien. No existen en la base; si alguien crea uno con ese nombre y ese sexo, sera este.
+ * Una luchadora y un hombre: la portada ya dice que se puede elegir.
  */
-const MUESTRA = ['Rosca la Brava', 'Matías Puñetas'].map(createBrute);
+const MUESTRA = [createBrute('Rosca la Brava', 'female'), createBrute('Matías Puñetas', 'male')];
 
 /**
  * Lo primero que se ve al crear: el peleon en grande y el siguiente paso. Antes
@@ -185,7 +187,7 @@ function recluta(
   if (maestro.data.isBot) {
     return {
       tipo: 'aviso',
-      texto: `${maestro.data.name} es un peleón de la casa y no recluta, pero puedes crear el tuyo igual.`,
+      texto: `${maestro.data.name} es ${segun(maestro.data.appearance.gender, 'un peleón', 'una peleona')} de la casa y no recluta, pero puedes crear el tuyo igual.`,
     };
   }
   return { tipo: 'valido', maestro: maestro.data };
@@ -209,7 +211,9 @@ export function Home() {
   const [creado, setCreado] = useState<BruteProfile | null>(() =>
     creadoEnOtraPantalla(location.state),
   );
-  const { name, setName, ayuda, create } = useCrearPeleon(masterSlug, (brute) => setCreado(brute));
+  const { name, setName, gender, setGender, ayuda, create } = useCrearPeleon(masterSlug, (brute) =>
+    setCreado(brute),
+  );
 
   const misPeleones = me.data?.brutes ?? [];
   const reclutamiento = recluta(
@@ -233,6 +237,8 @@ export function Home() {
       titulo={titulo}
       name={name}
       setName={setName}
+      gender={gender}
+      setGender={setGender}
       ayuda={ayuda}
       create={create}
       aviso={aviso}
@@ -311,11 +317,15 @@ export function Home() {
         <>
           <MisPeleones brutes={misPeleones} principal />
           {enlaces}
-          <div className="portada-seccion">{formulario('Otro peleón')}</div>
+          <div className="portada-seccion">
+            {formulario(segun(gender ?? undefined, 'Otro peleón', 'Otra peleona'))}
+          </div>
         </>
       ) : (
         <>
-          <div className="portada-form">{formulario('Nuevo peleón')}</div>
+          <div className="portada-form">
+            {formulario(segun(gender ?? undefined, 'Nuevo peleón', 'Nueva peleona'))}
+          </div>
           {enlaces}
           {/* Tiene peleones pero viene por el enlace de otro: abajo, por si acaso. */}
           {misPeleones.length > 0 && <MisPeleones brutes={misPeleones} principal={false} />}

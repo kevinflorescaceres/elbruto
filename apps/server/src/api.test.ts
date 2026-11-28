@@ -43,7 +43,7 @@ async function newFighter(
   prefix: string,
 ): Promise<{ browser: Browser; slug: string; claim: string }> {
   const browser = new Browser();
-  const res = await browser.call('POST', '/api/brutes', { name: unique(prefix) });
+  const res = await browser.call('POST', '/api/brutes', { name: unique(prefix), gender: 'male' });
   expect(res.status).toBe(201);
   return { browser, slug: res.body.brute.slug, claim: res.body.claimUrl.split('/').pop() };
 }
@@ -77,10 +77,44 @@ describe('creacion de luchadores', () => {
 
   it('rechaza nombres repetidos, mal formados y bloqueados', async () => {
     const browser = new Browser();
-    await browser.call('POST', '/api/brutes', { name: 'Chirlo Tuerto' });
+    await browser.call('POST', '/api/brutes', { name: 'Chirlo Tuerto', gender: 'male' });
 
-    expect((await browser.call('POST', '/api/brutes', { name: 'chirlo tuerto' })).status).toBe(409);
-    expect((await browser.call('POST', '/api/brutes', { name: 'el puta amo' })).status).toBe(400);
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: 'chirlo tuerto', gender: 'male' })).status,
+    ).toBe(409);
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: 'el puta amo', gender: 'male' })).status,
+    ).toBe(400);
+  });
+
+  it('crear sin sexo da 400 con mensaje en espanol y no crea nada', async () => {
+    const browser = new Browser();
+    const res = await browser.call('POST', '/api/brutes', { name: 'Sin Sexo' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Elige si es hombre o mujer.');
+    expect((await browser.call('GET', '/api/brutes/sin-sexo')).status).toBe(404);
+  });
+
+  it.each(['otro', '', 3])('un sexo que no existe (%j) da 400', async (gender) => {
+    const res = await new Browser().call('POST', '/api/brutes', {
+      name: 'Sexo Raro',
+      gender,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Elige si es hombre o mujer.');
+  });
+
+  it('crear una luchadora la guarda y la devuelve como mujer', async () => {
+    const browser = new Browser();
+    const res = await browser.call('POST', '/api/brutes', {
+      name: 'Rosca la Brava',
+      gender: 'female',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.brute.appearance.gender).toBe('female');
+
+    const ficha = await browser.call('GET', '/api/brutes/rosca-la-brava');
+    expect(ficha.body.appearance.gender).toBe('female');
   });
 
   it('fija el limite de longitud en NAME_MIN y NAME_MAX', async () => {
@@ -89,13 +123,23 @@ describe('creacion de luchadores', () => {
 
     // Justo por debajo y justo por encima fallan; los extremos validos pasan.
     expect(
-      (await browser.call('POST', '/api/brutes', { name: 'x'.repeat(NAME_MIN - 1) })).status,
+      (
+        await browser.call('POST', '/api/brutes', {
+          name: 'x'.repeat(NAME_MIN - 1),
+          gender: 'male',
+        })
+      ).status,
     ).toBe(400);
-    expect((await browser.call('POST', '/api/brutes', { name: largo + 'x' })).status).toBe(400);
-    expect((await browser.call('POST', '/api/brutes', { name: 'x'.repeat(NAME_MIN) })).status).toBe(
-      201,
-    );
-    expect((await browser.call('POST', '/api/brutes', { name: largo })).status).toBe(201);
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: largo + 'x', gender: 'male' })).status,
+    ).toBe(400);
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: 'x'.repeat(NAME_MIN), gender: 'male' }))
+        .status,
+    ).toBe(201);
+    expect(
+      (await browser.call('POST', '/api/brutes', { name: largo, gender: 'male' })).status,
+    ).toBe(201);
   });
 
   it('el perfil es publico pero pelear no lo es', async () => {
@@ -316,7 +360,7 @@ describe('anti-abuso', () => {
   it('corta la creacion de luchadores por IP', async () => {
     const limited = await buildApp({ createLimit: 2 });
     const post = (name: string) =>
-      limited.inject({ method: 'POST', url: '/api/brutes', payload: { name } });
+      limited.inject({ method: 'POST', url: '/api/brutes', payload: { name, gender: 'male' } });
 
     expect((await post(unique('cupo'))).statusCode).toBe(201);
     expect((await post(unique('cupo'))).statusCode).toBe(201);
@@ -334,7 +378,7 @@ describe('detras de un proxy', () => {
       suyo.inject({
         method: 'POST',
         url: '/api/brutes',
-        payload: { name: `proxy ${Math.random().toString(36).slice(2, 7)}` },
+        payload: { name: `proxy ${Math.random().toString(36).slice(2, 7)}`, gender: 'male' },
         headers: { 'x-forwarded-for': ip },
       });
 
@@ -354,7 +398,7 @@ describe('detras de un proxy', () => {
       suyo.inject({
         method: 'POST',
         url: '/api/brutes',
-        payload: { name: `rango ${Math.random().toString(36).slice(2, 7)}` },
+        payload: { name: `rango ${Math.random().toString(36).slice(2, 7)}`, gender: 'male' },
         headers: { 'x-forwarded-for': cadena },
       });
 
@@ -402,7 +446,7 @@ describe('metadatos para compartir', () => {
     // es el patron: si algun dia se amplia, este test cae y avisa.
     const browser = new Browser();
     for (const peligroso of ['ma"><script x', 'uno<b>dos', 'tres & cuatro', "cinco'seis"]) {
-      const res = await browser.call('POST', '/api/brutes', { name: peligroso });
+      const res = await browser.call('POST', '/api/brutes', { name: peligroso, gender: 'male' });
       expect(res.status).toBe(400);
     }
     for (const caracter of ['<', '>', '"', '&', "'", '/']) {
@@ -476,8 +520,8 @@ describe('razones para volver', () => {
     // brutes.map(rowToProfile) pasaba el indice al segundo parametro y el
     // primero salia con puesto 0, que el esquema rechaza y tumba la portada.
     const browser = new Browser();
-    await browser.call('POST', '/api/brutes', { name: 'Primero del Cupo' });
-    await browser.call('POST', '/api/brutes', { name: 'Segundo del Cupo' });
+    await browser.call('POST', '/api/brutes', { name: 'Primero del Cupo', gender: 'male' });
+    await browser.call('POST', '/api/brutes', { name: 'Segundo del Cupo', gender: 'male' });
 
     const me = await browser.call('GET', '/api/me');
     expect(me.status).toBe(200);
@@ -515,6 +559,7 @@ describe('pupilos', () => {
     const recluta = new Browser();
     const creado = await recluta.call('POST', '/api/brutes', {
       name: unique('recluta'),
+      gender: 'male',
       masterSlug: maestro.slug,
     });
     expect(creado.status).toBe(201);
@@ -530,6 +575,7 @@ describe('pupilos', () => {
     const { browser, slug } = await newFighter('tramposo');
     const otro = await browser.call('POST', '/api/brutes', {
       name: unique('clon'),
+      gender: 'male',
       masterSlug: slug,
     });
 
@@ -547,6 +593,7 @@ describe('pupilos', () => {
     for (let i = 0; i < 8; i++) {
       await new Browser().call('POST', '/api/brutes', {
         name: unique(`seguidor${i}`),
+        gender: 'male',
         masterSlug: maestro.slug,
       });
     }
@@ -569,6 +616,7 @@ describe('pupilos', () => {
     });
     const conBot = await new Browser().call('POST', '/api/brutes', {
       name: unique('inocente'),
+      gender: 'male',
       masterSlug: 'bot-reclutador',
     });
     expect(conBot.body.brute.master).toBeNull();
@@ -579,6 +627,7 @@ describe('pupilos', () => {
     const rival = await newFighter('sufrido');
     await new Browser().call('POST', '/api/brutes', {
       name: unique('apoyo'),
+      gender: 'male',
       masterSlug: maestro.slug,
     });
 
