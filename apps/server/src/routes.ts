@@ -405,7 +405,7 @@ export function registerRoutes(
       });
 
       if (grown.levelsGained > 0) {
-        // xpForLevel(n) >= 5 y una pelea da como mucho 2 XP: nunca son 2 niveles.
+        // addXp sube como mucho un nivel por pelea: nunca hay dos mejoras pendientes.
         await tx.levelUpChoice.create({
           data: {
             bruteId: me.id,

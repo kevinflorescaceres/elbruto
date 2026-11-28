@@ -63,7 +63,17 @@ export const clothColor2For = (slug: string): number => campoDeApariencia(slug, 
 export const maxHpFor = (endurance: number, level: number): number =>
   Math.floor(30 + endurance * 6 + level * 3);
 
-export const xpForLevel = (level: number): number => level * 5;
+/**
+ * XP para pasar de `level` al siguiente, por tramos. Hasta el nivel 4 es la de
+ * siempre (5N); desde el 5 crece de 2 en 2, a medio camino entre 5N, que a
+ * nivel 20 pedia casi 4 meses de juego, y LaBrute, con las mismas 6 peleas al
+ * dia. El nivel 5 cuesta lo mismo que el 4: nunca puede costar menos.
+ */
+export function xpForLevel(level: number): number {
+  if (level <= 4) return level * 5;
+  if (level <= 9) return 2 * level + 10;
+  return 2 * level + 9;
+}
 
 function rollStats(rng: Rng): Record<Stat, number> {
   const stats: Record<Stat, number> = {
@@ -221,15 +231,19 @@ export function applyLevelUpOption(brute: Brute, option: LevelUpOption): Brute {
   }
 }
 
-/** Suma XP y sube de nivel si llega. Devuelve cuantos niveles subio. */
+/**
+ * Suma XP y sube de nivel si llega. Como mucho un nivel por llamada: cada nivel
+ * trae su mejora y solo cabe una pendiente. Lo que sobre queda guardado y sube
+ * el siguiente nivel en la proxima pelea. Asi un cambio de `xpForLevel` que
+ * deje a alguien con XP de sobra no le hace saltarse mejoras.
+ */
 export function addXp(brute: Brute, amount: number): { brute: Brute; levelsGained: number } {
-  let next = { ...brute, xp: brute.xp + amount };
-  let levelsGained = 0;
-  while (next.xp >= xpForLevel(next.level)) {
-    next = { ...next, xp: next.xp - xpForLevel(next.level), level: next.level + 1 };
-    levelsGained += 1;
-  }
-  return { brute: next, levelsGained };
+  const next = { ...brute, xp: brute.xp + amount };
+  if (next.xp < xpForLevel(next.level)) return { brute: next, levelsGained: 0 };
+  return {
+    brute: { ...next, xp: next.xp - xpForLevel(next.level), level: next.level + 1 },
+    levelsGained: 1,
+  };
 }
 
 /**

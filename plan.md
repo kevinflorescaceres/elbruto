@@ -139,7 +139,7 @@ Fight
 ### Progresión
 
 - Victoria: +2 XP. Derrota: +1 XP. Solo gana XP quien ataca; el récord se apunta a los dos.
-- XP para subir: `level * 5`.
+- XP para subir, por tramos: `5N` hasta el nivel 4, `2N + 10` del 5 al 9 y `2N + 9` desde el 10. Una pelea sube como mucho un nivel; el sobrante queda para la siguiente. _(Ajustado el 2026-11-28: con `level * 5` el nivel 21 pedía unos 117 días de juego; ahora unos 67.)_
 - Al subir de nivel se ofrecen 2 opciones distintas. **La primera es siempre de estadística**, para no obligar a llevarse un arma o un bicho que no se quiere.
 - Opción de estadística: **+3 a una**, o **+2 y +1** repartidos entre dos.
 - La segunda opción se sortea ponderada: arma 35%, habilidad 35%, mascota 10%, estadística 20%. A partir de la cuarta arma, el peso de "arma" baja a 10%: solo se empuña una, así que la quinta no aporta.

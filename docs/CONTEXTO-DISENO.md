@@ -386,7 +386,7 @@ El coste se descuenta de la resistencia del dueño, con suelo en 0, antes de cal
 ### Progresión
 
 - XP: victoria +2, derrota +1. **Solo gana XP quien ataca**; el récord se apunta a los dos.
-- Umbral: `level * 5`. Nivel 1 → 5 XP. Nivel 10 → 50 XP.
+- Umbral por tramos: `5N` hasta el nivel 4, `2N + 10` del 5 al 9, `2N + 9` desde el 10. Nivel 1 → 5 XP. Nivel 10 → 29 XP. Una pelea sube como mucho un nivel.
 - Dos opciones al subir. **La primera es siempre de estadística**: +3 a una, o +2 y +1 entre dos.
 - La segunda se sortea: arma 35%, habilidad 35%, mascota 10%, estadística 20%. A partir de la
   cuarta arma, el peso de "arma" baja a 10%.
