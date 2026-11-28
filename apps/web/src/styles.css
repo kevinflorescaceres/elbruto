@@ -1678,11 +1678,18 @@ th {
   justify-self: start;
 }
 
+/*
+ * Sin elegir, en papel con borde de tinta: el fondo hondo es el de los botones
+ * apagados, y con el "Crear" en espera al lado las opciones parecian no estar
+ * disponibles todavia.
+ */
 .sexo-opcion {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--e-1);
+  justify-content: center;
   font-weight: 400;
+  background: var(--papel-claro);
 }
 
 .sexo-opcion + .sexo-opcion {
@@ -1699,15 +1706,18 @@ th {
 
 /* El foco por encima del vecino: con el borde compartido, el anillo quedaba tapado. */
 .sexo-opcion:focus-visible {
-  position: relative;
   z-index: 1;
 }
 
 /*
- * La marca ocupa su sitio siempre, para que elegir no mueva los botones; solo
- * se ve en la elegida. Elegida, ademas, en negrita y con el fondo de tinta.
+ * La marca va superpuesta en el relleno de la izquierda: si ocupara su sitio en
+ * la linea, la etiqueta quedaria descentrada en las dos. Solo se ve en la
+ * elegida, que ademas va en negrita y con el fondo de tinta.
  */
 .sexo-marca {
+  position: absolute;
+  left: calc(var(--e-4) / 2);
+  transform: translateX(-50%);
   visibility: hidden;
 }
 
@@ -1724,6 +1734,12 @@ th {
 @media (hover: hover) {
   .sexo-opcion[aria-checked='true']:hover {
     background: var(--tinta);
+  }
+
+  /* Sin el vino de los botones: una opcion en vino parecia ya elegida, o el "Crear". */
+  .sexo-opcion:hover:not([aria-checked='true']) {
+    background: var(--papel-hondo);
+    color: var(--tinta);
   }
 }
 
