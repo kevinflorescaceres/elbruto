@@ -267,6 +267,19 @@ group('planFight', () => {
     expect(agotada.some((m) => m.kind === 'toss')).toBe(false);
   });
 
+  // El rig se monta con `actor.weapon` antes del primer fotograma: si el plan lo
+  // pisa con el arma del final, quien la rompe sale con las manos vacias.
+  it('cada actor empieza con el arma con la que aparece, aunque la pierda o saque otra', () => {
+    for (let seed = 0; seed < 300; seed++) {
+      const result = fight(seed);
+      const spawns = (result.log as FightEvent[]).filter((e) => e.type === 'spawn');
+      const scene = planFight(result);
+      for (const spawn of spawns) {
+        expect(scene.actors.find((a) => a.id === spawn.id)?.weapon).toBe(spawn.weapon);
+      }
+    }
+  });
+
   it('la botija revienta en el rival: sin trozos en la mano de quien la tira', () => {
     const moves = planFight({
       winner: 'A',
