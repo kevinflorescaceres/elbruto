@@ -50,6 +50,11 @@ export const NOVEDADES: readonly Novedad[] = [
         texto:
           'Quien muere de un contraataque se queda tendido donde cayó, en vez de volver andando partido en dos.',
       },
+      {
+        tipo: 'arreglo',
+        texto:
+          'Cuando a tu peleón se le rompe el arma, la lleva en la mano hasta que se rompe, en vez de pelear con las manos vacías desde el principio.',
+      },
     ],
   },
 ];
