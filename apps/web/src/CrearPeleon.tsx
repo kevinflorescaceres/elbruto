@@ -85,7 +85,7 @@ export function VistaPrevia({
           appearance={brute.appearance}
           slug={brute.slug}
           weapon={armaVisible(brute.weapons)}
-          height={gender === null ? 56 : 72}
+          height={72}
         />
       ))}
     </div>

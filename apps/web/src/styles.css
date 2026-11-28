@@ -1861,10 +1861,13 @@ a.boton {
 
 .nombre-vista {
   flex: none;
-  /* Sin sexo elegido van dos, hombre y mujer, lado a lado y mas pequenos. */
+  /*
+   * Sin sexo elegido van dos, hombre y mujer, lado a lado y al mismo tamano que
+   * uno solo: a 56 px no se distinguian las caras, que es lo que se compara. El
+   * retrato ya trae aire a los lados, asi que no necesitan hueco entre ellos.
+   */
   display: flex;
   align-items: flex-end;
-  gap: var(--e-1);
   margin-top: var(--e-2);
   padding: var(--e-1) var(--e-2) 0;
   background: linear-gradient(to top, var(--linea) 0 0.5rem, var(--papel-hondo) 0.5rem);
