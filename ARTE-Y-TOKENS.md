@@ -145,6 +145,31 @@ Origen en la base del cuello; el borde de arriba del torso cae en y = −3.
 - **La cresta llega a y = −55** de la cabeza, −125 del peleón. **El `viewBox` del retrato debe
   llegar a −128**: `viewBox="-58 -128 116 136"`.
 
+#### Luchadoras
+
+`Appearance.gender` (`'female'`) cambia cuerpo y cabeza; ausente es hombre. Las rutas viven en
+`parts.ts` (`TORSOS_MUJER`, `PELOS_MUJER`, `PESTANAS`, `CLARO_DEL_OJO_MUJER`), como todas las demás.
+Cabezas, bocas, marcas, brazos, piernas y paleta son las mismas.
+
+- **Torsos**: uno por complexión, con cintura y cadera marcadas y los mismos hombros que el hombre
+  (los del `rig`, para no revisar poses). Escote **redondo** y **sin línea de pecho**: la silueta
+  se marca con cintura y cadera. La faja sigue la cintura de cada torso.
+- **Seis peinados** (`hair`): moño, trenza, coletas, melena con flequillo, media melena y coleta
+  alta, con las tres capas de siempre. Sin barba: la apariencia la guarda y el arte no la pinta.
+  - El moño va en `encima` (no en `detras`) para que un sombrero lo tape; la coleta alta va en
+    `detras` y asoma tras un sombrero, y se acepta.
+  - **La trenza cuelga por el lado `-x`**: en `+x` la tapa el brazo de delante.
+  - El flequillo de la melena acaba en y = −33 para no tapar la ceja subida.
+- **Pestañas por expresión**, después de los ojos: párpado y dos pestañas en `neutral` y
+  `esfuerzo`, colgando en `parpadeo`, hacia fuera en `alegria` y `socarrona`. **Ninguna en `dolor`
+  ni `derrotado`**: en `> <` y `x x` salían como brotes en las puntas. La pestaña de arriba de
+  los ojos abiertos se acortó (hasta y = −28,6) porque a −29,2 tocaba la ceja subida.
+- **Cejas +1,5 hacia arriba** (con `desplaza`) para dejar sitio a las pestañas. Las cejas del gesto
+  (V del esfuerzo, la enarcada) no se mueven.
+- **Chirlo**: el claro de piel del ojo derecho crece (`CLARO_DEL_OJO_MUJER`) para cubrir párpado y
+  pestañas; la cicatriz se corta limpia alrededor del ojo, asoma sobre la ceja y sigue por la
+  mejilla.
+
 #### Sombreros (preparado, sin campo todavía)
 
 `Appearance` no tiene campo `hat`. La cabeza ya admite uno: `montarCabeza(rasgos, sombrero)`
