@@ -19,8 +19,12 @@ export interface Weapon {
   strengthScale: number;
   /** 1 cuerpo a cuerpo, 4 muy larga. Solo afecta a la animacion. */
   reach: number;
-  /** Las arrojadizas solo se lanzan, y no se agotan (COMBATE.md §2). */
+  /** Las arrojadizas solo se lanzan (COMBATE.md §2). */
   throwable: boolean;
+  /** Tiros por combate de una arrojadiza; null en las de mano. */
+  stock: number | null;
+  /** Probabilidad (0-100) de romperse en cada impacto que conecta. */
+  breakChance: number;
 }
 
 export type SkillEffect =
@@ -121,6 +125,8 @@ export interface Combatant {
   /** Armas disponibles todavia sin lanzar. */
   weapons: Weapon[];
   weapon: Weapon;
+  /** Tiros que le quedan a cada arrojadiza, por id. */
+  municion: Record<string, number>;
   armor: number;
   block: number;
   counter: number;
@@ -168,6 +174,8 @@ export type FightEvent =
   | { type: 'drawWeapon'; id: string; weapon: string }
   | { type: 'throwWeapon'; id: string; target: string; weapon: string }
   | { type: 'disarm'; id: string; target: string; weapon: string }
+  /** El arma se rompe (o revienta, si era de un tiro) o se queda sin tiros. */
+  | { type: 'weaponLost'; id: string; weapon: string; reason: 'rota' | 'agotada' }
   | { type: 'skill'; id: string; skill: string }
   | { type: 'death'; id: string }
   | { type: 'end'; winner: Side; turns: number };

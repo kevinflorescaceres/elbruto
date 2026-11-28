@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getSkill, SKILLS } from '@camorra/engine';
-import { describeSkill } from './skillText.js';
+import { getSkill, getWeapon, SKILLS } from '@camorra/engine';
+import { describeSkill, describeWeapon } from './skillText.js';
 
 describe('describeSkill', () => {
   it('describe cada maña del catalogo con una frase acabada en punto', () => {
@@ -23,5 +23,14 @@ describe('describeSkill', () => {
     for (const skill of SKILLS.filter((s) => s.type === 'activa')) {
       expect(describeSkill(skill)).toContain('una vez por pelea');
     }
+  });
+});
+
+describe('describeWeapon', () => {
+  it('avisa del stock y de la fragilidad', () => {
+    expect(describeWeapon(getWeapon('botija'))).toMatch(/ · un solo uso$/);
+    expect(describeWeapon(getWeapon('cuchillos'))).toMatch(/ · 5 lanzamientos$/);
+    expect(describeWeapon(getWeapon('banqueta'))).toMatch(/ · frágil$/);
+    expect(describeWeapon(getWeapon('chaira'))).toBe('Arma rápida · 6 de daño · muy rápida');
   });
 });

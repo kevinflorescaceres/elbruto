@@ -46,6 +46,12 @@ export const fightEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('drawWeapon'), id, weapon: z.string() }),
   z.object({ type: z.literal('throwWeapon'), id, target: id, weapon: z.string() }),
   z.object({ type: z.literal('disarm'), id, target: id, weapon: z.string() }),
+  z.object({
+    type: z.literal('weaponLost'),
+    id,
+    weapon: z.string(),
+    reason: z.enum(['rota', 'agotada']),
+  }),
   z.object({ type: z.literal('skill'), id, skill: z.string() }),
   z.object({ type: z.literal('death'), id }),
   z.object({ type: z.literal('end'), winner: sideSchema, turns: z.number().int().positive() }),

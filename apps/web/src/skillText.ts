@@ -1,4 +1,4 @@
-import type { Skill } from '@camorra/engine';
+import type { Skill, Weapon, WeaponCategory } from '@camorra/engine';
 import { ESTADISTICAS } from './ui.js';
 
 const STAT_NAMES: Record<string, string> = Object.fromEntries(
@@ -33,4 +33,39 @@ export function describeSkill(skill: Skill): string {
     case 'disarm':
       return 'Un tajo a las piernas, una vez por pelea: el rival pierde su siguiente turno y suelta el arma.';
   }
+}
+
+/** Cada cuanto golpea, en palabras: "intervalo 132" no le decia nada a nadie. */
+function ritmo(intervalo: number): string {
+  // Mas bajo es mas rapido. Los punos van a 66; la mas pesada, a 150.
+  if (intervalo <= 60) return 'muy rápida';
+  if (intervalo <= 80) return 'rápida';
+  if (intervalo <= 105) return 'ritmo normal';
+  if (intervalo <= 135) return 'lenta';
+  return 'muy lenta';
+}
+
+/** El id de la categoria va sin tilde; el jugador la lee con ella. */
+const CATEGORIA: Record<WeaponCategory, string> = {
+  rapida: 'rápida',
+  media: 'media',
+  larga: 'larga',
+  pesada: 'pesada',
+  arrojadiza: 'arrojadiza',
+};
+
+/** A partir de aqui un arma se rompe lo bastante como para avisar. */
+const FRAGIL = 15;
+
+/** Que es un arma, en una linea: categoria, dano, ritmo y si se gasta. */
+export function describeWeapon(weapon: Weapon): string {
+  const partes = [
+    `Arma ${CATEGORIA[weapon.category]}`,
+    `${weapon.damage} de daño`,
+    ritmo(weapon.interval),
+  ];
+  if (weapon.stock === 1) partes.push('un solo uso');
+  else if (weapon.stock !== null) partes.push(`${weapon.stock} lanzamientos`);
+  if (weapon.breakChance >= FRAGIL) partes.push('frágil');
+  return partes.join(' · ');
 }

@@ -170,7 +170,7 @@ group('planFight', () => {
     }
   });
 
-  it('los 17 tipos de evento tienen animacion', () => {
+  it('los 18 tipos de evento tienen animacion', () => {
     const vistos = new Set<FightEvent['type']>();
     const animados = new Set<FightEvent['type']>();
 
@@ -221,9 +221,89 @@ group('planFight', () => {
       animados.add(type);
     }
 
-    expect(vistos.size).toBe(17);
-    expect(animados.size).toBe(16);
+    expect(vistos.size).toBe(18);
+    expect(animados.size).toBe(17);
   }, 30_000);
+
+  it('weaponLost deja al peleon a punos, y si se rompe saltan los trozos', () => {
+    const escena = (reason: 'rota' | 'agotada', weapon: string) =>
+      planFight({
+        winner: 'A',
+        seed: 1,
+        snapshotA: { appearance: createBrute('uno').appearance, slug: 'uno' },
+        snapshotB: { appearance: createBrute('otro').appearance, slug: 'otro' },
+        log: [
+          {
+            type: 'spawn',
+            id: 'A',
+            name: 'A',
+            side: 'A',
+            isPet: false,
+            hp: 10,
+            maxHp: 10,
+            weapon,
+          },
+          {
+            type: 'spawn',
+            id: 'B',
+            name: 'B',
+            side: 'B',
+            isPet: false,
+            hp: 10,
+            maxHp: 10,
+            weapon: 'punos',
+          },
+          { type: 'weaponLost', id: 'A', weapon, reason },
+        ],
+      }).beats.flatMap((b) => b.moves);
+
+    const rota = escena('rota', 'banqueta');
+    expect(rota).toContainEqual({ kind: 'weapon', id: 'A', weapon: 'punos' });
+    expect(rota).toContainEqual({ kind: 'toss', id: 'A', weapon: 'banqueta' });
+    const agotada = escena('agotada', 'cuchillos');
+    expect(agotada).toContainEqual({ kind: 'weapon', id: 'A', weapon: 'punos' });
+    expect(agotada.some((m) => m.kind === 'toss')).toBe(false);
+  });
+
+  it('la botija revienta en el rival: sin trozos en la mano de quien la tira', () => {
+    const moves = planFight({
+      winner: 'A',
+      seed: 1,
+      snapshotA: { appearance: createBrute('uno').appearance, slug: 'uno' },
+      snapshotB: { appearance: createBrute('otro').appearance, slug: 'otro' },
+      log: [
+        {
+          type: 'spawn',
+          id: 'A',
+          name: 'A',
+          side: 'A',
+          isPet: false,
+          hp: 10,
+          maxHp: 10,
+          weapon: 'botija',
+        },
+        {
+          type: 'spawn',
+          id: 'B',
+          name: 'B',
+          side: 'B',
+          isPet: false,
+          hp: 10,
+          maxHp: 10,
+          weapon: 'punos',
+        },
+        { type: 'turn', id: 'A' },
+        { type: 'throwWeapon', id: 'A', target: 'B', weapon: 'botija' },
+        { type: 'attack', id: 'A', target: 'B', weapon: 'botija' },
+        { type: 'evade', id: 'B' },
+        { type: 'weaponLost', id: 'A', weapon: 'botija', reason: 'rota' },
+      ],
+    }).beats.flatMap((b) => b.moves);
+
+    expect(moves.filter((m) => m.kind === 'toss')).toEqual([]);
+    const crac = moves.find((m) => m.kind === 'float' && m.text === '¡Crac!');
+    expect(crac).toMatchObject({ id: 'B' });
+  });
 
   it('cada accion de un peleon dura lo mismo', () => {
     // El ritmo es lo que hace que un combate se siga con la vista. Antes cada
@@ -499,6 +579,8 @@ function muestra(type: FightEvent['type']): FightEvent {
       return { type, id: 'A', target: 'B', weapon: 'cascote' };
     case 'disarm':
       return { type, id: 'A', target: 'B', weapon: 'chaira' };
+    case 'weaponLost':
+      return { type, id: 'A', weapon: 'banqueta', reason: 'rota' };
     case 'skill':
       return { type, id: 'A', skill: 'revire' };
     case 'death':

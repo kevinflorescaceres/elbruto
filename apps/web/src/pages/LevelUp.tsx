@@ -8,7 +8,7 @@ import { Escenario } from '../Escenario.js';
 import { useBrute } from '../hooks.js';
 import type { WeaponCategory } from '../art/parts.js';
 import { api } from '../api.js';
-import { describeSkill } from '../skillText.js';
+import { describeSkill, describeWeapon } from '../skillText.js';
 
 // Los mismos nombres que la ficha: antes era una copia aparte y podian divergir.
 const STAT_NAMES: Record<string, string> = Object.fromEntries(
@@ -22,16 +22,6 @@ interface Opcion {
   arma?: { category: WeaponCategory; reach: number };
 }
 
-/** Cada cuanto golpea, en palabras: "intervalo 132" no le decia nada a nadie. */
-function ritmo(intervalo: number): string {
-  // Mas bajo es mas rapido. Los punos van a 66; la mas pesada, a 150.
-  if (intervalo <= 60) return 'muy rápida';
-  if (intervalo <= 80) return 'rápida';
-  if (intervalo <= 105) return 'ritmo normal';
-  if (intervalo <= 135) return 'lenta';
-  return 'muy lenta';
-}
-
 /** Las cifras de ahora, para ensenar cuanto cambia cada camino. */
 type Cifras = Record<string, number>;
 
@@ -41,7 +31,7 @@ function describeOption(option: LevelUpOption, ahora: Cifras | undefined): Opcio
       const weapon = getWeapon(option.id);
       return {
         title: weapon.name,
-        detail: `Arma ${weapon.category} · ${weapon.damage} de daño · ${ritmo(weapon.interval)}`,
+        detail: describeWeapon(weapon),
         arma: { category: weapon.category, reach: weapon.reach },
       };
     }

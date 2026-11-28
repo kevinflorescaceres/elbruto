@@ -35,6 +35,8 @@ export const FISTS: Weapon = {
   strengthScale: 60,
   reach: 1,
   throwable: false,
+  stock: null,
+  breakChance: 0,
 };
 
 export const WEAPONS: readonly Weapon[] = [
@@ -50,6 +52,8 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 60,
     reach: 1,
     throwable: false,
+    stock: null,
+    breakChance: 1,
   },
   {
     id: 'puntilla',
@@ -62,6 +66,8 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 62,
     reach: 1,
     throwable: false,
+    stock: null,
+    breakChance: 1,
   },
   // Medias: el termino medio en todo.
   {
@@ -75,6 +81,8 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 75,
     reach: 1,
     throwable: false,
+    stock: null,
+    breakChance: 2,
   },
   {
     id: 'porra',
@@ -87,6 +95,8 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 85,
     reach: 2,
     throwable: false,
+    stock: null,
+    breakChance: 4,
   },
   // Largas: alcance y contraataque.
   {
@@ -100,6 +110,8 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 80,
     reach: 3,
     throwable: false,
+    stock: null,
+    breakChance: 2,
   },
   {
     id: 'chuzo',
@@ -112,19 +124,38 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 95,
     reach: 4,
     throwable: false,
+    stock: null,
+    breakChance: 5,
+  },
+  {
+    id: 'vara',
+    name: 'Vara de Fresno',
+    category: 'larga',
+    damage: 9,
+    accuracyBonus: 3,
+    interval: 86,
+    comboRate: 6,
+    strengthScale: 75,
+    reach: 4,
+    throwable: false,
+    stock: null,
+    // Madera verde y flexible: dobla antes de partirse.
+    breakChance: 1,
   },
   // Pesadas: un golpe hace mucho, pero llega tarde y se ve venir.
   {
     id: 'banqueta',
     name: 'Banqueta de Taberna',
     category: 'pesada',
-    damage: 18,
+    damage: 22,
     accuracyBonus: -3,
     interval: 132,
     comboRate: 0,
     strengthScale: 110,
     reach: 2,
     throwable: false,
+    stock: null,
+    breakChance: 30,
   },
   {
     id: 'tranca',
@@ -137,31 +168,66 @@ export const WEAPONS: readonly Weapon[] = [
     strengthScale: 130,
     reach: 2,
     throwable: false,
+    stock: null,
+    breakChance: 8,
   },
-  // Arrojadizas: solo se lanzan, no se agotan, y el dano va con la mana.
+  // Arrojadizas: solo se lanzan, traen un numero de tiros por combate (`stock`) y
+  // el dano va con la mana. Las de un tiro revientan contra el rival.
   {
     id: 'cascote',
     name: 'Cascote',
     category: 'arrojadiza',
-    damage: 9,
+    damage: 10,
     accuracyBonus: 3,
     interval: 64,
     comboRate: 0,
     strengthScale: 70,
     reach: 3,
     throwable: true,
+    stock: 3,
+    breakChance: 0,
   },
   {
     id: 'botija',
     name: 'Botija de Vino',
     category: 'arrojadiza',
-    damage: 10,
+    damage: 24,
     accuracyBonus: 1,
     interval: 76,
     comboRate: 0,
     strengthScale: 70,
     reach: 3,
     throwable: true,
+    stock: 1,
+    breakChance: 0,
+  },
+  {
+    id: 'garrafa',
+    name: 'Garrafa de Greda',
+    category: 'arrojadiza',
+    damage: 28,
+    accuracyBonus: -4,
+    interval: 90,
+    comboRate: 0,
+    strengthScale: 70,
+    reach: 3,
+    throwable: true,
+    stock: 1,
+    breakChance: 0,
+  },
+  {
+    id: 'cuchillos',
+    name: 'Cuchillos de Tiro',
+    category: 'arrojadiza',
+    damage: 8,
+    accuracyBonus: 5,
+    interval: 56,
+    comboRate: 0,
+    strengthScale: 60,
+    reach: 3,
+    throwable: true,
+    stock: 5,
+    breakChance: 0,
   },
 ];
 

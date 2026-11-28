@@ -868,7 +868,7 @@ export const colorOf = (fill: Tinte, colors: Look['colors']): string =>
     ? colors[fill]
     : PALETA[fill];
 
-/** El arma en la mano. Las 10 comparten silueta por categoria y varian de largo. */
+/** El arma en la mano. Todas comparten silueta por categoria y varian de largo. */
 export function weaponShapes(category: WeaponCategory, reach: number): Shape[] {
   const largo = 0.75 + reach * 0.12;
   return ARMAS[category].map((shape) => ({ ...shape, d: scalePath(shape.d, largo) }));

@@ -20,6 +20,7 @@ function refs(event: FightEvent): { actor?: string; target?: string } {
     case 'damage':
     case 'skill':
     case 'drawWeapon':
+    case 'weaponLost':
       return { actor: event.id };
     default:
       return { actor: event.id, target: event.target };

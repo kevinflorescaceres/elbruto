@@ -58,6 +58,22 @@ group('describe', () => {
     weapon: 'cascote',
   });
 
+  it('weaponLost rota y agotada tienen su frase', () => {
+    const rota: FightEvent = { type: 'weaponLost', id: 'A', weapon: 'banqueta', reason: 'rota' };
+    const agotada: FightEvent = {
+      type: 'weaponLost',
+      id: 'B',
+      weapon: 'cuchillos',
+      reason: 'agotada',
+    };
+    expect(describe(rota, nameOf)).toBe('A Rufo se le rompe Banqueta de Taberna.');
+    expect(describe(rota, nameOf, { corto: true })).toBe('Banqueta de Taberna se hace añicos.');
+    expect(describe(agotada, nameOf)).toBe('Pepa se queda sin Cuchillos de Tiro.');
+    expect(describe(agotada, nameOf, { corto: true })).toBe('Pepa se queda sin Cuchillos de Tiro.');
+    // Cascote es singular: "se le acaban Cascote" no concordaba.
+    expect(describe({ ...agotada, weapon: 'cascote' }, nameOf)).toBe('Pepa se queda sin Cascote.');
+  });
+
   it('un lanzamiento se cuenta una vez, no como lanzamiento y luego ataque', () => {
     expect(describe(ataque('A', 'B'), nameOf, { previo: lanza })).toBeNull();
   });

@@ -116,3 +116,18 @@ describe('progresion', () => {
     expect(new Set(grown.weapons).size).toBe(grown.weapons.length);
   });
 });
+
+describe('armas nuevas en el reparto', () => {
+  it('rollLevelUpOptions puede ofrecer garrafa, cuchillos y vara', () => {
+    const vistas = new Set<string>();
+    for (let i = 0; i < 2000 && vistas.size < 3; i++) {
+      const brute = { ...createBrute(`reparto-${i}`), level: 2 + (i % 20) };
+      for (const option of rollLevelUpOptions(brute)) {
+        if (option.type === 'weapon') vistas.add(option.id);
+      }
+      for (const id of [...vistas])
+        if (!['garrafa', 'cuchillos', 'vara'].includes(id)) vistas.delete(id);
+    }
+    expect([...vistas].sort()).toEqual(['cuchillos', 'garrafa', 'vara']);
+  });
+});

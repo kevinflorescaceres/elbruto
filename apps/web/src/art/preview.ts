@@ -275,7 +275,7 @@ sheet(
   );
 }
 
-// 3. Las diez armas en la mano.
+// 3. Todas las armas del catalogo en la mano.
 sheet(
   `${salida}/armas.svg`,
   WEAPONS.map((w) => ({

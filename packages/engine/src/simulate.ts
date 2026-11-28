@@ -19,12 +19,14 @@ import type {
 
 // 3: reglas de combate.md. Vida con termino por nivel, intervalos en la escala
 // nueva con azar, combos de hasta 3 impactos, defensa en orden esquiva /
-// bloqueo / contraataque, arrojadizas que no se agotan y mascotas que cuestan
+// bloqueo / contraataque, arrojadizas sin limite (hasta el 6) y mascotas que cuestan
 // resistencia.
 // 5: las manas de estadistica pasan a dispararse en un momento del combate
 // (Cuero Curtido, Resuello, Pies Ligeros, Brazo de Fragua) y la armadura de
 // Callo Viejo frena todos los impactos, no solo el primero.
-export const ENGINE_VERSION = 5;
+// 6: las arrojadizas traen un numero de tiros por combate (las de uno revientan
+// contra el rival) y las armas de mano pueden romperse en cada impacto.
+export const ENGINE_VERSION = 6;
 
 const MAX_TURNS = 500;
 
@@ -62,6 +64,8 @@ function petWeapon(pet: Pet): Weapon {
     strengthScale: 0,
     reach: 1,
     throwable: false,
+    stock: null,
+    breakChance: 0,
   };
 }
 
@@ -145,6 +149,8 @@ function buildFighter(brute: Brute, side: Side): Combatant {
   // Entra con un arma en la mano: empezar a punos desperdiciaba turnos. Cual,
   // se decide despues, cuando se conoce al rival (ver `equipBest`).
   const weapons = brute.weapons.map(getWeapon);
+  const municion: Record<string, number> = {};
+  for (const w of weapons) if (w.stock !== null) municion[w.id] = w.stock;
 
   return {
     id: side,
@@ -158,6 +164,7 @@ function buildFighter(brute: Brute, side: Side): Combatant {
     speed,
     weapons,
     weapon: FISTS,
+    municion,
     armor,
     block,
     counter,
@@ -182,6 +189,7 @@ function buildPet(petId: string, side: Side, index: number): Combatant {
     speed: 0,
     weapons: [],
     weapon,
+    municion: {},
     armor: 0,
     block: 0,
     counter: 0,
@@ -316,6 +324,8 @@ function resolveAttack(
 
   if (defender.block > 0 && chance(state.rng, defender.block)) {
     state.log.push({ type: 'block', id: defender.id });
+    // Dar contra una guardia tambien castiga el arma.
+    if (seRompe(state, attacker, weapon)) perderArma(state, attacker, weapon, 'rota');
     return;
   }
 
@@ -383,6 +393,12 @@ function resolveAttack(
       state.log.push({ type: 'skill', id: defender.id, skill: SKILL_DE.secondWind });
     }
 
+    // Cada impacto castiga el arma: si se parte, el combo acaba ahi.
+    if (seRompe(state, attacker, weapon)) {
+      perderArma(state, attacker, weapon, 'rota');
+      break;
+    }
+
     // Quien aguanta de pie corta el combo: el rival se queda mirando.
     if (aguanta) break;
     if (!chance(state.rng, combo)) break;
@@ -400,11 +416,31 @@ function resolveAttack(
   }
 }
 
+/** Tira la rotura del arma de la mano. Las lanzadas y los punos no se rompen asi. */
+function seRompe(state: State, attacker: Combatant, weapon: Weapon): boolean {
+  // Una arrojadiza se gasta por sus tiros, nunca por impacto: si no, un mismo
+  // lanzamiento podia perderla dos veces.
+  if (weapon.category === 'arrojadiza') return false;
+  if (weapon !== attacker.weapon || weapon.breakChance <= 0) return false;
+  return chance(state.rng, weapon.breakChance);
+}
+
+/** El arma se va para el resto del combate y vuelve a los punos. */
+function perderArma(
+  state: State,
+  actor: Combatant,
+  weapon: Weapon,
+  reason: 'rota' | 'agotada',
+): void {
+  actor.weapons = actor.weapons.filter((w) => w.id !== weapon.id);
+  if (actor.weapon.id === weapon.id) actor.weapon = FISTS;
+  state.log.push({ type: 'weaponLost', id: actor.id, weapon: weapon.id, reason });
+}
+
 function attack(state: State, actor: Combatant, multiplier = 1): void {
-  // Una arrojadiza no se usa de cerca: atacar con ella es lanzarla.
-  if (actor.weapon.category === 'arrojadiza' && multiplier === 1) {
-    return throwWeapon(state, actor);
-  }
+  // Una arrojadiza no se usa de cerca: atacar con ella es lanzarla, tambien con
+  // Zurriagazo, que la lanza con todo el brazo y gasta el tiro como cualquier otro.
+  if (actor.weapon.category === 'arrojadiza') return throwWeapon(state, actor, multiplier);
   const target = chooseTarget(state, actor);
   if (target === undefined) return;
   resolveAttack(state, actor, target, actor.weapon, { allowCounter: true, multiplier });
@@ -428,20 +464,30 @@ function drawWeapon(state: State, actor: Combatant): void {
   state.log.push({ type: 'drawWeapon', id: actor.id, weapon: next.id });
 }
 
-function throwWeapon(state: State, actor: Combatant): void {
+function throwWeapon(state: State, actor: Combatant, multiplier = 1): void {
   const thrown = actor.weapon;
   const target = chooseTarget(state, actor);
   if (target === undefined) return;
 
   state.log.push({ type: 'throwWeapon', id: actor.id, target: target.id, weapon: thrown.id });
 
-  // Una arrojadiza es munición: no se agota ni se pierde (COMBATE.md §4.7).
-  // Cualquier otra arma lanzada queda inutilizable el resto del combate.
+  // Cualquier arma de mano lanzada queda inutilizable el resto del combate.
   if (thrown.category !== 'arrojadiza') {
     actor.weapons = actor.weapons.filter((w) => w.id !== thrown.id);
     actor.weapon = FISTS;
   }
-  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier: 1 });
+  resolveAttack(state, actor, target, thrown, { allowCounter: false, multiplier });
+
+  // Una arrojadiza trae sus tiros contados (COMBATE.md §4.7). La de un solo tiro
+  // revienta contra el rival; la de varios, al acabarse, se agota.
+  if (thrown.stock === null) return;
+  const quedan = (actor.municion[thrown.id] ?? thrown.stock) - 1;
+  actor.municion[thrown.id] = quedan;
+  if (quedan > 0) return;
+  // Si tumbo al peleon el combate acaba en ese `death`: no se cuenta nada mas.
+  // Un bicho muerto no acaba nada, y el arma se pierde igual.
+  if (!isAlive(target) && !target.isPet) return;
+  perderArma(state, actor, thrown, thrown.stock === 1 ? 'rota' : 'agotada');
 }
 
 /** Desjarrete necesita a quien barrer: el peleon rival, no sus bichos. */
@@ -508,7 +554,9 @@ function act(state: State, actor: Combatant): void {
 
   const action = weightedPick<'attack' | 'draw' | 'throw' | 'skill'>(state.rng, [
     { value: 'attack', weight: 60 },
-    { value: 'draw', weight: canDraw ? 12 : 0 },
+    // A punos y con armas encima, lo primero es echar mano de otra: para eso se
+    // llevan varias, ahora que se rompen y se agotan.
+    { value: 'draw', weight: canDraw ? (actor.weapon.id === FISTS.id ? 60 : 12) : 0 },
     // Tirar el arma dobla el dano pero la pierdes: merece considerarse mas a menudo
     // ahora que compensa.
     { value: 'throw', weight: canThrow ? 12 : 0 },

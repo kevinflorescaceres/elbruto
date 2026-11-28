@@ -131,6 +131,7 @@ const EN_LA_LINEA: ReadonlySet<FightEvent['type']> = new Set([
   'drawWeapon',
   'throwWeapon',
   'disarm',
+  'weaponLost',
   'skill',
   'death',
 ]);
@@ -312,6 +313,7 @@ const WEIGHT: Record<FightEvent['type'], number> = {
   drawWeapon: 400,
   throwWeapon: 500,
   disarm: 400,
+  weaponLost: 400,
   skill: 350,
   death: 800,
   end: 900,
@@ -371,6 +373,8 @@ export type Replayable = Pick<FightReplay, 'log' | 'winner' | 'seed'> & {
 export function planFight(replay: Replayable): Scene {
   const actors: Actor[] = [];
   const byId = new Map<string, Actor>();
+  /** Lo ultimo que lanzo cada uno, y a quien: una de un tiro revienta alli. */
+  const lanzada = new Map<string, { weapon: string; target: string }>();
   const petCount = { A: 0, B: 0 };
   const crudos: Crudo[] = [];
   let eventoPrevio: FightEvent | null = null;
@@ -576,6 +580,7 @@ export function planFight(replay: Replayable): Scene {
       }
 
       case 'throwWeapon':
+        lanzada.set(event.id, { weapon: event.weapon, target: event.target });
         push(event, [
           { kind: 'pose', id: event.id, anim: 'throw' },
           { kind: 'face', id: event.id, cara: 'esfuerzo' },
@@ -590,6 +595,28 @@ export function planFight(replay: Replayable): Scene {
           { kind: 'weapon', id: event.target, weapon: 'punos' },
         ]);
         break;
+
+      // Rota, los trozos salen volando como un arma que se suelta; agotada,
+      // simplemente ya no queda nada en la mano. Una de un tiro ya volo con el
+      // `throwWeapon`: revienta en quien la recibio, no en la mano que la lanzo.
+      case 'weaponLost': {
+        const actor = byId.get(event.id);
+        if (actor !== undefined) actor.weapon = 'punos';
+        const enVuelo = lanzada.get(event.id);
+        const contra = enVuelo?.weapon === event.weapon ? enVuelo.target : null;
+        const mano: Move = { kind: 'weapon', id: event.id, weapon: 'punos' };
+        if (event.reason === 'agotada') push(event, [mano]);
+        else if (contra !== null) {
+          push(event, [mano, { kind: 'float', id: contra, text: '¡Crac!', color: COLOR.dano }]);
+        } else {
+          push(event, [
+            { kind: 'toss', id: event.id, weapon: event.weapon },
+            mano,
+            { kind: 'float', id: event.id, text: '¡Crac!', color: COLOR.dano },
+          ]);
+        }
+        break;
+      }
 
       // El nombre de la maña flota sobre quien la usa: las de disparo (Resuello,
       // Cuero Curtido...) no tienen otro gesto propio, y sin letrero pasaban.
@@ -681,6 +708,11 @@ const AIRE_ANTES_DE_GESTO = 0.35;
  */
 const PEGADO_AL_GESTO = 0.6;
 /**
+ * Adelantar el parpadeo al final del gesto no puede dejarlo pegado al anterior:
+ * con ESPERA_MIN 2,2 y el adelanto de 0,6, dos parpadeos quedaban a 1,6 s.
+ */
+const ENTRE_PARPADEOS_MIN = 2;
+/**
  * Hueco minimo de cara tranquila entre dos gestos, en tiempo real. Por debajo
  * el gesto anterior se alarga hasta el siguiente: a x2 asomaban destellos de
  * neutral de 0,2 s que se leian como parpadeos rotos.
@@ -732,6 +764,7 @@ export function pistaDeCaras(
     const cambios: CambioDeCara[] = [];
     let semilla = semillaDe(actor.id) ^ scene.escenario;
     let proximo = (1 + aleatorio(semilla) * ESPERA_VARIA) * e;
+    let ultimoParpadeo = -Infinity;
     // El rato tranquilo de `desde` a `hasta`, con sus parpadeos. `alFinal`: no
     // viene ningun gesto detras, asi que no hace falta dejarle aire.
     const tranquilo = (desde: number, hasta: number, alFinal: boolean): void => {
@@ -739,12 +772,17 @@ export function pistaDeCaras(
       const tope = alFinal ? hasta : hasta - AIRE_ANTES_DE_GESTO;
       for (;;) {
         // Pendiente o a punto de tocar al soltar un gesto: sale de el.
-        const at = desde > 0 && proximo < desde + PEGADO_AL_GESTO * e ? desde : proximo;
+        const pegado =
+          desde > 0 &&
+          proximo < desde + PEGADO_AL_GESTO * e &&
+          desde - ultimoParpadeo >= ENTRE_PARPADEOS_MIN * e;
+        const at = pegado ? desde : Math.max(proximo, desde);
         if (at + PARPADEO * e > tope) return;
         // Si justo ahi se volvia a neutral, ese paso sobra: del gesto a cerrar.
         const previo = cambios.at(-1);
         if (previo !== undefined && previo.at === at && previo.cara === 'neutral') cambios.pop();
         cambios.push({ at, cara: 'parpadeo' }, { at: at + PARPADEO * e, cara: 'neutral' });
+        ultimoParpadeo = at;
         semilla = siguiente(semilla);
         proximo = at + (ESPERA_MIN + aleatorio(semilla) * ESPERA_VARIA) * e;
       }

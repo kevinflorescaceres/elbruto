@@ -72,6 +72,14 @@ export function describe(
       return corto && esPeleon(event.target)
         ? `${nameOf(event.id)} le quita ${weaponName(event.weapon)}.`
         : `${nameOf(event.id)} desarma a ${nameOf(event.target)}: ${weaponName(event.weapon)} al suelo.`;
+    case 'weaponLost':
+      // "Se queda sin" concuerda con Cascote y con Cuchillos de Tiro por igual.
+      if (event.reason === 'agotada') {
+        return `${nameOf(event.id)} se queda sin ${weaponName(event.weapon)}.`;
+      }
+      return corto
+        ? `${weaponName(event.weapon)} se hace añicos.`
+        : `A ${nameOf(event.id)} se le rompe ${weaponName(event.weapon)}.`;
     case 'skill': {
       // Las pasivas de disparo no se "usan": pasan. Cada una con su frase.
       const skill = getSkill(event.skill);
