@@ -12,6 +12,7 @@ import { api, ApiError } from './api.js';
 import { Boton, Tarjeta } from './ui.js';
 import { armaVisible, Fighter } from './art/Fighter.js';
 import { ayudaNombre, type AyudaNombre } from './nombre.js';
+import { segun } from './genero.js';
 import { anadirPendiente, type EnlacePendiente } from './enlacesPendientes.js';
 
 /**
@@ -185,7 +186,8 @@ export function FormularioNombre({
       <h2>{titulo}</h2>
       {aviso !== null && <p className="apagado recluta-texto">{aviso}</p>}
       <label htmlFor="nombre-peleon" className="etiqueta">
-        Nombre del peleón
+        {/* Generico hasta que se elige: entonces ya es un peleon concreto. */}
+        {segun(gender ?? undefined, 'Nombre del peleón', 'Nombre de la peleona')}
       </label>
       <form
         className="campo-nombre"

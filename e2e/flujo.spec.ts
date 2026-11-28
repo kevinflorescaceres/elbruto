@@ -19,6 +19,10 @@ async function crearPeleon(
   await page.getByRole('radio', { name: sexo }).click();
   await expect(page.locator('.nombre-vista svg')).toHaveCount(1);
   await expect(page.getByRole('radio', { name: sexo })).toHaveAttribute('aria-checked', 'true');
+  // Elegido el sexo, ya es un peleon concreto: la etiqueta concuerda.
+  await expect(
+    page.getByLabel(sexo === 'Mujer' ? 'Nombre de la peleona' : 'Nombre del peleón'),
+  ).toHaveValue(suyo);
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Guarda este enlace')).toBeVisible();
   await expect(page.getByRole('heading', { name: `Aquí está ${suyo}` })).toBeVisible();

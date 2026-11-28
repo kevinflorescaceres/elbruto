@@ -317,11 +317,15 @@ export function Home() {
         <>
           <MisPeleones brutes={misPeleones} principal />
           {enlaces}
-          <div className="portada-seccion">{formulario('Otro peleón')}</div>
+          <div className="portada-seccion">
+            {formulario(segun(gender ?? undefined, 'Otro peleón', 'Otra peleona'))}
+          </div>
         </>
       ) : (
         <>
-          <div className="portada-form">{formulario('Nuevo peleón')}</div>
+          <div className="portada-form">
+            {formulario(segun(gender ?? undefined, 'Nuevo peleón', 'Nueva peleona'))}
+          </div>
           {enlaces}
           {/* Tiene peleones pero viene por el enlace de otro: abajo, por si acaso. */}
           {misPeleones.length > 0 && <MisPeleones brutes={misPeleones} principal={false} />}
