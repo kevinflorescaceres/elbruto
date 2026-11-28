@@ -414,6 +414,19 @@ group('luchadoras', () => {
     for (const beard of [1, 2, 3, 4, 5]) expect(montarCabeza({ ...rasgos, beard })).toEqual(sin);
   });
 
+  it('la mellada de la luchadora no es un bloque sobre la barbilla', () => {
+    // El bloque relleno de la mellada del hombre se leia como perilla en una cara de mujer.
+    const rasgos = { head: 0, hair: 0, beard: 0, brow: 0, mark: 0 };
+    const boca = (gender?: 'female') =>
+      cabezaPorCapas({ ...rasgos, mouth: 3, gender }).caras.neutral.at(-2)!;
+    expect(boca('female')).not.toEqual(boca());
+    for (const mouth of [0, 1, 2]) {
+      expect(cabezaPorCapas({ ...rasgos, mouth, gender: 'female' }).caras.neutral.at(-1)).toEqual(
+        cabezaPorCapas({ ...rasgos, mouth }).caras.neutral.at(-1),
+      );
+    }
+  });
+
   it('cada peinado de luchadora encaja bajo un sombrero', () => {
     // Con un sombrero (vacio) no se pinta la capa `encima`, sino `bajoSombrero`.
     const rasgos = { head: 0, beard: 0, brow: 0, mouth: 0, mark: 0, gender: 'female' as const };

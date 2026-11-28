@@ -559,6 +559,20 @@ const BOCAS: Shape[][] = [
 ];
 
 /**
+ * La mellada de la luchadora. La de arriba es un bloque relleno sobre la
+ * barbilla y, en una cara con pestanas y coletas, se leia como una perilla.
+ * Esta es una sonrisa abierta en media luna, mas alta y sin contorno, con un
+ * solo diente: la mella se lee en lo que falta.
+ */
+const BOCA_MELLADA_MUJER: Shape[] = [
+  { d: 'M -5 -14.2 Q 0 -8.6 5 -14.2 Q 0 -12.6 -5 -14.2 Z', fill: 'oscuro', stroke: false },
+  { d: 'M 0.6 -13.4 L 2.8 -13.75 L 2.6 -12 L 0.9 -11.75 Z', fill: 'trapo', stroke: false },
+];
+
+/** Las bocas de la luchadora: las mismas, salvo la mellada. */
+const BOCAS_MUJER: Shape[][] = [...BOCAS.slice(0, 3), BOCA_MELLADA_MUJER];
+
+/**
  * Seis barbas. La primera es no llevar. Las que tapan la mandibula son algo
  * mas anchas que la mas ancha de las cuatro, para cubrirlas todas sin que
  * asome una esquina de la cuadrada.
@@ -882,7 +896,7 @@ export function cabezaPorCapas(r: Rasgos, sombrero?: Shape[]): CabezaPorCapas {
   const mujer = r.gender === 'female';
   const pelo = pickFrom(mujer ? PELOS_MUJER : PELOS, r.hair);
   const marca = pickFrom(MARCAS, r.mark);
-  const boca = pickFrom(BOCAS, r.mouth);
+  const boca = pickFrom(mujer ? BOCAS_MUJER : BOCAS, r.mouth);
   // Las cejas de la luchadora van 1,5 mas altas, para dejar sitio a las
   // pestanas. Las del gesto (V, enarcada) no se mueven.
   const cejas = pickFrom(CEJAS, r.brow).map((s) =>
