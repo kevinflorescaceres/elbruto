@@ -12,6 +12,7 @@ import { FightPage } from './pages/Fight.js';
 import { ClaimPage } from './pages/Claim.js';
 import { LegalPage } from './pages/Legal.js';
 import { RankingPage } from './pages/Ranking.js';
+import { NovedadesPage } from './pages/Novedades.js';
 import { ErrorBoundary } from './ErrorBoundary.js';
 import './styles.css';
 
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/claim/:token" element={<ClaimPage />} />
             <Route path="/reclutar/:slug" element={<Home />} />
             <Route path="/ranking" element={<RankingPage />} />
+            <Route path="/novedades" element={<NovedadesPage />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

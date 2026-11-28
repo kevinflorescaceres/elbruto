@@ -100,3 +100,18 @@ test('el ciclo completo se juega en el navegador', async ({ browser }) => {
   await expect(paginaAnonima.locator('canvas')).toBeVisible();
   await expect(paginaAnonima.getByRole('button', { name: 'Copiar enlace' })).toBeVisible();
 });
+
+test('el punto de novedades se apaga al verlas y no vuelve', async ({ page }) => {
+  await page.goto('/');
+  const enlace = page.getByRole('link', { name: /Novedades/ });
+  await expect(enlace).toBeVisible();
+  await expect(page.locator('.punto-novedad')).toHaveCount(1);
+
+  await enlace.click();
+  await expect(page.getByRole('heading', { name: 'Novedades' })).toBeVisible();
+  await expect(page.locator('.punto-novedad')).toHaveCount(0);
+
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: /Novedades/ })).toBeVisible();
+  await expect(page.locator('.punto-novedad')).toHaveCount(0);
+});

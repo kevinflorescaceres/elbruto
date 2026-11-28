@@ -748,6 +748,11 @@ th {
 
 .barra-superior {
   display: flex;
+  /* Si la navegacion no cabe junto a la marca baja entera a su fila (el salto
+     de linea mide su ancho sin partir), en vez de dejar Reportar solo debajo.
+     Si ni asi cabe, se parte: nunca scroll lateral. */
+  flex-wrap: wrap;
+  row-gap: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--e-4);
@@ -824,6 +829,60 @@ th {
 .barra-nav {
   align-items: center;
   gap: var(--e-4);
+}
+
+/* El punto de novedades: pegado al enlace, en oro, sin moverlo de sitio. */
+.punto-novedad {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: var(--e-1);
+  border-radius: 50%;
+  background: var(--oro);
+}
+
+.novedad h2 {
+  margin-bottom: var(--e-2);
+}
+
+.novedad-puntos {
+  display: grid;
+  gap: var(--e-3);
+  margin: 0 0 var(--e-5);
+  padding: 0;
+  list-style: none;
+}
+
+.novedad-puntos li {
+  display: flex;
+  gap: var(--e-3);
+  align-items: baseline;
+}
+
+/* La etiqueta en un ancho fijo: los textos quedan alineados en columna. */
+.novedad-tipo {
+  flex: none;
+  min-width: 5.5em;
+  color: var(--apagado);
+  font-size: var(--t-meta);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.novedad-nuevo {
+  color: var(--gana);
+}
+
+.novedad-arreglo {
+  color: var(--acento);
+}
+
+.novedad-reportar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  align-items: center;
 }
 
 /*

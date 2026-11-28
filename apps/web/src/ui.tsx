@@ -4,10 +4,32 @@
  * de los tokens y de aqui.
  */
 import { useEffect, type ReactNode } from 'react';
-import { Link, NavLink } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { usePendientes } from './hooks.js';
 import { sinGuardar } from './enlacesPendientes.js';
 import { ReportarProblema } from './ReportarProblema.js';
+import { hayNovedad, leerVista } from './novedades.js';
+
+/**
+ * El enlace a Novedades, con un punto mientras no se haya visto la ultima. Se
+ * calcula al pintar: cada pagina monta su barra, asi que al volver de
+ * /novedades ya sale apagado, y en /novedades no parpadea ni un fotograma.
+ */
+function EnlaceNovedades() {
+  const { pathname } = useLocation();
+  const nueva = pathname !== '/novedades' && hayNovedad(leerVista());
+  return (
+    <NavLink to="/novedades">
+      Novedades
+      {nueva && (
+        <>
+          <span className="punto-novedad" aria-hidden="true" />
+          <span className="solo-lector"> (sin leer)</span>
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 /**
  * El cartel de la pantalla: una franja de madera a todo lo ancho, con el titulo
@@ -61,6 +83,7 @@ export function Pagina({
         <nav className="fila barra-nav">
           {/* NavLink marca la pagina actual con aria-current="page". */}
           <NavLink to="/ranking">Ranking</NavLink>
+          <EnlaceNovedades />
           <ReportarProblema />
         </nav>
       </header>

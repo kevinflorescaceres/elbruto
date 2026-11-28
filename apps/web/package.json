@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "art": "tsx src/art/preview.ts",
-    "ritmo": "tsx src/ritmo.ts"
+    "ritmo": "tsx src/ritmo.ts",
+    "novedades": "tsx src/novedadesRelease.ts"
   },
   "dependencies": {
     "@camorra/engine": "workspace:*",
