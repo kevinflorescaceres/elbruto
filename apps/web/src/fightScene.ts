@@ -379,6 +379,9 @@ export type Replayable = Pick<FightReplay, 'log' | 'winner' | 'seed'> & {
 export function planFight(replay: Replayable): Scene {
   const actors: Actor[] = [];
   const byId = new Map<string, Actor>();
+  // El arma en la mano en cada punto del plan. Va aparte del Actor porque el
+  // rig se monta con `actor.weapon` antes de empezar: debe ser la de salida.
+  const empuña = new Map<string, string>();
   /** Lo ultimo que lanzo cada uno, y a quien: una de un tiro revienta alli. */
   const lanzada = new Map<string, { weapon: string; target: string }>();
   const petCount = { A: 0, B: 0 };
@@ -440,6 +443,7 @@ export function planFight(replay: Replayable): Scene {
         };
         actors.push(actor);
         byId.set(actor.id, actor);
+        empuña.set(actor.id, event.weapon);
         push(event, [{ kind: 'appear', id: event.id }]);
         break;
       }
@@ -456,7 +460,7 @@ export function planFight(replay: Replayable): Scene {
             kind: 'approach',
             id: event.id,
             toward: event.target,
-            weapon: byId.get(event.id)?.weapon ?? 'punos',
+            weapon: empuña.get(event.id) ?? 'punos',
           },
           { kind: 'pose', id: event.id, anim: 'walk' },
         ]);
@@ -579,14 +583,14 @@ export function planFight(replay: Replayable): Scene {
         break;
 
       case 'drawWeapon': {
-        const actor = byId.get(event.id);
-        if (actor !== undefined) actor.weapon = event.weapon;
+        empuña.set(event.id, event.weapon);
         push(event, [{ kind: 'weapon', id: event.id, weapon: event.weapon }]);
         break;
       }
 
       case 'throwWeapon':
         lanzada.set(event.id, { weapon: event.weapon, target: event.target });
+        empuña.set(event.id, 'punos');
         push(event, [
           { kind: 'pose', id: event.id, anim: 'throw' },
           { kind: 'face', id: event.id, cara: 'esfuerzo' },
@@ -596,6 +600,7 @@ export function planFight(replay: Replayable): Scene {
         break;
 
       case 'disarm':
+        empuña.set(event.target, 'punos');
         push(event, [
           { kind: 'toss', id: event.target, weapon: event.weapon },
           { kind: 'weapon', id: event.target, weapon: 'punos' },
@@ -606,8 +611,7 @@ export function planFight(replay: Replayable): Scene {
       // simplemente ya no queda nada en la mano. Una de un tiro ya volo con el
       // `throwWeapon`: revienta en quien la recibio, no en la mano que la lanzo.
       case 'weaponLost': {
-        const actor = byId.get(event.id);
-        if (actor !== undefined) actor.weapon = 'punos';
+        empuña.set(event.id, 'punos');
         const enVuelo = lanzada.get(event.id);
         const contra = enVuelo?.weapon === event.weapon ? enVuelo.target : null;
         const mano: Move = { kind: 'weapon', id: event.id, weapon: 'punos' };
