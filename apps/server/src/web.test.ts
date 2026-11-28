@@ -58,7 +58,7 @@ it('lo que lleva hash no se vuelve a pedir; lo demas, si', async () => {
 it('las paginas que pinta el frontend responden 200, y lo inventado 404', async () => {
   // El HTML es el mismo, pero el estado lo leen las vistas previas de WhatsApp,
   // los buscadores y los monitores: /ranking respondia 404 y se daba por rota.
-  for (const ruta of ['/', '/ranking', '/legal']) {
+  for (const ruta of ['/', '/ranking', '/legal', '/novedades']) {
     const res = await app.inject({ url: ruta });
     expect(res.statusCode, ruta).toBe(200);
     expect(res.headers['content-type']).toContain('text/html');

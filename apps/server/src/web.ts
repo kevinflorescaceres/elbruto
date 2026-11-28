@@ -18,6 +18,7 @@ const RUTAS = [
   /^\/$/,
   /^\/legal$/,
   /^\/ranking$/,
+  /^\/novedades$/,
   /^\/b\/[\w-]+(\/(arena|level-up))?$/,
   /^\/fight\/[\w-]+$/,
   /^\/claim\/[\w-]+$/,
