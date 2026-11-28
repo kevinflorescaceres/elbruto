@@ -111,7 +111,7 @@ comboChance = clamp(comboChance, 0, 45)
 - `comboRate` por categoría (valores actuales en `catalog.ts`):
   - rápida: 16–19 (chaira 19, puntilla 16)
   - media: 8–12 (jifero 12, porra 8)
-  - larga: 4–7 (verduguillo 7, chuzo 4)
+  - larga: 4–7 (verduguillo 7, vara 6, chuzo 4)
   - pesada: 0
   - arrojadiza: 0
   - puños: 12
@@ -133,10 +133,13 @@ Valores de `interval` **actuales en `catalog.ts`** (ajustados por balance, disti
 | Porra de Corchete     | media       | 84       |
 | Verduguillo           | larga       | 88       |
 | Chuzo de Sereno       | larga       | 102      |
+| Vara de Fresno        | larga       | 86       |
 | Banqueta de Taberna   | pesada      | 132      |
 | Tranca de Portón      | pesada      | 150      |
 | Cascote               | arrojadiza  | 64       |
 | Botija de Vino        | arrojadiza  | 76       |
+| Garrafa de Greda      | arrojadiza  | 90       |
+| Cuchillos de Tiro     | arrojadiza  | 56       |
 
 Efecto buscado: con velocidad 3 y arma rápida, el luchador acumula rachas de 2 a 4 acciones seguidas. Verificarlo con el script de balance, no a ojo.
 
@@ -165,10 +168,15 @@ Para armas arrojadizas, sustituir la fuerza por `agility * 0.7 + strength * 0.3`
 | Porra de Corchete     | 10   | media       | 85            |
 | Verduguillo           | 10   | larga       | 80            |
 | Chuzo de Sereno       | 13   | larga       | 95            |
-| Banqueta de Taberna   | 18   | pesada      | 110           |
+| Vara de Fresno        | 9    | larga       | 75            |
+| Banqueta de Taberna   | 22   | pesada      | 110           |
 | Tranca de Portón      | 22   | pesada      | 130           |
-| Cascote               | 9    | arrojadiza  | 70            |
-| Botija de Vino        | 10   | arrojadiza  | 70            |
+| Cascote               | 10   | arrojadiza  | 70            |
+| Botija de Vino        | 24   | arrojadiza  | 70            |
+| Garrafa de Greda      | 28   | arrojadiza  | 70            |
+| Cuchillos de Tiro     | 8    | arrojadiza  | 60            |
+
+> **Motor 6:** la Banqueta pasó de 18 a 22 porque ahora se rompe a menudo; la Botija, de 10 a 24 porque se lanza una sola vez; el Cascote, de 9 a 10 porque ya no es infinito.
 
 > **Nota:** Puños vale 6 (no 3) desde que el nivel 1 empieza sin arma; con 3 el combate se iba a ~37 impactos. Con 6 vuelve a ~21, como cuando había arma por defecto.
 
@@ -191,7 +199,20 @@ Verificar que estén los cuatro casos y que cada uno emita su evento:
 - Lanzar el arma en mano: hace daño y el arma queda inutilizable el resto del combate. Evento `throwWeapon`.
 - Ser desarmado por el rival: el arma cae y queda inutilizable. Evento `disarm`.
 - Sin arma en mano se pelea a puños, siempre disponibles.
-- Las arrojadizas no se agotan ni se pierden al lanzarse.
+- **Arrojadizas con stock (motor 6):** cada una trae `stock` tiros por combate. Con stock 1 (Botija, Garrafa) revienta contra el rival al lanzarse, acierte o no; con más (Cascote 3, Cuchillos 5) se agota al gastar el último. En los dos casos se pierde el resto del combate. Evento `weaponLost` con `reason: 'rota'` (stock 1) o `'agotada'`.
+- **Rotura (motor 6):** cada arma de mano tiene `breakChance` (0–100), que se tira en **cada impacto que conecta**; un bloqueo cuenta como impacto y una esquiva no. Si se rompe a mitad de combo, el combo se corta ahí. Evento `weaponLost` con `reason: 'rota'`. Si el golpe tumba al rival, no se tira.
+
+  | Arma | breakChance |
+  | --- | --- |
+  | Puños, arrojadizas, bichos | 0 |
+  | Chaira, Puntilla, Vara de Fresno | 1 |
+  | Jifero, Verduguillo | 2 |
+  | Porra de Corchete | 4 |
+  | Chuzo de Sereno | 5 |
+  | Tranca de Portón | 8 |
+  | Banqueta de Taberna | 30 |
+
+- Quien se queda a puños con armas encima saca otra en su siguiente acción con peso 60 (frente a 12 cuando ya lleva arma): así llevar varias armas paga.
 
 ### 4.8 Mascotas
 

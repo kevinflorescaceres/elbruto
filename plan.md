@@ -154,7 +154,7 @@ Fight
 
 ### Combate
 
-Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya conflicto. Resumen de lo implementado (ENGINE_VERSION 5):
+Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya conflicto. Resumen de lo implementado (ENGINE_VERSION 6):
 
 - Participantes: los dos luchadores y sus mascotas. El combate termina solo cuando un **luchador** llega a 0.
 - **Iniciativa:** actúa quien tenga menor tiempo de próxima acción. Tras actuar suma `round(weapon.interval * 100 / (10 + speed))`, con un **±18% de azar**. Sin ese azar, dos luchadores iguales alternan en lockstep y nunca encadenan dos acciones seguidas.
@@ -184,7 +184,8 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 **Gestión de armas:**
 
 - Cambiar de arma **descarta** la que se llevaba: por eso el arsenal se agota dentro del combate.
-- Las **arrojadizas solo se lanzan**, nunca se usan de cerca, y **no se agotan**. Cualquier otra arma lanzada queda inutilizable.
+- Las **arrojadizas solo se lanzan**, nunca se usan de cerca, y traen un número de tiros por combate (`stock`): las de uno revientan al lanzarse y las demás se agotan _(Ajustado en motor 6: antes no se agotaban)_. Cualquier otra arma lanzada queda inutilizable.
+- Las armas de mano pueden **romperse** en cada impacto que conecta (`breakChance`, de 1 en las de acero a 30 en la Banqueta) _(motor 6)_. Rota o agotada, se pelea a puños hasta sacar otra.
 - Ser desarmado deja el arma inservible. Sin arma se pelea a puños, siempre disponibles.
 - `disarm` solo mediante la habilidad activa correspondiente (Desjarrete).
 
@@ -196,7 +197,7 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 
 ### Catálogo inicial (nombres y efectos originales)
 
-- **10 armas**, dos por cada una de las 5 categorías: rápida, media, larga, pesada, arrojadiza. Campos: `id, name, category, damage, accuracyBonus, interval, comboRate, strengthScale, reach, throwable`.
+- **13 armas** en las 5 categorías: rápida, media, larga, pesada, arrojadiza _(motor 6: se suman Vara de Fresno, Garrafa de Greda y Cuchillos de Tiro)_. Campos: `id, name, category, damage, accuracyBonus, interval, comboRate, strengthScale, reach, throwable, stock, breakChance`.
 - **10 habilidades**, mezcla de pasivas de disparo (Cuero Curtido, Callo Viejo, Pies Ligeros, Brazo de Fragua, Resuello, Mano Zurda, Revire) y activas (Trago Largo, Zurriagazo, Desjarrete). Campos: `id, name, type, effect`.
 - **3 mascotas** con stats propias y un `enduranceCost` que paga el dueño.
 
@@ -206,7 +207,7 @@ Las reglas las fija `COMBATE.md`, que manda sobre esta sección donde haya confl
 
 Los tipos los define **`packages/engine`** (TypeScript plano), que es quien los produce y no puede depender de Zod (§12). **`packages/shared`** construye encima la unión discriminada de Zod por `type`, más una comprobación a nivel de tipo que rompe `pnpm typecheck` si los dos se desincronizan. Tipos de evento:
 
-`start`, `spawn`, `turn`, `move`, `attack`, `hit`, `evade`, `block`, `counter`, `damage`, `heal`, `drawWeapon`, `throwWeapon`, `disarm`, `skill`, `death`, `end`.
+`start`, `spawn`, `turn`, `move`, `attack`, `hit`, `evade`, `block`, `counter`, `damage`, `heal`, `drawWeapon`, `throwWeapon`, `disarm`, `weaponLost`, `skill`, `death`, `end`.
 
 - Cada evento referencia a los combatientes por id (`A`, `B`, `A-pet-0`, etc.).
 - `damage` incluye la vida restante para que el cliente no tenga que calcular nada.

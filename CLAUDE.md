@@ -93,7 +93,7 @@ tests, asi que nunca pisan la base de desarrollo.
 - Prisma 7 no admite `url` en el schema: la conexión va en `apps/server/prisma.config.ts`
   y el cliente usa el driver adapter de `pg`. `prisma` está fijado en 7.10.0 porque su
   tag `latest` en npm apunta a una release candidate de la 8.
-- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **5**.
+- `ENGINE_VERSION` sube cada vez que cambian las reglas del combate. Va por **6**.
   Los combates antiguos se siguen viendo: se reproducen desde su log guardado, no se
   vuelven a simular.
 - **Los textos que ve el jugador llevan tildes.** Los comentarios del código no, para
@@ -119,7 +119,11 @@ tests, asi que nunca pisan la base de desarrollo.
 - **Defensa** en orden: esquiva → bloqueo → contraataque. El contraataque responde a la
   **esquiva**, y un arma larga en la mano añade 25 puntos. Revire es la excepción: también
   responde tras **encajar** un golpe (solo su porcentaje, sin el bonus del arma larga).
-- **Arrojadizas**: solo se lanzan, no se agotan, y el daño escala con agilidad.
+- **Arrojadizas** (motor 6): solo se lanzan, traen `stock` tiros por combate (las de uno revientan al
+  lanzarse) y el daño escala con agilidad.
+- **Rotura** (motor 6): `breakChance` se tira en cada impacto que conecta (el bloqueo cuenta, la
+  esquiva no) y corta el combo. Rota o agotada, evento `weaponLost` y a puños; con armas encima,
+  sacar otra pesa 60 en vez de 12.
 - **Mascotas**: cuestan resistencia (2/3/6), así que tener bicho te hace más frágil.
 - **Mañas de disparo** (motor 5): ninguna maña da "+N a una estadística", que ya lo da subir de
   nivel. Cuero Curtido, Resuello, Pies Ligeros y Brazo de Fragua se disparan en un momento del
